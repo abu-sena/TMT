@@ -202,12 +202,23 @@ function GameApp() {
   }
 
   if (screen === "map") {
+    const popupStars = popupMission ? activeProfile.missionProgress[popupMission.id]?.stars ?? 0 : 0;
     return (
-      <MapScreen
-        profile={activeProfile}
-        onBack={() => setScreen("home")}
-        onOpenMission={(m) => setPopupMission(m)}
-      />
+      <>
+        <MapScreen
+          profile={activeProfile}
+          onBack={() => setScreen("home")}
+          onOpenMission={(m) => setPopupMission(m)}
+        />
+        {popupMission ? (
+          <MissionPopup
+            mission={popupMission}
+            stars={popupStars}
+            onClose={() => setPopupMission(null)}
+            onPlay={() => startMission(popupMission)}
+          />
+        ) : null}
+      </>
     );
   }
 
