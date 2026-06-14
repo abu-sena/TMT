@@ -126,7 +126,7 @@ export function ProfileSelectScreen({ profiles, activeId, onSelect, onCreate, on
                 Simpan
               </GameButton>
             </div>
-          </GameCard>
+          </div>
         )}
 
         {activeId ? (
