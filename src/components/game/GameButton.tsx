@@ -4,19 +4,22 @@ import { cn } from "@/lib/utils";
 type Variant = "primary" | "secondary" | "wood" | "danger" | "ghost" | "coin";
 type Size = "sm" | "md" | "lg" | "xl";
 
+const baseCandy =
+  "shadow-candy hover:brightness-110 active:translate-y-[3px] active:shadow-candy-sm";
+
 const variants: Record<Variant, string> = {
   primary:
-    "bg-gradient-meadow text-primary-foreground border-leaf-dark/60 shadow-pop hover:brightness-105 active:translate-y-[2px] active:shadow-pop-sm",
+    `bg-gradient-meadow text-white border-transparent ${baseCandy}`,
   secondary:
-    "bg-gradient-sun text-[color:var(--wood-dark)] border-[color:var(--wood)]/60 shadow-pop hover:brightness-105 active:translate-y-[2px] active:shadow-pop-sm",
+    `bg-gradient-blue text-white border-transparent ${baseCandy}`,
   wood:
-    "bg-gradient-wood text-cream border-[color:var(--wood-dark)] shadow-pop hover:brightness-110 active:translate-y-[2px] active:shadow-pop-sm",
+    `bg-gradient-wood text-white border-transparent ${baseCandy}`,
   danger:
-    "bg-gradient-heart text-white border-[color:var(--heart)]/70 shadow-pop hover:brightness-105 active:translate-y-[2px] active:shadow-pop-sm",
+    `bg-gradient-heart text-white border-transparent ${baseCandy}`,
   coin:
-    "bg-gradient-coin text-[color:var(--wood-dark)] border-[color:var(--wood)]/60 shadow-pop hover:brightness-105 active:translate-y-[2px] active:shadow-pop-sm",
+    `bg-gradient-coin text-white border-transparent ${baseCandy}`,
   ghost:
-    "bg-white/70 text-foreground border-border hover:bg-white active:translate-y-[1px]",
+    "bg-white/8 text-white border-white/15 backdrop-blur-sm hover:bg-white/12 active:translate-y-[1px] shadow-pop-sm",
 };
 
 const sizes: Record<Size, string> = {
@@ -48,7 +51,7 @@ export function GameButton({
     <button
       {...rest}
       className={cn(
-        "inline-flex items-center justify-center gap-2 font-display font-bold border-2 transition-all select-none disabled:opacity-50 disabled:cursor-not-allowed",
+        "inline-flex items-center justify-center gap-2 font-display font-extrabold tracking-wide uppercase text-[0.95em] border-2 transition-all select-none disabled:opacity-50 disabled:cursor-not-allowed drop-shadow-[0_2px_0_rgba(0,0,0,0.35)]",
         variants[variant],
         sizes[size],
         full && "w-full",

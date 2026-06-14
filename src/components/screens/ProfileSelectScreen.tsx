@@ -32,10 +32,10 @@ export function ProfileSelectScreen({ profiles, activeId, onSelect, onCreate, on
     <div className="min-h-[100dvh] bg-gradient-sky px-5 pt-10 pb-8">
       <header className="text-center mb-5">
         <div className="text-5xl">👨‍👩‍👧</div>
-        <h1 className="font-display font-black text-2xl text-[color:var(--wood-dark)] mt-1">
+        <h1 className="font-display font-black text-3xl text-game-title mt-2 uppercase">
           Pilih Profil
         </h1>
-        <p className="text-sm text-[color:var(--wood-dark)]/80">
+        <p className="text-sm text-white/70 mt-1">
           Banyak anak bisa main di satu perangkat.
         </p>
       </header>
@@ -54,7 +54,7 @@ export function ProfileSelectScreen({ profiles, activeId, onSelect, onCreate, on
               onClick={() => {
                 if (confirm(`Hapus profil ${p.name}?`)) onDelete(p.id);
               }}
-              className="h-14 w-12 rounded-2xl bg-white border-2 border-[color:var(--heart)]/40 text-[color:var(--heart)] grid place-items-center shadow-pop-sm"
+              className="h-14 w-12 rounded-2xl bg-gradient-heart text-white grid place-items-center shadow-candy-sm border-2 border-white/20"
               aria-label="Hapus profil"
             >
               🗑️
@@ -67,18 +67,18 @@ export function ProfileSelectScreen({ profiles, activeId, onSelect, onCreate, on
             Tambah Profil Anak
           </GameButton>
         ) : (
-          <GameCard tone="cream" className="space-y-3">
+          <div className="surface-panel rounded-3xl p-4 space-y-3">
             <div>
-              <label className="text-xs font-bold uppercase text-muted-foreground">Nama</label>
+              <label className="text-xs font-bold uppercase text-white/60">Nama</label>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Nama panggilan"
-                className="mt-1 w-full rounded-2xl border-2 border-[color:var(--wood)]/40 bg-white px-4 py-3 text-base font-bold focus:outline-none focus:border-[color:var(--leaf-dark)]"
+                className="mt-1 w-full rounded-2xl border-2 border-white/15 bg-black/30 px-4 py-3 text-base font-bold text-white placeholder:text-white/40 focus:outline-none focus:border-[color:var(--leaf)]"
               />
             </div>
             <div>
-              <label className="text-xs font-bold uppercase text-muted-foreground">Pilih Avatar</label>
+              <label className="text-xs font-bold uppercase text-white/60">Pilih Avatar</label>
               <div className="mt-1 grid grid-cols-6 gap-2">
                 {AVATARS.map((a) => (
                   <button
@@ -87,8 +87,8 @@ export function ProfileSelectScreen({ profiles, activeId, onSelect, onCreate, on
                     className={cn(
                       "aspect-square rounded-2xl text-2xl grid place-items-center border-2 transition-all",
                       avatar === a
-                        ? "bg-gradient-meadow border-leaf-dark scale-105 shadow-pop-sm"
-                        : "bg-white border-[color:var(--wood)]/30",
+                        ? "bg-gradient-meadow border-white/40 scale-105 shadow-candy-sm"
+                        : "bg-black/30 border-white/10 hover:border-white/30",
                     )}
                   >
                     {a}
@@ -97,21 +97,21 @@ export function ProfileSelectScreen({ profiles, activeId, onSelect, onCreate, on
               </div>
             </div>
             <div>
-              <label className="text-xs font-bold uppercase text-muted-foreground">Tingkat Kesulitan</label>
+              <label className="text-xs font-bold uppercase text-white/60">Tingkat Kesulitan</label>
               <div className="mt-1 grid grid-cols-2 gap-2">
                 {DIFFICULTIES.map((d) => (
                   <button
                     key={d.id}
                     onClick={() => setDiff(d.id)}
                     className={cn(
-                      "rounded-2xl border-2 p-2 text-left transition-all",
+                      "rounded-2xl border-2 p-2.5 text-left transition-all",
                       diff === d.id
-                        ? "bg-gradient-sun border-[color:var(--wood)] shadow-pop-sm"
-                        : "bg-white border-[color:var(--wood)]/30",
+                        ? "bg-gradient-sun border-white/40 shadow-candy-sm text-[#3a2400]"
+                        : "bg-black/30 border-white/10 text-white hover:border-white/30",
                     )}
                   >
                     <div className="font-display font-bold text-sm">{d.emoji} {d.label}</div>
-                    <div className="text-[11px] text-muted-foreground">{d.description}</div>
+                    <div className="text-[11px] opacity-80">{d.description}</div>
                   </button>
                 ))}
               </div>
@@ -126,7 +126,7 @@ export function ProfileSelectScreen({ profiles, activeId, onSelect, onCreate, on
                 Simpan
               </GameButton>
             </div>
-          </GameCard>
+          </div>
         )}
 
         {activeId ? (

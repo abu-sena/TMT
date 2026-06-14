@@ -22,20 +22,20 @@ export function MapScreen({ profile, onBack, onOpenMission }: Props) {
   const highest = completedNumbers.size > 0 ? Math.max(...Array.from(completedNumbers)) : 0;
 
   return (
-    <div className="min-h-[100dvh] bg-gradient-meadow pb-10 relative overflow-hidden">
+    <div className="min-h-[100dvh] bg-gradient-sky pb-10 relative overflow-hidden">
       {/* decorative scenery */}
-      <div className="absolute top-6 left-4 text-4xl opacity-80">☁️</div>
-      <div className="absolute top-12 right-6 text-3xl opacity-80">☁️</div>
+      <div className="absolute top-6 left-4 text-4xl opacity-40">☁️</div>
+      <div className="absolute top-12 right-6 text-3xl opacity-40">☁️</div>
 
       <header className="px-4 pt-6 pb-3 flex items-center gap-3 relative z-10">
-        <button onClick={onBack} className="h-12 w-12 rounded-2xl bg-white/90 border-2 border-white grid place-items-center text-xl shadow-pop-sm" aria-label="Kembali">
+        <button onClick={onBack} className="h-12 w-12 rounded-2xl bg-black/30 border border-white/15 text-white grid place-items-center text-xl shadow-pop-sm shrink-0" aria-label="Kembali">
           ←
         </button>
-        <div className="flex-1">
-          <h1 className="font-display font-black text-2xl text-cream drop-shadow-[0_2px_0_oklch(0.35_0.12_140)]">
+        <div className="flex-1 min-w-0">
+          <h1 className="font-display font-black text-2xl text-game-title uppercase truncate">
             Peta Petualangan
           </h1>
-          <p className="text-cream/90 text-sm font-bold">{diff.emoji} {diff.label} — {missions.length} misi</p>
+          <p className="text-white/80 text-sm font-bold">{diff.emoji} {diff.label} — {missions.length} misi</p>
         </div>
       </header>
 
@@ -45,7 +45,7 @@ export function MapScreen({ profile, onBack, onOpenMission }: Props) {
           <path
             d="M 60 50 Q 240 120 60 220 Q 240 320 60 420 Q 240 520 60 620 Q 240 720 150 780"
             fill="none"
-            stroke="oklch(0.95 0.05 95)"
+            stroke="rgba(255,255,255,0.35)"
             strokeWidth="6"
             strokeDasharray="2 14"
             strokeLinecap="round"
@@ -71,7 +71,7 @@ export function MapScreen({ profile, onBack, onOpenMission }: Props) {
                     onClick={() => state !== "locked" && onOpenMission(m)}
                   />
                   <div className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                    state === "locked" ? "bg-stone-200 text-stone-500" : "bg-white/95 text-[color:var(--wood-dark)]"
+                    state === "locked" ? "bg-black/30 text-white/50 border border-white/10" : "bg-black/40 text-white border border-white/15"
                   } shadow-pop-sm max-w-[120px] text-center truncate`}>
                     {state === "locked" ? "Terkunci" : m.title}
                   </div>

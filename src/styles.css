@@ -50,83 +50,100 @@
 }
 
 :root {
-  --background: oklch(0.96 0.05 130);
-  --foreground: oklch(0.28 0.06 60);
+  /* Casual game dark navy theme */
+  --background: oklch(0.18 0.04 265);
+  --foreground: oklch(0.97 0.02 230);
 
-  --card: oklch(0.985 0.03 95);
-  --card-foreground: oklch(0.28 0.06 60);
+  --card: oklch(0.30 0.04 260);
+  --card-foreground: oklch(0.97 0.02 230);
 
-  --popover: oklch(0.99 0.02 95);
-  --popover-foreground: oklch(0.28 0.06 60);
+  --popover: oklch(0.32 0.04 260);
+  --popover-foreground: oklch(0.97 0.02 230);
 
-  --primary: oklch(0.7 0.18 145);
+  --primary: oklch(0.74 0.21 145);
   --primary-foreground: oklch(0.99 0.01 100);
 
-  --secondary: oklch(0.88 0.1 85);
-  --secondary-foreground: oklch(0.3 0.08 60);
+  --secondary: oklch(0.62 0.18 250);
+  --secondary-foreground: oklch(0.99 0.01 100);
 
-  --muted: oklch(0.94 0.04 95);
-  --muted-foreground: oklch(0.5 0.05 70);
+  --muted: oklch(0.28 0.04 260);
+  --muted-foreground: oklch(0.78 0.03 230);
 
   --accent: oklch(0.82 0.16 70);
-  --accent-foreground: oklch(0.28 0.08 50);
+  --accent-foreground: oklch(0.22 0.04 60);
 
   --destructive: oklch(0.65 0.22 25);
   --destructive-foreground: oklch(0.99 0.01 100);
 
-  --border: oklch(0.85 0.06 90);
-  --input: oklch(0.92 0.04 90);
-  --ring: oklch(0.7 0.18 145);
+  --border: oklch(0.42 0.05 260);
+  --input: oklch(0.32 0.04 260);
+  --ring: oklch(0.7 0.18 220);
 
-  /* Game tokens */
-  --leaf: oklch(0.72 0.19 142);
-  --leaf-dark: oklch(0.52 0.16 145);
-  --sky: oklch(0.85 0.12 220);
-  --cream: oklch(0.96 0.06 95);
-  --wood: oklch(0.65 0.12 60);
-  --wood-dark: oklch(0.42 0.09 50);
-  --sun: oklch(0.88 0.18 90);
-  --coin: oklch(0.82 0.18 85);
-  --heart: oklch(0.68 0.23 20);
-  --grape: oklch(0.62 0.2 300);
-  --berry: oklch(0.65 0.22 0);
-  --xp: oklch(0.75 0.18 145);
+  /* Game tokens (re-tuned for dark candy style) */
+  --leaf: oklch(0.78 0.21 145);
+  --leaf-dark: oklch(0.48 0.18 145);
+  --sky: oklch(0.72 0.18 230);
+  --cream: oklch(0.98 0.02 230);          /* near-white for light text */
+  --wood: oklch(0.45 0.05 258);            /* mid slate border */
+  --wood-dark: oklch(0.96 0.02 230);       /* light text (used everywhere as primary text) */
+  --sun: oklch(0.86 0.18 85);
+  --coin: oklch(0.82 0.18 75);
+  --heart: oklch(0.68 0.24 22);
+  --grape: oklch(0.62 0.22 295);
+  --berry: oklch(0.68 0.24 355);
+  --xp: oklch(0.78 0.18 220);
 
-  --gradient-sky: linear-gradient(180deg, oklch(0.88 0.1 220) 0%, oklch(0.92 0.08 180) 60%, oklch(0.85 0.14 140) 100%);
-  --gradient-meadow: linear-gradient(180deg, oklch(0.85 0.13 145) 0%, oklch(0.7 0.18 142) 100%);
-  --gradient-sun: linear-gradient(180deg, oklch(0.92 0.18 95) 0%, oklch(0.82 0.2 75) 100%);
-  --gradient-wood: linear-gradient(180deg, oklch(0.72 0.12 65) 0%, oklch(0.52 0.11 55) 100%);
-  --gradient-cream: linear-gradient(180deg, oklch(0.98 0.04 95) 0%, oklch(0.93 0.07 90) 100%);
-  --gradient-coin: linear-gradient(180deg, oklch(0.9 0.18 95) 0%, oklch(0.75 0.2 75) 100%);
-  --gradient-heart: linear-gradient(180deg, oklch(0.75 0.22 20) 0%, oklch(0.6 0.24 18) 100%);
-  --gradient-xp: linear-gradient(90deg, oklch(0.82 0.2 140) 0%, oklch(0.7 0.2 145) 100%);
+  /* ---- Glossy candy gradients ---- */
+  /* page background — deep navy with subtle radial */
+  --gradient-sky: radial-gradient(120% 80% at 50% 0%, #1b2548 0%, #0e1330 55%, #080b1f 100%);
 
-  --shadow-pop: 0 6px 0 0 oklch(0 0 0 / 0.12), 0 10px 18px -4px oklch(0 0 0 / 0.18);
-  --shadow-pop-sm: 0 4px 0 0 oklch(0 0 0 / 0.12), 0 6px 12px -4px oklch(0 0 0 / 0.16);
-  --shadow-card: 0 8px 24px -8px oklch(0 0 0 / 0.18);
-  --shadow-inset: inset 0 -4px 0 0 oklch(0 0 0 / 0.12);
+  /* primary green button / panels */
+  --gradient-meadow: linear-gradient(180deg, #7BE56F 0%, #4ECB52 45%, #2E9E37 100%);
+  /* secondary blue */
+  --gradient-blue: linear-gradient(180deg, #7CC8FF 0%, #3897E8 50%, #1E5FB8 100%);
+  /* yellow / sun */
+  --gradient-sun: linear-gradient(180deg, #FFE07A 0%, #F5B622 55%, #B3700C 100%);
+  /* gold coin */
+  --gradient-coin: linear-gradient(180deg, #FFD66B 0%, #F2A41C 55%, #A86200 100%);
+  /* purple feature card (the “elements” banner in the reference) */
+  --gradient-wood: linear-gradient(180deg, #B58CF7 0%, #7C4DD8 55%, #4A2A99 100%);
+  /* dark slate panel (used by cream tone) */
+  --gradient-cream: linear-gradient(180deg, #38426A 0%, #232B4A 100%);
+  /* red heart */
+  --gradient-heart: linear-gradient(180deg, #FF8678 0%, #E64040 50%, #A02020 100%);
+  /* cyan XP fill */
+  --gradient-xp: linear-gradient(90deg, #5EE0FF 0%, #1E9BFF 100%);
+
+  /* Chunky shadows (heavier for dark bg) */
+  --shadow-pop:
+    0 6px 0 0 rgba(0, 0, 0, 0.45),
+    0 14px 22px -6px rgba(0, 0, 0, 0.55);
+  --shadow-pop-sm:
+    0 4px 0 0 rgba(0, 0, 0, 0.4),
+    0 8px 14px -4px rgba(0, 0, 0, 0.45);
+  --shadow-card:
+    0 10px 28px -8px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+  --shadow-inset: inset 0 -4px 0 0 rgba(0, 0, 0, 0.25);
+
+  /* Glossy candy button effect (inner highlight + dark bottom edge) */
+  --shadow-candy:
+    inset 0 2px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -5px 0 rgba(0, 0, 0, 0.28),
+    0 6px 0 rgba(0, 0, 0, 0.35),
+    0 12px 18px -4px rgba(0, 0, 0, 0.55);
+  --shadow-candy-sm:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.22),
+    0 4px 0 rgba(0, 0, 0, 0.3),
+    0 8px 12px -3px rgba(0, 0, 0, 0.45);
 }
 
 .dark {
-  --background: oklch(0.25 0.04 150);
-  --foreground: oklch(0.96 0.02 95);
-  --card: oklch(0.32 0.05 140);
-  --card-foreground: oklch(0.96 0.02 95);
-  --popover: oklch(0.32 0.05 140);
-  --popover-foreground: oklch(0.96 0.02 95);
-  --primary: oklch(0.78 0.18 145);
-  --primary-foreground: oklch(0.2 0.05 140);
-  --secondary: oklch(0.45 0.08 80);
-  --secondary-foreground: oklch(0.98 0.02 95);
-  --muted: oklch(0.35 0.04 140);
-  --muted-foreground: oklch(0.78 0.03 95);
-  --accent: oklch(0.7 0.16 70);
-  --accent-foreground: oklch(0.2 0.05 60);
-  --destructive: oklch(0.65 0.22 25);
-  --destructive-foreground: oklch(0.99 0.01 100);
-  --border: oklch(0.4 0.05 130);
-  --input: oklch(0.4 0.05 130);
-  --ring: oklch(0.78 0.18 145);
+  --background: oklch(0.18 0.04 265);
+  --foreground: oklch(0.97 0.02 230);
+  --card: oklch(0.30 0.04 260);
+  --card-foreground: oklch(0.97 0.02 230);
 }
 
 @layer base {
@@ -138,6 +155,7 @@
   }
   body {
     background: var(--gradient-sky);
+    background-attachment: fixed;
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
@@ -152,6 +170,7 @@
 @layer utilities {
   .bg-gradient-sky { background: var(--gradient-sky); }
   .bg-gradient-meadow { background: var(--gradient-meadow); }
+  .bg-gradient-blue { background: var(--gradient-blue); }
   .bg-gradient-sun { background: var(--gradient-sun); }
   .bg-gradient-wood { background: var(--gradient-wood); }
   .bg-gradient-cream { background: var(--gradient-cream); }
@@ -162,7 +181,29 @@
   .shadow-pop-sm { box-shadow: var(--shadow-pop-sm); }
   .shadow-card { box-shadow: var(--shadow-card); }
   .shadow-inset-b { box-shadow: var(--shadow-inset); }
+  .shadow-candy { box-shadow: var(--shadow-candy); }
+  .shadow-candy-sm { box-shadow: var(--shadow-candy-sm); }
   .font-display { font-family: var(--font-display); }
+
+  /* Chunky cartoon title — bright cyan with white outer outline + heavy drop shadow */
+  .text-game-title {
+    color: #C7ECFF;
+    -webkit-text-stroke: 2px #ffffff;
+    paint-order: stroke fill;
+    text-shadow:
+      0 3px 0 rgba(0, 0, 0, 0.55),
+      0 6px 12px rgba(0, 0, 0, 0.6);
+    letter-spacing: 0.02em;
+  }
+
+  /* Dark game panel surface */
+  .surface-panel {
+    background: var(--gradient-cream);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 10px 28px -10px rgba(0, 0, 0, 0.6);
+  }
 }
 
 /* Playful animations */

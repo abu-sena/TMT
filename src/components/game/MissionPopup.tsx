@@ -15,9 +15,9 @@ export function MissionPopup({ mission, stars, onClose, onPlay }: Props) {
   const diff = DIFFICULTY_MAP[mission.difficulty];
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-end sm:place-items-center bg-black/50 backdrop-blur-sm p-3 animate-pop-in">
-      <div className="w-full max-w-md rounded-3xl bg-gradient-cream border-2 border-[color:var(--wood)]/50 shadow-pop overflow-hidden">
-        <div className="bg-gradient-wood px-4 py-3 flex items-center gap-3 text-cream">
+    <div className="fixed inset-0 z-50 grid place-items-end sm:place-items-center bg-black/70 backdrop-blur-sm p-3 animate-pop-in">
+      <div className="w-full max-w-md surface-panel rounded-3xl overflow-hidden">
+        <div className="bg-gradient-wood px-4 py-3 flex items-center gap-3 text-white">
           <div className="h-12 w-12 rounded-2xl bg-white/20 border-2 border-white/40 grid place-items-center text-2xl">
             {mission.isBoss ? "👑" : cat.emoji}
           </div>
@@ -28,7 +28,7 @@ export function MissionPopup({ mission, stars, onClose, onPlay }: Props) {
           <button
             onClick={onClose}
             aria-label="Tutup"
-            className="h-9 w-9 rounded-full bg-white/20 hover:bg-white/30 border-2 border-white/40 grid place-items-center text-cream font-bold"
+            className="h-9 w-9 rounded-full bg-white/20 hover:bg-white/30 border-2 border-white/40 grid place-items-center text-white font-bold"
           >
             ✕
           </button>
@@ -36,37 +36,37 @@ export function MissionPopup({ mission, stars, onClose, onPlay }: Props) {
 
         <div className="p-4 space-y-3">
           <div className="flex flex-wrap gap-2">
-            <span className="px-3 py-1 rounded-full bg-white border border-[color:var(--wood)]/40 text-xs font-bold">
+            <span className="px-3 py-1 rounded-full bg-black/30 border border-white/15 text-white text-xs font-bold">
               {cat.emoji} {cat.short}
             </span>
-            <span className="px-3 py-1 rounded-full bg-white border border-[color:var(--wood)]/40 text-xs font-bold">
+            <span className="px-3 py-1 rounded-full bg-black/30 border border-white/15 text-white text-xs font-bold">
               {diff.emoji} {diff.label}
             </span>
-            <span className="px-3 py-1 rounded-full bg-gradient-coin border border-[color:var(--wood)]/40 text-xs font-bold text-[color:var(--wood-dark)]">
+            <span className="px-3 py-1 rounded-full bg-gradient-coin border border-white/30 text-xs font-bold text-[#3a2400] shadow-candy-sm">
               ⭐ {mission.basePoint} poin
             </span>
             {mission.adabBonus ? (
-              <span className="px-3 py-1 rounded-full bg-[color:var(--berry)] text-white border border-white/40 text-xs font-bold">
+              <span className="px-3 py-1 rounded-full bg-[color:var(--berry)] text-white border border-white/40 text-xs font-bold shadow-candy-sm">
                 ✨ Adab +{mission.adabBonus}
               </span>
             ) : null}
           </div>
 
-          <p className="text-sm text-foreground/80 leading-relaxed">{mission.story}</p>
+          <p className="text-sm text-white/85 leading-relaxed">{mission.story}</p>
 
           {stars > 0 ? (
-            <div className="flex items-center justify-between rounded-2xl bg-white border border-[color:var(--wood)]/30 px-3 py-2">
-              <span className="text-xs font-bold text-muted-foreground">Bintang terbaik</span>
+            <div className="flex items-center justify-between rounded-2xl bg-black/30 border border-white/15 px-3 py-2">
+              <span className="text-xs font-bold text-white/60">Bintang terbaik</span>
               <RewardStars count={stars} />
             </div>
           ) : null}
 
-          <div className="rounded-2xl bg-white/80 border border-dashed border-[color:var(--wood)]/40 px-3 py-2">
-            <div className="text-[11px] font-bold uppercase text-muted-foreground mb-1">Booster tersedia</div>
+          <div className="rounded-2xl bg-black/30 border border-dashed border-white/20 px-3 py-2">
+            <div className="text-[11px] font-bold uppercase text-white/60 mb-1">Booster tersedia</div>
             <div className="flex flex-wrap gap-2 text-xs">
-              <span className="px-2 py-1 rounded-full bg-gradient-sun border border-[color:var(--wood)]/40">💡 Petunjuk</span>
-              <span className="px-2 py-1 rounded-full bg-gradient-sky border border-[color:var(--wood)]/40">⏱️ Waktu +</span>
-              <span className="px-2 py-1 rounded-full bg-gradient-meadow text-primary-foreground border border-leaf-dark/40">2× Poin</span>
+              <span className="px-2 py-1 rounded-full bg-gradient-sun border border-white/30 text-[#3a2400] shadow-candy-sm">💡 Petunjuk</span>
+              <span className="px-2 py-1 rounded-full bg-gradient-blue border border-white/30 text-white shadow-candy-sm">⏱️ Waktu +</span>
+              <span className="px-2 py-1 rounded-full bg-gradient-meadow text-white border border-white/30 shadow-candy-sm">2× Poin</span>
             </div>
           </div>
 
