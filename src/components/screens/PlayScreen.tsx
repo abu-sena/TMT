@@ -38,31 +38,31 @@ export function PlayScreen({ mission, onFinish, onQuit }: Props) {
   return (
     <div className="min-h-[100dvh] bg-gradient-sky pb-6 flex flex-col">
       <header className="px-4 pt-5 pb-2 flex items-center gap-2">
-        <button onClick={onQuit} className="h-10 w-10 rounded-2xl bg-white/90 border-2 border-white grid place-items-center text-lg shadow-pop-sm" aria-label="Keluar">
+        <button onClick={onQuit} className="h-10 w-10 rounded-2xl bg-black/30 border border-white/15 text-white grid place-items-center text-lg shadow-pop-sm" aria-label="Keluar">
           ✕
         </button>
         <div className="flex-1 flex gap-1.5 items-center">
-          <span className="px-2.5 py-1 rounded-full bg-white/90 border border-[color:var(--wood)]/40 text-xs font-bold">
+          <span className="px-2.5 py-1 rounded-full bg-black/30 border border-white/15 text-white text-xs font-bold">
             {cat.emoji} {cat.short}
           </span>
-          <span className="px-2.5 py-1 rounded-full bg-white/90 border border-[color:var(--wood)]/40 text-xs font-bold">
+          <span className="px-2.5 py-1 rounded-full bg-black/30 border border-white/15 text-white text-xs font-bold">
             {diff.emoji} {diff.shortLabel}
           </span>
         </div>
-        <div className="px-2.5 py-1 rounded-full bg-gradient-heart text-white text-xs font-bold border border-white/40">
+        <div className="px-2.5 py-1 rounded-full bg-gradient-heart text-white text-xs font-bold border border-white/40 shadow-candy-sm">
           Coba {attempts}/3
         </div>
       </header>
 
       <main className="flex-1 px-4 mt-2 space-y-4 max-w-md mx-auto w-full">
-        {/* parchment story panel */}
-        <div className="rounded-3xl bg-gradient-cream border-2 border-[color:var(--wood)]/50 shadow-card p-4">
-          <h1 className="font-display font-black text-xl text-[color:var(--wood-dark)]">{mission.title}</h1>
-          <p className="mt-1 text-sm leading-relaxed text-foreground/85">{mission.story}</p>
+        {/* story panel */}
+        <div className="surface-panel rounded-3xl p-4">
+          <h1 className="font-display font-black text-xl text-white">{mission.title}</h1>
+          <p className="mt-1 text-sm leading-relaxed text-white/85">{mission.story}</p>
         </div>
 
         {/* question */}
-        <div className="font-display font-bold text-base text-[color:var(--wood-dark)] px-1">
+        <div className="font-display font-bold text-base text-white px-1">
           {mission.question}
         </div>
 
@@ -78,19 +78,19 @@ export function PlayScreen({ mission, onFinish, onQuit }: Props) {
                 disabled={revealed || wasWrong}
                 onClick={() => setSelected(o.id)}
                 className={cn(
-                  "w-full rounded-2xl border-2 p-3 text-left flex items-center gap-3 transition-all shadow-pop-sm",
-                  isRight ? "bg-gradient-meadow border-leaf-dark text-primary-foreground" :
-                  isWrongPick ? "bg-gradient-heart border-[color:var(--heart)] text-white" :
-                  wasWrong ? "bg-stone-200 border-stone-300 text-stone-500" :
-                  isSel ? "bg-gradient-sun border-[color:var(--wood)] -translate-y-0.5" :
-                  "bg-white border-[color:var(--wood)]/40 hover:-translate-y-0.5",
+                  "w-full rounded-2xl border-2 p-3 text-left flex items-center gap-3 transition-all",
+                  isRight ? "bg-gradient-meadow border-white/30 text-white shadow-candy-sm" :
+                  isWrongPick ? "bg-gradient-heart border-white/30 text-white shadow-candy-sm" :
+                  wasWrong ? "bg-black/20 border-white/5 text-white/40" :
+                  isSel ? "bg-gradient-blue border-white/30 text-white -translate-y-0.5 shadow-candy-sm" :
+                  "surface-panel text-white hover:-translate-y-0.5",
                 )}
               >
                 <div className={cn(
                   "h-9 w-9 rounded-xl grid place-items-center font-display font-bold shrink-0 border-2",
-                  isRight ? "bg-white/30 border-white/50" :
-                  isWrongPick ? "bg-white/30 border-white/50" :
-                  isSel ? "bg-white border-[color:var(--wood)]/60" : "bg-gradient-cream border-[color:var(--wood)]/40",
+                  isRight ? "bg-white/30 border-white/50 text-white" :
+                  isWrongPick ? "bg-white/30 border-white/50 text-white" :
+                  isSel ? "bg-white/30 border-white/50 text-white" : "bg-black/30 border-white/15 text-white/80",
                 )}>
                   {revealed && o.id === mission.correctOptionId ? "✓" :
                    revealed && isSel ? "✗" :
@@ -103,7 +103,7 @@ export function PlayScreen({ mission, onFinish, onQuit }: Props) {
         </div>
 
         {showHint ? (
-          <div className="rounded-2xl bg-gradient-sun/80 border-2 border-[color:var(--wood)]/40 p-3 text-sm">
+          <div className="rounded-2xl bg-gradient-sun border-2 border-white/30 p-3 text-sm text-[#3a2400] shadow-candy-sm">
             <span className="font-display font-bold">💡 Petunjuk: </span>
             {mission.hint}
           </div>
