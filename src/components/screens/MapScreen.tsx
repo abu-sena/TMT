@@ -45,7 +45,7 @@ export function MapScreen({ profile, onBack, onOpenMission }: Props) {
           <path
             d="M 60 50 Q 240 120 60 220 Q 240 320 60 420 Q 240 520 60 620 Q 240 720 150 780"
             fill="none"
-            stroke="oklch(0.95 0.05 95)"
+            stroke="rgba(255,255,255,0.35)"
             strokeWidth="6"
             strokeDasharray="2 14"
             strokeLinecap="round"
@@ -71,7 +71,7 @@ export function MapScreen({ profile, onBack, onOpenMission }: Props) {
                     onClick={() => state !== "locked" && onOpenMission(m)}
                   />
                   <div className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                    state === "locked" ? "bg-stone-200 text-stone-500" : "bg-white/95 text-[color:var(--wood-dark)]"
+                    state === "locked" ? "bg-black/30 text-white/50 border border-white/10" : "bg-black/40 text-white border border-white/15"
                   } shadow-pop-sm max-w-[120px] text-center truncate`}>
                     {state === "locked" ? "Terkunci" : m.title}
                   </div>
