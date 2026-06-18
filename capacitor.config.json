@@ -1,0 +1,14 @@
+{
+  "appId": "id.adabquest.game",
+  "appName": "TMT",
+  "webDir": "dist-spa",
+  "bundledWebRuntime": false,
+  "server": {
+    "allowNavigation": []
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  }
+}

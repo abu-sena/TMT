@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#51C625" />
+  <meta name="description" content="Petualangan Ilmu & Akhlak untuk anak Indonesia" />
+  <title>TMT</title>
+  <style>
+    /* Prevent FOUC — show splash background immediately */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      overflow-x: hidden;
+    }
+    body {
+      background: linear-gradient(180deg, #99E1FF 0%, #E6F8FF 100%);
+      font-family: 'Nunito', system-ui, sans-serif;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    #root {
+      width: 100%;
+      min-height: 100dvh;
+      overflow-x: hidden;
+    }
+    .splash-loader {
+      text-align: center;
+    }
+    .splash-loader .icon {
+      font-size: 5rem;
+      animation: bob 2.5s ease-in-out infinite;
+    }
+    @keyframes bob {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+  </style>
+  <script type="module" src="/src/capacitor-main.tsx"></script>
+</head>
+<body>
+  <div id="root">
+    <div style="display:flex; align-items:center; justify-content:center; min-height:100dvh; width:100%;">
+      <div class="splash-loader">
+        <div class="icon">📜</div>
+        <p style="font-weight:700; color:#5A3515; font-size:1.25rem;">TMT</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
