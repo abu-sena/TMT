@@ -1,117 +1,410 @@
-import { useState, useEffect, useMemo } from "react";
-import type { Profile, DailyAdabChecklistItem } from "@/types";
+import { useState, useMemo, useCallback } from "react";
+import type { Profile, DailyMissionAssignment, DailyMissionAssignmentStatus } from "@/types";
+import { DAILY_MISSION_CATEGORY_META } from "@/types";
 import { GameButton } from "../game/GameButton";
 import { GameCard } from "../game/GameCard";
 import { useGameStore } from "@/lib/storage";
 import { cn } from "@/lib/utils";
+import {
+  getTodaySummary,
+  checkInAssignment,
+  getStreak,
+  sortDailyMissionAssignments,
+} from "@/lib/dailyMissions";
 
 // ═══════════════════════════════════════════
-// Adab Checklist items per difficulty
+// Status badge config
 // ═══════════════════════════════════════════
 
-const CHECKLIST_POOL: DailyAdabChecklistItem[] = [
-  { id: "bantu-ortu", title: "Membantu Ibu/Ayah", description: "Bantu pekerjaan rumah hari ini (menyapu, mencuci piring, dll).", requiresParentVerification: false, isChecked: false, isVerified: false },
-  { id: "salam", title: "Mengucapkan Salam", description: "Ucapkan salam saat masuk rumah atau bertemu keluarga.", requiresParentVerification: false, isChecked: false, isVerified: false },
-  { id: "rapikan-tidur", title: "Merapikan Tempat Tidur", description: "Rapikan tempat tidur setelah bangun pagi.", requiresParentVerification: false, isChecked: false, isVerified: false },
-  { id: "bantu-teman", title: "Membantu Teman/Adik", description: "Bantu teman atau adik yang kesulitan hari ini.", requiresParentVerification: false, isChecked: false, isVerified: false },
-  { id: "terima-kasih", title: "Mengucapkan Terima Kasih", description: "Ucapkan terima kasih pada orang yang membantu.", requiresParentVerification: false, isChecked: false, isVerified: false },
-  { id: "minta-maaf", title: "Meminta Maaf Jika Salah", description: "Berani minta maaf jika melakukan kesalahan.", requiresParentVerification: true, isChecked: false, isVerified: false },
-  { id: "baca-buku", title: "Membaca Buku 10 Menit", description: "Baca buku atau Al-Qur'an minimal 10 menit.", requiresParentVerification: false, isChecked: false, isVerified: false },
-  { id: "jaga-lisan", title: "Menjaga Lisan", description: "Tidak berkata kasar, bohong, atau menyakiti hari ini.", requiresParentVerification: true, isChecked: false, isVerified: false },
-  { id: "berbagi", title: "Berbagi dengan Saudara", description: "Berbagi makanan, mainan, atau cerita dengan saudara.", requiresParentVerification: false, isChecked: false, isVerified: false },
-  { id: "taruh-barang", title: "Menaruh Barang pada Tempatnya", description: "Kembalikan mainan/buku ke tempatnya setelah dipakai.", requiresParentVerification: false, isChecked: false, isVerified: false },
-  { id: "sholat", title: "Sholat Tepat Waktu", description: "Sholat 5 waktu tanpa disuruh.", requiresParentVerification: true, isChecked: false, isVerified: false },
-  { id: "doa", title: "Berdoa Sebelum & Sesudah", description: "Baca doa sebelum dan sesudah makan/belajar.", requiresParentVerification: false, isChecked: false, isVerified: false },
-  { id: "senyum", title: "Tersenyum & Ramah", description: "Tersenyum dan bersikap ramah pada keluarga.", requiresParentVerification: false, isChecked: false, isVerified: false },
-  { id: "antri", title: "Mengantri dengan Sabar", description: "Mengantri dengan tertib (di rumah, sekolah, tempat umum).", requiresParentVerification: false, isChecked: false, isVerified: false },
-  { id: "hemat", title: "Hemat Air & Listrik", description: "Matikan lampu/air jika tidak digunakan.", requiresParentVerification: false, isChecked: false, isVerified: false },
-];
+const STATUS_BADGE: Record<
+  DailyMissionAssignmentStatus,
+  { emoji: string; label: string; bgClass: string; textClass: string }
+> = {
+  not_started: {
+    emoji: "📌",
+    label: "Belum Dilakukan",
+    bgClass: "bg-blue-50",
+    textClass: "text-blue-600",
+  },
+  checked_by_child: {
+    emoji: "⏳",
+    label: "Menunggu Validasi",
+    bgClass: "bg-[#FFF3E0]",
+    textClass: "text-[#FF9800]",
+  },
+  pending_parent_validation: {
+    emoji: "⏳",
+    label: "Menunggu Validasi",
+    bgClass: "bg-[#FFF3E0]",
+    textClass: "text-[#FF9800]",
+  },
+  approved_by_parent: {
+    emoji: "✅",
+    label: "Disetujui",
+    bgClass: "bg-[#E8F5E9]",
+    textClass: "text-[#4CAF50]",
+  },
+  rejected_by_parent: {
+    emoji: "🔄",
+    label: "Perlu Diulang",
+    bgClass: "bg-[#FFEBEE]",
+    textClass: "text-[#E53935]",
+  },
+};
+
+// ═══════════════════════════════════════════
+// Section config for child view
+// ═══════════════════════════════════════════
+type ChildSection =
+  | "not_started"
+  | "rejected"
+  | "pending"
+  | "approved";
+
+const SECTION_META: Record<
+  ChildSection,
+  { emoji: string; label: string; emptyEmoji: string; emptyText: string; emptySub?: string }
+> = {
+  not_started: {
+    emoji: "📋",
+    label: "Belum Dilakukan",
+    emptyEmoji: "🎉",
+    emptyText: "Semua misi sudah dicentang!",
+    emptySub: "Tunggu orang tua memvalidasi ya.",
+  },
+  rejected: {
+    emoji: "🔄",
+    label: "Perlu Diulang",
+    emptyEmoji: "👍",
+    emptyText: "Tidak ada misi yang perlu diulang.",
+  },
+  pending: {
+    emoji: "⏳",
+    label: "Menunggu Validasi",
+    emptyEmoji: "📭",
+    emptyText: "Tidak ada misi yang menunggu validasi.",
+  },
+  approved: {
+    emoji: "✅",
+    label: "Disetujui",
+    emptyEmoji: "⭐",
+    emptyText: "Belum ada misi yang disetujui hari ini.",
+  },
+};
 
 interface Props {
   profile: Profile;
   onBack: () => void;
-  onPlayMission: () => void;
-  onPlayMiniGame: () => void;
 }
 
-export function DailyMissionsScreen({ profile, onBack }: Props) {
-  const { updateProfile } = useGameStore();
-  const [dateStr, setDateStr] = useState("");
+export function DailyMissionsScreen({ profile: initialProfile, onBack }: Props) {
+  const { store, updateProfile } = useGameStore();
+  const profile = store.profiles.find(p => p.id === initialProfile.id) || initialProfile;
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
+  const [animateItemId, setAnimateItemId] = useState<string | null>(null);
 
-  useEffect(() => {
-    setDateStr(new Date().toISOString().split("T")[0]);
+  const summary = useMemo(() => getTodaySummary(profile), [profile]);
+  const streak = useMemo(() => getStreak(profile), [profile]);
+
+  // Sort assignments for child view
+  const sortedAssignments = useMemo(
+    () => sortDailyMissionAssignments(summary.assignments),
+    [summary.assignments]
+  );
+
+  // Group by section
+  const sections = useMemo(() => {
+    const groups: Record<ChildSection, DailyMissionAssignment[]> = {
+      not_started: [],
+      rejected: [],
+      pending: [],
+      approved: [],
+    };
+    for (const a of sortedAssignments) {
+      if (a.status === "not_started") groups.not_started.push(a);
+      else if (a.status === "rejected_by_parent") groups.rejected.push(a);
+      else if (a.status === "pending_parent_validation" || a.status === "checked_by_child")
+        groups.pending.push(a);
+      else if (a.status === "approved_by_parent") groups.approved.push(a);
+    }
+    return groups;
+  }, [sortedAssignments]);
+
+  // Show toast helper
+  const showToast = useCallback((msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
   }, []);
 
-  // Generate checklist for today if needed
-  const checklist = useMemo(() => {
-    if (!dateStr) return null;
+  // Handle child check-in with animation
+  const handleCheckIn = useCallback(
+    (assignmentId: string) => {
+      if (submittingId) return; // anti-double-click
+      setSubmittingId(assignmentId);
 
-    const existing = profile.dailyAdabChecklist;
-    if (existing && existing.date === dateStr) return existing;
+      // Brief delay to show "Mengirim..." state
+      setTimeout(() => {
+        const result = checkInAssignment(profile, assignmentId);
+        if (!result) {
+          setSubmittingId(null);
+          return;
+        }
+        updateProfile(profile.id, result);
+        setAnimateItemId(assignmentId);
+        showToast("✅ Misi dikirim ke orang tua untuk divalidasi.");
+        setSubmittingId(null);
 
-    // Generate 4-5 random items for today (Fisher-Yates)
-    const pool = [...CHECKLIST_POOL];
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [pool[i], pool[j]] = [pool[j], pool[i]];
-    }
-    const itemCount = profile.difficulty === "tk" ? 3 : profile.difficulty === "sd-bawah" ? 4 : 5;
-    const items = pool.slice(0, itemCount).map(item => ({
-      ...item,
-      isChecked: false,
-      isVerified: false,
-    }));
+        // Clear animation flag after transition
+        setTimeout(() => setAnimateItemId(null), 600);
+      }, 400);
+    },
+    [profile, submittingId, updateProfile, showToast]
+  );
 
-    return {
-      id: crypto.randomUUID(),
-      profileId: profile.id,
-      date: dateStr,
-      items,
-      completedCount: 0,
-      verifiedCount: 0,
-      rewardClaimed: false,
-      streak: existing?.streak || 0,
-    };
-  }, [dateStr, profile.dailyAdabChecklist, profile.id, profile.difficulty]);
+  // Handle child re-check after rejection
+  const handleRecheck = useCallback(
+    (assignmentId: string) => {
+      if (submittingId) return;
+      setSubmittingId(assignmentId);
 
-  // Persist new checklist
-  useEffect(() => {
-    if (checklist && checklist.date === dateStr && !profile.dailyAdabChecklist?.date?.startsWith(dateStr)) {
-      updateProfile(profile.id, { dailyAdabChecklist: checklist });
-    }
-  }, [checklist]);
+      setTimeout(() => {
+        const result = checkInAssignment(profile, assignmentId);
+        if (!result) {
+          setSubmittingId(null);
+          return;
+        }
+        updateProfile(profile.id, result);
+        setAnimateItemId(assignmentId);
+        showToast("💪 Misi dikirim ulang ke orang tua. Semangat!");
+        setSubmittingId(null);
 
-  const currentChecklist = profile.dailyAdabChecklist;
-  const items = currentChecklist?.items || [];
-  const completedCount = items.filter(i => i.isChecked).length;
-  const verifiedCount = items.filter(i => i.isVerified).length;
+        setTimeout(() => setAnimateItemId(null), 600);
+      }, 400);
+    },
+    [profile, submittingId, updateProfile, showToast]
+  );
 
-  const toggleItem = (itemId: string) => {
-    if (!currentChecklist) return;
-    const newItems = currentChecklist.items.map(i =>
-      i.id === itemId ? { ...i, isChecked: !i.isChecked, checkedAt: !i.isChecked ? new Date().toISOString() : undefined } : i
+  const isEmpty = summary.total === 0;
+  const allApproved =
+    summary.total > 0 &&
+    summary.notStarted === 0 &&
+    summary.pending === 0 &&
+    summary.rejected === 0;
+
+  // Render a single assignment card
+  const renderAssignmentCard = (item: DailyMissionAssignment) => {
+    const badge = STATUS_BADGE[item.status] || STATUS_BADGE.not_started;
+    const catMeta = DAILY_MISSION_CATEGORY_META[item.category];
+    const isPending =
+      item.status === "pending_parent_validation" || item.status === "checked_by_child";
+    const isApproved = item.status === "approved_by_parent";
+    const isRejected = item.status === "rejected_by_parent";
+    const isNotStarted = item.status === "not_started";
+    const isSubmitting = submittingId === item.id;
+    const isAnimating = animateItemId === item.id;
+
+    const cardBg = isApproved
+      ? "bg-[#E8F5E9] border-[#4CAF50]"
+      : isRejected
+        ? "bg-[#FFEBEE] border-[#E53935]"
+        : isPending
+          ? "bg-[#FFF8E1] border-[#FF9800]"
+          : "bg-white/80 border-[#D4B483]";
+
+    return (
+      <div
+        key={item.id}
+        className={cn(
+          "w-full rounded-[20px] p-3.5 text-left border-2 transition-all duration-300",
+          cardBg,
+          isAnimating && "animate-pop-in scale-[0.98] shadow-md",
+          "hover:shadow-sm"
+        )}
+      >
+        <div className="flex items-start gap-3">
+          {/* Category icon */}
+          <div
+            className={cn(
+              "h-10 w-10 rounded-full grid place-items-center shrink-0 mt-0.5 text-lg transition-colors duration-300",
+              isApproved
+                ? "bg-[#4CAF50]/20"
+                : isRejected
+                  ? "bg-[#E53935]/15"
+                  : isPending
+                    ? "bg-[#FF9800]/20"
+                    : "bg-[#E3F2FD]"
+            )}
+          >
+            {catMeta?.emoji || "✨"}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span
+                className={cn(
+                  "font-bold text-sm",
+                  isApproved
+                    ? "text-[#2E7D32]"
+                    : isRejected
+                      ? "text-[#C62828]"
+                      : isPending
+                        ? "text-[#E65100]"
+                        : "text-[#5A3515]"
+                )}
+              >
+                {item.title}
+              </span>
+              <span className="text-[10px] font-black bg-[#FFD54F]/30 text-[#E65100] px-1.5 py-0.5 rounded-full">
+                +{item.points} pts
+              </span>
+            </div>
+            {item.description && (
+              <div className="text-[11px] font-semibold text-[#8C6B45] mt-0.5 line-clamp-2">
+                {item.description}
+              </div>
+            )}
+
+            {/* Status badge */}
+            <div
+              className={cn(
+                "inline-flex items-center gap-1 mt-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full",
+                badge.bgClass,
+                badge.textClass
+              )}
+            >
+              <span>{badge.emoji}</span>
+              <span>{badge.label}</span>
+            </div>
+
+            {/* Subtle hint for pending */}
+            {isPending && (
+              <p className="text-[10px] text-[#E65100]/70 mt-1 italic">
+                Menunggu orang tua memeriksa.
+              </p>
+            )}
+
+            {/* Approved points */}
+            {isApproved && item.pointsAwarded > 0 && (
+              <p className="text-[11px] font-bold text-[#2E7D32] mt-1">
+                🎉 +{item.pointsAwarded} poin didapat
+              </p>
+            )}
+
+            {/* Parent note if rejected */}
+            {isRejected && item.parentNote && (
+              <div className="mt-1.5 text-[10px] font-semibold text-[#C62828] italic bg-[#FFEBEE] p-1.5 rounded-lg border border-[#E53935]/20">
+                💬 Catatan: {item.parentNote}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Action button */}
+        <div className="mt-2.5">
+          {isNotStarted && (
+            <button
+              onClick={() => handleCheckIn(item.id)}
+              disabled={isSubmitting}
+              className={cn(
+                "w-full py-2.5 rounded-xl font-black text-sm transition-all duration-200",
+                isSubmitting
+                  ? "bg-gray-300 text-gray-500 cursor-wait"
+                  : "bg-gradient-to-r from-[#4CAF50] to-[#2E8B12] border-b-3 border-[#1B5E20] text-white active:translate-y-0.5 active:border-b-0"
+              )}
+            >
+              {isSubmitting ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full" />
+                  Mengirim…
+                </span>
+              ) : (
+                "✅ Saya sudah melakukan"
+              )}
+            </button>
+          )}
+
+          {isPending && (
+            <button
+              disabled
+              className="w-full py-2.5 rounded-xl bg-[#FFF3E0] border border-[#FF9800]/30 text-[#E65100]/70 font-bold text-sm cursor-not-allowed"
+            >
+              ⏳ Menunggu Validasi Orang Tua
+            </button>
+          )}
+
+          {isApproved && (
+            <div className="w-full py-2.5 rounded-xl bg-[#E8F5E9] border border-[#4CAF50]/30 text-[#2E7D32] font-bold text-sm text-center cursor-default">
+              ✅ Disetujui · +{item.pointsAwarded} poin
+            </div>
+          )}
+
+          {isRejected && (
+            <button
+              onClick={() => handleRecheck(item.id)}
+              disabled={isSubmitting}
+              className={cn(
+                "w-full py-2.5 rounded-xl font-black text-sm transition-all duration-200",
+                isSubmitting
+                  ? "bg-gray-300 text-gray-500 cursor-wait"
+                  : "bg-gradient-to-r from-[#FF9800] to-[#F57C00] border-b-3 border-[#E65100] text-white active:translate-y-0.5 active:border-b-0"
+              )}
+            >
+              {isSubmitting ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full" />
+                  Mengirim…
+                </span>
+              ) : (
+                "🔄 Saya sudah mengulang"
+              )}
+            </button>
+          )}
+        </div>
+      </div>
     );
-    updateProfile(profile.id, {
-      dailyAdabChecklist: {
-        ...currentChecklist,
-        items: newItems,
-        completedCount: newItems.filter(i => i.isChecked).length,
-      },
-    });
   };
 
-  const claimReward = () => {
-    if (!currentChecklist || currentChecklist.rewardClaimed || completedCount < items.length) return;
-    const xpGain = 30 + (verifiedCount * 10);
-    updateProfile(profile.id, {
-      xp: profile.xp + xpGain,
-      points: profile.points + 20,
-      dailyAdabChecklist: {
-        ...currentChecklist,
-        rewardClaimed: true,
-        streak: currentChecklist.streak + 1,
-      },
-    });
+  // Render a section
+  const renderSection = (key: ChildSection, items: DailyMissionAssignment[]) => {
+    const meta = SECTION_META[key];
+    if (items.length === 0) {
+      // Hide empty "approved" section unless everything is done
+      if (key === "approved" && !allApproved) return null;
+      if (key === "pending" || key === "rejected") return null;
+      // For not_started when empty but total > 0, show a friendly empty
+      if (key === "not_started" && summary.total > 0) {
+        return (
+          <div className="mb-3">
+            <h3 className="font-display font-black text-sm text-[#5A3515] mb-2 flex items-center gap-2">
+              <span>{meta.emoji}</span> {meta.label}
+            </h3>
+            <div className="rounded-[18px] bg-[#FDF8F0] border-2 border-dashed border-[#D4B483] p-4 text-center">
+              <div className="text-3xl mb-1">{meta.emptyEmoji}</div>
+              <p className="text-xs font-bold text-[#8C6B45]">{meta.emptyText}</p>
+              {meta.emptySub && (
+                <p className="text-[10px] text-[#8C6B45]/70 mt-0.5">{meta.emptySub}</p>
+              )}
+            </div>
+          </div>
+        );
+      }
+      return null;
+    }
+
+    return (
+      <div className="mb-3" key={key}>
+        <h3 className="font-display font-black text-sm text-[#5A3515] mb-2 flex items-center gap-2">
+          <span>{meta.emoji}</span> {meta.label}
+          <span className="text-[10px] font-bold text-[#8C6B45] bg-white/60 px-1.5 py-0.5 rounded-full">
+            {items.length}
+          </span>
+        </h3>
+        <div className="space-y-2.5">
+          {items.map(renderAssignmentCard)}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -127,146 +420,155 @@ export function DailyMissionsScreen({ profile, onBack }: Props) {
         </button>
         <div className="flex-1 min-w-0">
           <h1 className="font-display font-black text-xl sm:text-2xl text-[#5A3515] truncate">
-            Misi Harian Adab
+            Misi Harian
           </h1>
           <p className="text-xs sm:text-sm text-[#8C6B45] truncate">
-            Checklist kebaikan hari ini ✨
+            Centang misi yang sudah kamu lakukan hari ini ✨
           </p>
         </div>
         <div className="text-2xl sm:text-3xl shrink-0">☀️</div>
       </header>
 
-      <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain content-wrapper space-y-4 pb-6">
-        {/* Progress Card */}
-        <GameCard tone="coin" className="text-white border-[#E65100]/50 bg-gradient-to-br from-[#FF9800] to-[#F57C00]">
-          <div className="flex justify-between items-center">
-            <div>
-              <div className="text-sm font-bold opacity-80 uppercase">Progres Hari Ini</div>
-              <div className="font-display font-black text-2xl">
-                {completedCount} / {items.length} Selesai
+      <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain content-wrapper space-y-4 pb-6">
+        {/* Toast message */}
+        {toastMessage && (
+          <div className="rounded-2xl bg-[#E8F5E9] border-2 border-[#4CAF50] p-3 text-center text-sm font-bold text-[#2E7D32] animate-pop-in shadow-md">
+            {toastMessage}
+          </div>
+        )}
+
+        {/* Empty state - absolutely no missions */}
+        {isEmpty && (
+          <GameCard tone="cream" className="text-center py-8">
+            <div className="text-5xl mb-4">📋</div>
+            <h2 className="font-display font-black text-lg text-[#5A3515] mb-2">
+              Belum ada Misi Harian
+            </h2>
+            <p className="text-sm font-bold text-[#8C6B45]">
+              Belum ada Misi Harian dari orang tua.
+            </p>
+          </GameCard>
+        )}
+
+        {!isEmpty && (
+          <>
+            {/* ═══ Progress Summary ═══ */}
+            <GameCard
+              tone="coin"
+              className="text-white border-[#E65100]/50 bg-gradient-to-br from-[#FF9800] to-[#F57C00]"
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="text-xs font-bold opacity-80 uppercase tracking-wide">
+                    Misi Hari Ini
+                  </div>
+                  <div className="font-display font-black text-xl mt-0.5">
+                    {summary.approved} dari {summary.total} Disetujui
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-3xl">🔥</div>
+                  <div className="text-xs font-bold">{streak.currentStreak} Hari Beruntun</div>
+                </div>
               </div>
-              {verifiedCount > 0 && (
-                <div className="text-xs font-bold opacity-80 mt-0.5">
-                  ✅ {verifiedCount} diverifikasi orang tua
+
+              {/* Progress bar */}
+              <div className="mt-3 h-3 rounded-full bg-black/20 overflow-hidden">
+                <div
+                  className="h-full bg-[#FFD54F] transition-all duration-700 ease-out"
+                  style={{
+                    width: `${summary.total > 0 ? (summary.approved / summary.total) * 100 : 0}%`,
+                  }}
+                />
+              </div>
+
+              {/* Quick stats row */}
+              <div className="mt-2.5 grid grid-cols-3 gap-1.5">
+                <div className="bg-white/15 rounded-xl p-2 text-center">
+                  <div className="text-lg">⏳</div>
+                  <div className="font-black text-sm">{summary.pending}</div>
+                  <div className="text-[9px] font-bold opacity-70">Menunggu</div>
+                </div>
+                <div className="bg-white/15 rounded-xl p-2 text-center">
+                  <div className="text-lg">🔄</div>
+                  <div className="font-black text-sm">{summary.rejected}</div>
+                  <div className="text-[9px] font-bold opacity-70">Diulang</div>
+                </div>
+                <div className="bg-white/15 rounded-xl p-2 text-center">
+                  <div className="text-lg">⭐</div>
+                  <div className="font-black text-sm">+{summary.totalPointsEarned}</div>
+                  <div className="text-[9px] font-bold opacity-70">Poin</div>
+                </div>
+              </div>
+
+              {summary.totalPointsPending > 0 && (
+                <div className="mt-1.5 text-[10px] font-bold opacity-70 text-center">
+                  💎 {summary.totalPointsPending} poin menunggu validasi
                 </div>
               )}
-            </div>
-            <div className="text-right">
-              <div className="text-3xl mb-1">🔥</div>
-              <div className="text-sm font-bold">{currentChecklist?.streak || 0} Hari Beruntun</div>
-            </div>
-          </div>
-          <div className="mt-3 h-3 rounded-full bg-black/20 overflow-hidden">
-            <div
-              className="h-full bg-[#FFD54F] transition-all duration-500"
-              style={{ width: `${items.length > 0 ? (completedCount / items.length) * 100 : 0}%` }}
-            />
-          </div>
-        </GameCard>
+            </GameCard>
 
-        {/* Checklist Items */}
-        <div>
-          <h2 className="font-display font-black text-lg text-[#5A3515] mb-3 flex items-center gap-2">
-            <span>📋</span> Checklist Hari Ini
-          </h2>
-          <div className="space-y-2.5">
-            {items.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => toggleItem(item.id)}
-                className={cn(
-                  "w-full rounded-[20px] p-3.5 text-left border-2 transition-all active:translate-y-[2px]",
-                  item.isChecked
-                    ? "bg-[#E8F5E9] border-[#4CAF50] shadow-sm"
-                    : "bg-white/80 border-[#D4B483] hover:border-[#FF9800]",
-                )}
+            {/* ═══ Sections ═══ */}
+            {renderSection("not_started", sections.not_started)}
+            {renderSection("rejected", sections.rejected)}
+            {renderSection("pending", sections.pending)}
+            {renderSection("approved", sections.approved)}
+
+            {/* ═══ All Done Celebration ═══ */}
+            {allApproved && (
+              <GameCard
+                tone="meadow"
+                className="text-center border-[#2E8B12] bg-gradient-to-br from-[#E8F5E9] to-[#C8E6C9]"
               >
-                <div className="flex items-start gap-3">
-                  <div className={cn(
-                    "h-7 w-7 rounded-full border-2 grid place-items-center shrink-0 mt-0.5 transition-all",
-                    item.isChecked
-                      ? "bg-[#4CAF50] border-[#4CAF50] text-white"
-                      : "bg-white border-[#CBB794]"
-                  )}>
-                    {item.isChecked ? "✓" : ""}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className={cn(
-                      "font-bold text-sm",
-                      item.isChecked ? "text-[#2E7D32]" : "text-[#5A3515]"
-                    )}>
-                      {item.title}
-                    </div>
-                    <div className="text-[11px] font-semibold text-[#8C6B45] mt-0.5">
-                      {item.description}
-                    </div>
-                    {item.requiresParentVerification && (
-                      <div className="flex items-center gap-1 mt-1.5">
-                        {item.isVerified ? (
-                          <span className="text-[10px] font-bold text-[#4CAF50] bg-[#E8F5E9] px-2 py-0.5 rounded-full">
-                            ✅ Diverifikasi Orang Tua
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-bold text-[#FF9800] bg-[#FFF3E0] px-2 py-0.5 rounded-full">
-                            ⏳ Menunggu Konfirmasi Orang Tua
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  {item.isChecked && (
-                    <div className="text-xl shrink-0 self-center">{item.isVerified ? "🌟" : "⭐"}</div>
-                  )}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Reward Section */}
-        <div className="pt-2">
-          <h2 className="font-display font-black text-lg text-[#5A3515] mb-2">Hadiah Harian</h2>
-          <GameCard tone={completedCount === items.length && !currentChecklist?.rewardClaimed ? "coin" : "cream"} className="overflow-hidden">
-            <div className="min-w-0">
-              <div className="font-bold text-[#5A3515] mb-1">
-                {currentChecklist?.rewardClaimed
-                  ? "✅ Hadiah Sudah Diklaim"
-                  : completedCount === items.length
-                    ? "🎉 Semua checklist selesai!"
-                    : `Selesaikan ${items.length - completedCount} checklist lagi`}
-              </div>
-              <div className="text-sm font-bold text-[#8C6B45] mb-3">
-                +{30 + (verifiedCount * 10)} XP, +20 Poin
-                {verifiedCount > 0 && <span className="text-[#4CAF50]"> (+bonus verifikasi)</span>}
-              </div>
-              <button
-                disabled={completedCount < items.length || currentChecklist?.rewardClaimed}
-                onClick={claimReward}
-                className={cn(
-                  "w-full py-2.5 rounded-[18px] font-black text-sm transition-all",
-                  completedCount === items.length && !currentChecklist?.rewardClaimed
-                    ? "bg-gradient-meadow border-b-4 border-[#2E7D32] text-white active:translate-y-[2px] active:border-b-0"
-                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                )}
-              >
-                🎁 Klaim Hadiah
-              </button>
-            </div>
-          </GameCard>
-
-          {/* Parent note */}
-          <div className="mt-3 bg-[#FFF3E0] rounded-[18px] p-3 border border-[#FF9800]/20">
-            <div className="flex items-start gap-2">
-              <span className="text-xl shrink-0">👨‍👩‍👧</span>
-              <div>
-                <div className="text-xs font-black text-[#E65100] uppercase">Untuk Orang Tua</div>
-                <p className="text-[11px] font-bold text-[#8C6B45] mt-0.5 leading-relaxed">
-                  Beberapa checklist perlu verifikasi orang tua. Buka <strong>Dashboard Orang Tua</strong> untuk memverifikasi dan memberi semangat pada ananda!
+                <div className="text-4xl mb-2 animate-bounce-in">🎉</div>
+                <h3 className="font-display font-black text-lg text-[#2E8B12]">
+                  MasyaAllah! Semua misi hari ini sudah disetujui.
+                </h3>
+                <p className="text-sm font-bold text-[#4CAF50] mt-1">
+                  Hebat! Orang tua sudah memvalidasi semua misimu.
                 </p>
+                {summary.bonusEarned > 0 && (
+                  <p className="text-xs font-bold text-[#D48806] mt-1.5">
+                    🎁 Bonus selesai semua: +{summary.bonusEarned} poin
+                  </p>
+                )}
+              </GameCard>
+            )}
+
+            {/* Streak info */}
+            {streak.currentStreak >= 3 && (
+              <div className="rounded-[18px] bg-[#FFF8E1] border-2 border-[#FFD54F] p-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🔥</span>
+                  <div className="text-xs font-bold text-[#E65100]">
+                    Streak {streak.currentStreak} hari!
+                    {streak.currentStreak >= 30 && " 🏆 Lencana Istiqamah 30 Hari!"}
+                    {streak.currentStreak >= 7 &&
+                      streak.currentStreak < 30 &&
+                      " ⭐ Lencana Konsisten 7 Hari!"}
+                    {streak.currentStreak >= 3 &&
+                      streak.currentStreak < 7 &&
+                      " Teruskan semangatmu!"}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Parent note */}
+            <div className="rounded-[18px] bg-[#FFF3E0] border-2 border-[#FF9800]/20 p-3">
+              <div className="flex items-start gap-2">
+                <span className="text-xl shrink-0">👨‍👩‍👧</span>
+                <div>
+                  <div className="text-xs font-black text-[#E65100] uppercase">Untuk Kamu</div>
+                  <p className="text-[11px] font-bold text-[#8C6B45] mt-0.5 leading-relaxed">
+                    Setelah kamu mencentang misi, orang tua akan memvalidasi di Dashboard Orang
+                    Tua. Poin akan masuk setelah disetujui!
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          </>
+        )}
       </main>
 
       {/* Bottom */}

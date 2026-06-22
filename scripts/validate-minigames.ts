@@ -18,7 +18,7 @@ const REQUIRED_PACKAGES: MiniGamePackageId[] = ["fokus-cepat", "adab", "logika",
 const REQUIRED_GAMES: Record<string, string[]> = {
   "fokus-cepat": ["hitung-kilat", "pola-kilat", "ingatan-cepat", "cari-berbeda"],
   "adab": ["pilih-sikap", "nasihat-lembut", "urutkan-adab", "dilema-bijak"],
-  "logika": ["detektif-petunjuk", "tebak-aturan", "pilih-kesimpulan", "benar-atau-salah"],
+  "logika": ["detektif-petunjuk", "tebak-aturan", "pilih-kesimpulan", "benar-atau-salah", "kode-warna"],
   "spasial": ["ubah-posisi", "cocok-bayangan", "jalur-tercepat"],
   "keluarga": ["misi-keluarga", "family-challenge"],
 };
@@ -81,7 +81,7 @@ function main() {
     "moral-choice", "gentle-advice", "adab-sort", "wisdom-dilemma",
     "detective-clues", "guess-rule", "pick-conclusion", "true-or-false",
     "change-position", "match-shadow", "fastest-path",
-    "family-mission", "family-challenge",
+    "family-mission", "family-challenge", "color-code",
   ]);
 
   const invalidTypes = MINI_GAMES.filter(g => !validGameTypes.has(g.gameType));

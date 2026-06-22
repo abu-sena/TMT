@@ -2,6 +2,8 @@ import { Component, type ReactNode } from "react";
 import type { Profile } from "@/types";
 import { CATEGORIES } from "@/data/constants";
 import { computeStats } from "@/lib/stats-service";
+import { getTodaySummary, getStreak } from "@/lib/dailyMissions";
+import { DAILY_MISSION_CATEGORY_META } from "@/types";
 import { CategoryProgress } from "../game/CategoryProgress";
 import { GameButton } from "../game/GameButton";
 import { GameCard } from "../game/GameCard";
@@ -290,6 +292,12 @@ export function StatsScreen({ profile, onBack }: Props) {
                 </GameCard>
               )}
 
+              {/* Daily Mission Status */}
+              <DailyMissionSection profile={profile} />
+
+              {/* Difficulty Completion Status */}
+              <DifficultyCompletionSection profile={profile} />
+
               {/* Category Progress */}
               <div>
                 <div className="px-1 py-2 text-xs font-bold uppercase text-[#5A3515]/80">
@@ -321,7 +329,167 @@ export function StatsScreen({ profile, onBack }: Props) {
   );
 }
 
+// ── Difficulty Completion Section ──
+
+function DifficultyCompletionSection({ profile }: { profile: Profile }) {
+  const DIFFICULTIES: Array<{ id: import("@/types").DifficultyId; label: string; emoji: string }> = [
+    { id: "tk", label: "TK", emoji: "🌸" },
+    { id: "sd-bawah", label: "SD Bawah", emoji: "🌱" },
+    { id: "sd-atas", label: "SD Atas", emoji: "🌿" },
+    { id: "smp", label: "SMP", emoji: "🌳" },
+    { id: "sma", label: "SMA", emoji: "🏔️" },
+    { id: "universitas", label: "Universitas", emoji: "🎓" },
+  ];
+
+  const claimedRewards = profile.claimedFinalRewardsByDifficulty || {};
+  const hasAnyCompletion = DIFFICULTIES.some(d => claimedRewards[d.id]?.rewardClaimed);
+
+  if (!hasAnyCompletion && profile.completedDifficulties.length === 0) return null;
+
+  return (
+    <div className="rounded-[18px] bg-gradient-cream border-2 border-[#8C6B45]/40 p-4 shadow-pop-sm">
+      <h3 className="font-display font-black text-lg text-[#5A3515] mb-2">
+        🏆 Progres Level Kesulitan
+      </h3>
+      <div className="space-y-1.5">
+        {DIFFICULTIES.map((d) => {
+          const reward = claimedRewards[d.id];
+          const isCompleted = reward?.rewardClaimed || profile.completedDifficulties.includes(d.id);
+          const isUnlocked = profile.unlockedDifficulties.includes(d.id);
+          const isCurrent = profile.currentDifficulty === d.id || profile.difficulty === d.id;
+          const isPending = reward?.rewardPending;
+
+          return (
+            <div
+              key={d.id}
+              className={`flex items-center gap-2 rounded-xl p-2 text-xs ${
+                isCompleted
+                  ? "bg-[#2E8B12]/10 border border-[#2E8B12]/20"
+                  : isCurrent
+                    ? "bg-[#185E9F]/10 border border-[#185E9F]/20"
+                    : isUnlocked
+                      ? "bg-white/50 border border-[#CBB794]/20"
+                      : "bg-stone-100/50 border border-stone-200"
+              }`}
+            >
+              <span className="text-lg">{d.emoji}</span>
+              <span className="flex-1 font-bold text-[#5A3515]">{d.label}</span>
+              {isCompleted ? (
+                <span className="text-[#2E8B12] font-black text-xs">✅ Selesai</span>
+              ) : isPending ? (
+                <span className="text-[#D48806] font-black text-xs animate-pulse">🎁 Hadiah</span>
+              ) : isCurrent ? (
+                <span className="text-[#185E9F] font-black text-xs">📍 Aktif</span>
+              ) : isUnlocked ? (
+                <span className="text-[#8C6B45] font-bold text-xs">🔓 Terbuka</span>
+              ) : (
+                <span className="text-stone-400 font-bold text-xs">🔒</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {profile.pendingDifficultyUpgrade && (
+        <div className="mt-2 text-center text-[10px] font-bold text-[#2E8B12] bg-[#2E8B12]/10 rounded-xl py-1.5">
+          🚀 Level baru sudah terbuka! Buka dari Peta atau Beranda.
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Stat Tile component ──
+
+// ── Daily Mission Section ──
+
+function DailyMissionSection({ profile }: { profile: Profile }) {
+  const summary = getTodaySummary(profile);
+  const streak = getStreak(profile);
+
+  if (summary.total === 0 && streak.currentStreak === 0) return null;
+
+  return (
+    <div className="rounded-[18px] bg-gradient-to-br from-[#FFF8E1] to-[#FFE0B2] border-2 border-[#FF9800]/40 p-4 shadow-pop-sm">
+      <h3 className="font-display font-black text-lg text-[#E65100] mb-2">
+        ☀️ Misi Harian
+      </h3>
+      
+      {/* Today's progress */}
+      {summary.total > 0 && (
+        <div className="space-y-1.5 mb-3">
+          <div className="flex justify-between text-xs font-bold">
+            <span className="text-[#8C6B45]">Progres Hari Ini</span>
+            <span className="text-[#5A3515]">{summary.approved}/{summary.total} Disetujui</span>
+          </div>
+          <div className="h-2 rounded-full bg-white/60 overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-[#FF9800] to-[#FFD54F] transition-all"
+              style={{ width: `${summary.total > 0 ? (summary.approved / summary.total) * 100 : 0}%` }}
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-1 text-center text-[10px]">
+            <div className="bg-white/50 rounded-lg py-1">
+              <div className="font-black text-[#4CAF50]">{summary.approved}</div>
+              <div className="text-[#8C6B45]">Disetujui</div>
+            </div>
+            <div className="bg-white/50 rounded-lg py-1">
+              <div className="font-black text-[#FF9800]">{summary.pending}</div>
+              <div className="text-[#8C6B45]">Pending</div>
+            </div>
+            <div className="bg-white/50 rounded-lg py-1">
+              <div className="font-black text-[#E53935]">{summary.rejected}</div>
+              <div className="text-[#8C6B45]">Diulang</div>
+            </div>
+          </div>
+          <div className="flex justify-between text-[10px] font-bold mt-1">
+            <span className="text-[#8C6B45]">Poin hari ini</span>
+            <span className="text-[#D48806]">+{summary.totalPointsEarned}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Streak */}
+      {streak.currentStreak > 0 && (
+        <div className="flex items-center gap-2 bg-white/50 rounded-xl p-2">
+          <span className="text-xl">🔥</span>
+          <div>
+            <div className="text-xs font-black text-[#E65100]">Streak {streak.currentStreak} Hari</div>
+            <div className="text-[10px] text-[#8C6B45]">
+              Terpanjang: {streak.longestStreak} hari
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Last 7 days quick view */}
+      {summary.total > 0 && (
+        <div className="mt-2 flex gap-1">
+          {Array.from({ length: 7 }).map((_, i) => {
+            const d = new Date(Date.now() - (6 - i) * 86400000).toISOString().split("T")[0];
+            const dayAssignments = (profile.dailyMissionAssignments || []).filter(a => a.date === d);
+            const dayApproved = dayAssignments.filter(a => a.status === "approved_by_parent").length;
+            const dayTotal = dayAssignments.length;
+            const hasActivity = dayTotal > 0;
+            const allDone = hasActivity && dayApproved === dayTotal;
+            return (
+              <div
+                key={d}
+                className={`flex-1 rounded-lg py-1 text-center text-[9px] font-bold ${
+                  allDone ? "bg-[#4CAF50] text-white" :
+                  hasActivity ? "bg-[#FF9800]/30 text-[#E65100]" :
+                  "bg-gray-100 text-gray-400"
+                }`}
+                title={d}
+              >
+                {allDone ? "✓" : hasActivity ? dayApproved : "·"}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function StatTile({
   label,

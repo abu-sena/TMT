@@ -23,5 +23,9 @@ export const STORAGE_KEYS = {
  *   1 — Initial schema (2025-06-15).
  *   2 — Added difficulty upgrade fields (unlockedDifficulties, currentDifficulty, etc.)
  *   3 — Added gender field. Renamed sd-kecil→sd-bawah, sd-muda→sd-atas.
+ *   4 — Added difficulty completion rewards (stage 500 final reward system).
+ *   5 — Added DailyAdabChecklistItem status enum, parent validation flow fields.
+ *   6 — Added completedCount & firstCompletedAt to MissionProgress (replay 1/4 reward).
+ *   7 — Migrate DailyAdabChecklist → DailyMissionAssignments; add dailyMissions to store.
  */
-export const CURRENT_VERSION = 3;
+export const CURRENT_VERSION = 7;

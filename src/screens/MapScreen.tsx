@@ -1,13 +1,15 @@
 import { useMemo, useState, useEffect, useRef } from "react";
-import type { Mission, Profile } from "@/types";
-import { DIFFICULTY_MAP } from "@/data/constants";
-import { missionsForDifficulty } from "@/lib/progress";
+import type { Mission, Profile, DifficultyId } from "@/types";
+import { DIFFICULTY_MAP, DIFFICULTY_UI_LABELS } from "@/data/constants";
+import { DIFFICULTY_ORDER } from "@/types";
+import { missionsForDifficulty, getDifficultyStatus, getStageCompletionStatus } from "@/lib/progress";
 import { WORLDS_BY_DIFFICULTY } from "@/data/worlds";
 import type { WorldDefinition } from "@/types";
 import { GameScreen } from "@/components/layout/GameScreen";
 import { FixedBottomActionArea } from "@/components/layout/FixedBottomActionArea";
 import { GameButton } from "../game/GameButton";
 import { cn } from "@/lib/utils";
+import { CATEGORY_MAP } from "@/data/constants";
 
 // ══════════════════════════════════════════
 // Map Configuration
@@ -22,16 +24,22 @@ interface MapProps {
   profile: Profile;
   onBack: () => void;
   onOpenMission: (m: Mission) => void;
+  onChangeDifficulty?: (diff: DifficultyId) => void;
+  onHomeUpgrade?: () => void;
 }
 
 // ══════════════════════════════════════════
 // Main Map Screen
 // ══════════════════════════════════════════
-export function MapScreen({ profile, onBack, onOpenMission }: MapProps) {
+export function MapScreen({ profile, onBack, onOpenMission, onChangeDifficulty, onHomeUpgrade }: MapProps) {
   const missions = useMemo(() => missionsForDifficulty(profile.difficulty), [profile.difficulty]);
   const diff = DIFFICULTY_MAP[profile.difficulty];
   const worlds = useMemo(() => WORLDS_BY_DIFFICULTY[profile.difficulty] || [], [profile.difficulty]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Difficulty selector state
+  const [showDifficultySelector, setShowDifficultySelector] = useState(false);
+  const [lockedMessage, setLockedMessage] = useState<string | null>(null);
 
   // Highest completed stage
   const highestCompleted = useMemo(() => {
@@ -55,6 +63,10 @@ export function MapScreen({ profile, onBack, onOpenMission }: MapProps) {
   }, [missions, currentStageNum, worlds]);
 
   const [activeSegmentIndex, setActiveSegmentIndex] = useState(currentWorldIndex);
+  const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
+
+  // Pending upgrade
+  const hasPendingUpgrade = profile.difficultyUpgradeAvailable && profile.pendingDifficultyUpgrade;
 
   // Auto scroll to current segment when changing segments
   useEffect(() => {
@@ -116,15 +128,126 @@ export function MapScreen({ profile, onBack, onOpenMission }: MapProps) {
         >
           ←
         </button>
+        
+        {/* Difficulty selector button */}
+        <button
+          onClick={() => setShowDifficultySelector(!showDifficultySelector)}
+          className="h-12 sm:h-14 px-3 rounded-[18px] bg-white/90 border-3 border-[#CBB794] text-[#5A3515] flex items-center gap-1.5 shadow-pop-sm shrink-0 active:translate-y-[2px]"
+          aria-label="Pilih Level Kesulitan"
+        >
+          <span className="text-xl">{diff.emoji}</span>
+          <span className="font-display font-black text-xs sm:text-sm">{diff.shortLabel}</span>
+          <span className="text-xs">{showDifficultySelector ? "▲" : "▼"}</span>
+        </button>
+        
         <div className="flex-1 min-w-0 bg-white/80 backdrop-blur-md px-4 py-2 rounded-2xl border-2 border-white/50 shadow-sm">
           <h1 className="font-display font-black text-xl text-[#5A3515] truncate">
             {activeWorld.name}
           </h1>
           <p className="text-[#8C6B45] text-xs font-bold truncate">
-            {diff.emoji} Segmen {activeSegmentIndex + 1} dari {worlds.length}
+            Stage {currentStageNum} · Segmen {activeSegmentIndex + 1} dari {worlds.length}
           </p>
         </div>
       </header>
+
+      {/* Difficulty Selector Dropdown */}
+      {showDifficultySelector && (
+        <div className="shrink-0 content-wrapper relative z-30 mx-4">
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl border-3 border-[#CBB794] shadow-2xl p-3 space-y-1.5">
+            <h3 className="font-display font-black text-sm text-[#5A3515] text-center mb-1">
+              Pilih Level Kesulitan
+            </h3>
+            {DIFFICULTY_ORDER.map((d) => {
+              const status = getDifficultyStatus(profile, d);
+              const info = DIFFICULTY_MAP[d];
+              const progress = getStageCompletionStatus(profile, d);
+              
+              return (
+                <button
+                  key={d}
+                  onClick={() => {
+                    if (status === "locked") {
+                      setLockedMessage(`Selesaikan 500 misi di level sebelumnya untuk membuka level ${info.label}.`);
+                      return;
+                    }
+                    if (status === "active") {
+                      setShowDifficultySelector(false);
+                      return;
+                    }
+                    onChangeDifficulty?.(d);
+                    setShowDifficultySelector(false);
+                  }}
+                  className={`w-full rounded-xl p-2.5 flex items-center gap-3 text-left transition-all active:scale-[0.98] ${
+                    status === "active"
+                      ? "bg-[#185E9F]/10 border-2 border-[#185E9F]"
+                      : status === "completed"
+                        ? "bg-[#2E8B12]/10 border-2 border-[#2E8B12]"
+                        : status === "unlocked"
+                          ? "bg-white/70 border-2 border-[#CBB794] hover:bg-[#E8F5E9]/50"
+                          : "bg-stone-100/70 border-2 border-stone-300 opacity-60"
+                  }`}
+                >
+                  <span className="text-2xl shrink-0">{info.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-display font-black text-sm text-[#5A3515]">{info.label}</span>
+                      {status === "active" && (
+                        <span className="text-[10px] bg-[#185E9F] text-white px-2 py-0.5 rounded-full font-bold">📍 Aktif</span>
+                      )}
+                      {status === "completed" && (
+                        <span className="text-[10px] bg-[#2E8B12] text-white px-2 py-0.5 rounded-full font-bold">✅ Selesai</span>
+                      )}
+                      {status === "locked" && (
+                        <span className="text-[10px] bg-stone-400 text-white px-2 py-0.5 rounded-full font-bold">🔒</span>
+                      )}
+                    </div>
+                    <div className="text-[10px] font-bold text-[#8C6B45]">
+                      {progress.label} stage
+                    </div>
+                  </div>
+                  {status === "unlocked" && (
+                    <span className="text-[#2E8B12] text-xs font-black">➜</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Locked difficulty message toast */}
+      {lockedMessage && (
+        <div className="shrink-0 content-wrapper mx-4">
+          <div className="bg-[#FFF3E0] border-2 border-[#FF9800] rounded-2xl p-3 flex items-start gap-2">
+            <span className="text-xl shrink-0">🔒</span>
+            <div className="flex-1">
+              <p className="text-xs font-bold text-[#E65100]">{lockedMessage}</p>
+            </div>
+            <button onClick={() => setLockedMessage(null)} className="text-sm text-[#8C6B45] shrink-0">✕</button>
+          </div>
+        </div>
+      )}
+
+      {/* Pending Upgrade Banner ("Nanti Dulu" was chosen) */}
+      {hasPendingUpgrade && profile.pendingDifficultyUpgrade && !showDifficultySelector && (
+        <div className="shrink-0 content-wrapper mx-4 mb-2">
+          <div className="bg-gradient-to-r from-[#E8F5E9] to-[#A5D6A7] border-3 border-[#2E8B12] rounded-2xl p-3 flex items-center gap-3">
+            <span className="text-2xl shrink-0">{DIFFICULTY_MAP[profile.pendingDifficultyUpgrade]?.emoji || "🚀"}</span>
+            <div className="flex-1 min-w-0">
+              <p className="font-display font-black text-sm text-[#2E8B12]">
+                {DIFFICULTY_UI_LABELS[profile.pendingDifficultyUpgrade] || profile.pendingDifficultyUpgrade} sudah terbuka!
+              </p>
+              <p className="text-[10px] font-bold text-[#5A3515]">Siap naik tingkat?</p>
+            </div>
+            <button
+              onClick={() => onHomeUpgrade?.()}
+              className="shrink-0 px-4 py-2 rounded-xl bg-gradient-meadow border-b-3 border-[#1B5E20] text-white font-black text-sm shadow-sm active:translate-y-1 active:border-b-0 transition-all"
+            >
+              🚀 Naik
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Map Segment Container */}
       <div 
@@ -137,7 +260,7 @@ export function MapScreen({ profile, onBack, onOpenMission }: MapProps) {
           world={activeWorld}
           highestCompleted={highestCompleted}
           isUnlocked={isSegmentUnlocked}
-          onOpenMission={onOpenMission}
+          onOpenMission={setSelectedMission}
         />
       </div>
 
@@ -165,6 +288,40 @@ export function MapScreen({ profile, onBack, onOpenMission }: MapProps) {
           </GameButton>
         </div>
       </FixedBottomActionArea>
+    
+      {selectedMission && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4" onClick={() => setSelectedMission(null)}>
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm border-4 border-[#8C6B45] shadow-2xl relative" onClick={e => e.stopPropagation()}>
+            <button 
+              className="absolute top-3 right-3 w-8 h-8 rounded-full bg-stone-200 text-stone-600 font-bold flex items-center justify-center hover:bg-stone-300"
+              onClick={() => setSelectedMission(null)}
+            >
+              ✕
+            </button>
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-black text-[#5A3515] font-display mb-1">
+                Stage {selectedMission.number}
+              </h2>
+              <div className="inline-flex items-center gap-2 bg-stone-100 px-3 py-1.5 rounded-full text-sm font-bold text-stone-600 mb-4">
+                <span>{CATEGORY_MAP[selectedMission.category]?.emoji || "🎮"}</span>
+                <span>Jenis: {CATEGORY_MAP[selectedMission.category]?.short || selectedMission.category}</span>
+              </div>
+              <p className="text-lg text-[#8C6B45] font-bold">
+                Tantangan:<br/>
+                <span className="text-[#E91E63]">{selectedMission.challengeType?.replace(/_/g, " ").toUpperCase() || selectedMission.missionType.replace(/_/g, " ").toUpperCase()}</span>
+              </p>
+            </div>
+            <GameButton variant="primary" size="xl" full onClick={() => {
+              const m = selectedMission;
+              setSelectedMission(null);
+              onOpenMission(m);
+            }}>
+              Mulai Petualangan
+            </GameButton>
+          </div>
+        </div>
+      )}
+
     </GameScreen>
   );
 }
@@ -226,20 +383,19 @@ function MapSegment({ missions, profile, world, highestCompleted, isUnlocked, on
     }
   }
 
-  // Determine background style
+  // Determine background style based on world.backgroundTheme
   const getBgStyle = () => {
-    // Simple colorful backgrounds representing different areas
-    const bgs = [
-      "linear-gradient(to top, #7CB342, #AED581)", // Grass
-      "linear-gradient(to top, #4DD0E1, #81D4FA)", // Water/Beach
-      "linear-gradient(to top, #8D6E63, #BCAAA4)", // Mountain/Cave
-      "linear-gradient(to top, #FBC02D, #FFF176)", // Desert/Sand
-      "linear-gradient(to top, #AB47BC, #CE93D8)", // Magic
-    ];
-    // Hash world.id to an index, or use themeColor directly
-    let hash = 0;
-    for(let i = 0; i < world.id.length; i++) hash += world.id.charCodeAt(i);
-    return { background: bgs[hash % bgs.length] };
+    const themeBackgrounds: Record<string, string> = {
+      forest: "linear-gradient(to top, #2E7D32, #66BB6A, #A5D6A7)",
+      grassland: "linear-gradient(to top, #558B2F, #9CCC65, #C5E1A5)",
+      river_bridge: "linear-gradient(to top, #0288D1, #4FC3F7, #B3E5FC)",
+      cave: "linear-gradient(to top, #3E2723, #6D4C41, #8D6E63)",
+      mountain: "linear-gradient(to top, #37474F, #607D8B, #90A4AE)",
+      beach: "linear-gradient(to top, #00838F, #4DD0E1, #FFF9C4)",
+      valley: "linear-gradient(to top, #5D4037, #8BC34A, #DCEDC8)",
+      city: "linear-gradient(to top, #37474F, #546E7A, #B0BEC5)",
+    };
+    return { background: themeBackgrounds[world.backgroundTheme] || themeBackgrounds.forest };
   };
 
   return (
@@ -278,7 +434,9 @@ function MapSegment({ missions, profile, world, highestCompleted, isUnlocked, on
         }
 
         const isBoss = (m as any).isBossMission || m.id.includes("boss") || world.bossStages.includes(m.number);
-        const isReward = m.giftBoxReward || m.isRewardStage;
+        const isReward = (m as any).giftBoxReward || (m as any).isRewardStage;
+        // Stage 500 is the final stage — show as special golden boss node
+        const isFinalStage = m.number === 500;
 
         if (state !== "locked" && state !== "completed" && state !== "current") {
           // fallback available
@@ -296,8 +454,9 @@ function MapSegment({ missions, profile, world, highestCompleted, isUnlocked, on
               number={m.number} 
               state={state} 
               stars={stars} 
-              isBoss={isBoss}
+              isBoss={isBoss || isFinalStage}
               isReward={isReward}
+              isFinalStage={isFinalStage}
               onClick={() => state !== "locked" && onOpenMission(m)} 
             />
             {state === "current" && <PlayerMarker avatar={profile.avatar} />}
@@ -328,12 +487,14 @@ interface StageNodeProps {
   stars: number;
   isBoss?: boolean;
   isReward?: boolean;
+  isFinalStage?: boolean;
   onClick: () => void;
 }
 
-function StageNode({ number, state, stars, isBoss, isReward, onClick }: StageNodeProps) {
+function StageNode({ number, state, stars, isBoss, isReward, isFinalStage, onClick }: StageNodeProps) {
   // Candy Crush style colors
   // Blue for normal/completed, Green for active, Gray for locked, Gold for Boss
+  // Stage 500 is the final boss with golden glow
   
   let bgClass = "";
   let borderClass = "";
@@ -370,6 +531,9 @@ function StageNode({ number, state, stars, isBoss, isReward, onClick }: StageNod
       break;
   }
 
+  // Stage 500 special glow
+  const finalStageGlow = isFinalStage ? "shadow-[0_0_15px_rgba(255,215,0,0.6)]" : "";
+
   if (state === "completed" && isBoss) {
     bgClass = "bg-gradient-to-b from-[#FFB74D] to-[#F57C00]";
     borderClass = "border-[#E65100]";
@@ -380,23 +544,42 @@ function StageNode({ number, state, stars, isBoss, isReward, onClick }: StageNod
 
   return (
     <div className="relative group">
+      {isFinalStage && (
+        <div className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap bg-[#FFD700]/90 text-[#5A3515] px-2 py-0.5 rounded-full text-[10px] font-black border border-[#D48806] z-20">
+          ⭐ Final
+        </div>
+      )}
+      {/* World Impact: glow ring on completed nodes */}
+      {state === "completed" && (
+        <>
+          <div className="absolute inset-0 rounded-full bg-[#FFD700]/15 animate-pulse-glow scale-150 pointer-events-none" />
+          <div className="absolute -top-1 -right-1 text-xs z-20 pointer-events-none">✨</div>
+        </>
+      )}
       <button 
         className={cn(
           "relative rounded-full border-[4px] sm:border-[5px] flex items-center justify-center text-white font-display font-black shadow-pop transition-transform",
-          sizeClass, bgClass, borderClass, animation,
+          sizeClass, bgClass, borderClass, animation, finalStageGlow,
+          state === "completed" && "shadow-[0_0_12px_rgba(255,215,0,0.3)]",
           state !== "locked" && "active:translate-y-1 active:shadow-pop-sm group-hover:scale-105"
         )}
         onClick={onClick}
         disabled={state === "locked"}
       >
         {/* Inner highlight for 3D effect */}
+        {isFinalStage && (
+          <div className="absolute inset-0 rounded-full bg-gradient-to-b from-[#FFD700]/30 to-transparent pointer-events-none animate-pulse" />
+        )}
+        {state === "completed" && (
+          <div className="absolute inset-0 rounded-full bg-gradient-to-b from-[#FFD700]/10 to-transparent pointer-events-none" />
+        )}
         <div className="absolute inset-1 rounded-full bg-gradient-to-b from-white/40 to-transparent pointer-events-none" />
         
         <span className={cn(
           "relative z-10 drop-shadow-md",
           isBig ? "text-3xl sm:text-4xl" : "text-2xl sm:text-3xl"
         )}>
-          {icon}
+          {isFinalStage ? "🏆" : icon}
         </span>
       </button>
 

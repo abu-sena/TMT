@@ -470,7 +470,7 @@ export function MiniGameAdabScreen({ profile, onBack, backRef }: Props) {
                 onClick={() => handleAnswer(opt.idx)}
                 className="w-full text-left p-3 sm:p-4 rounded-2xl bg-white border-3 border-[#CBB794] text-[#5A3515] font-bold text-sm sm:text-base shadow-pop active:translate-y-[4px] active:shadow-sm transition-all hover:border-[#A02020] hover:bg-[#FFF0F0] min-h-[3.5rem] flex items-center gap-2 max-w-full overflow-hidden box-border"
               >
-                <span className="text-lg shrink-0">{["🌟","💚","💛","💙","💜","🧡"][opt.idx % 6]}</span>
+                <span className="text-lg shrink-0">{["💬","🔷","📌","🔹","💠","🔸"][opt.idx % 6]}</span>
                 <span className="leading-tight break-words">{opt.text}</span>
               </button>
             ))}

@@ -5,6 +5,7 @@ import { GameCard } from "../game/GameCard";
 import { useCloudSync } from "@/hooks/useCloudSync";
 import { ParentGate } from "@/components/safety/ParentGate";
 import { ConfirmResetModal } from "@/components/safety/ConfirmResetModal";
+import { resetTechnicalData } from "@/lib/technical-reset";
 
 interface Props {
   profile: Profile;
@@ -16,21 +17,25 @@ interface Props {
   onExportProfile: () => void;
   onExportAll: () => void;
   onPrivacy: () => void;
+  onReload: () => void;
 }
 
 export function SettingsScreen({
   profile, onBack, onUpdate, onReset, onDeleteAll,
-  onSwitchProfile, onExportProfile, onExportAll, onPrivacy,
+  onSwitchProfile, onExportProfile, onExportAll, onPrivacy, onReload,
 }: Props) {
   const s = profile.settings;
 
   // Parent gate states
   const [gateOpen, setGateOpen] = useState(false);
-  const [gateAction, setGateAction] = useState<"reset" | "delete" | null>(null);
+  const [gateAction, setGateAction] = useState<"reset" | "delete" | "technical" | null>(null);
   const [resetModalOpen, setResetModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [technicalResetModalOpen, setTechnicalResetModalOpen] = useState(false);
+  const [technicalResetResult, setTechnicalResetResult] = useState<string | null>(null);
+  const [technicalResetDone, setTechnicalResetDone] = useState(false);
 
-  const openGate = (action: "reset" | "delete") => {
+  const openGate = (action: "reset" | "delete" | "technical") => {
     setGateAction(action);
     setGateOpen(true);
   };
@@ -39,7 +44,15 @@ export function SettingsScreen({
     setGateOpen(false);
     if (gateAction === "reset") setResetModalOpen(true);
     if (gateAction === "delete") setDeleteModalOpen(true);
+    if (gateAction === "technical") setTechnicalResetModalOpen(true);
     setGateAction(null);
+  };
+
+  const handleTechnicalReset = () => {
+    const result = resetTechnicalData(profile.id);
+    setTechnicalResetModalOpen(false);
+    setTechnicalResetResult(result.message);
+    setTechnicalResetDone(true);
   };
 
   const screenTimeOptions = [0, 30, 45, 60, 90];
@@ -215,6 +228,69 @@ export function SettingsScreen({
           </GameButton>
         </div>
 
+        {/* ═══ Perawatan Data ═══ */}
+        <GameCard tone="cream" padded={false}>
+          <div className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xl">🛠️</span>
+              <div>
+                <div className="font-display font-black text-sm text-[#5A3515]">
+                  Reset Data Teknis
+                </div>
+                <div className="text-xs text-[#8C6B45] mt-0.5 leading-relaxed">
+                  Hapus cache dan data teknis yang bermasalah tanpa menghapus
+                  capaian, poin, lencana, profil, dan laporan. Gunakan jika
+                  Misi Harian bermasalah atau setelah update aplikasi.
+                </div>
+              </div>
+            </div>
+            <GameButton
+              variant="secondary"
+              size="md"
+              full
+              leadingIcon="🛠️"
+              onClick={() => openGate("technical")}
+            >
+              Reset Data Teknis
+            </GameButton>
+          </div>
+        </GameCard>
+
+        {/* Result after technical reset */}
+        {technicalResetDone && technicalResetResult && (
+          <div className="rounded-[28px] bg-gradient-to-br from-[#E8F5E9] to-[#C8E6C9] border-2 border-[#2E8B12] p-4 shadow-card text-center">
+            <div className="text-3xl mb-2">✅</div>
+            <div className="font-display font-black text-sm text-[#2E8B12] mb-2">
+              Data Teknis Berhasil Direset
+            </div>
+            <p className="text-xs font-bold text-[#5A3515] whitespace-pre-line mb-3">
+              {technicalResetResult}
+            </p>
+            <p className="text-[10px] text-[#8C6B45] mb-3">
+              Capaian, poin, lencana, dan laporan tetap aman.
+            </p>
+            <div className="flex gap-2">
+              <GameButton
+                variant="primary"
+                size="md"
+                onClick={onReload}
+              >
+                🔄 Muat Ulang Aplikasi
+              </GameButton>
+              <GameButton
+                variant="ghost"
+                size="md"
+                onClick={() => {
+                  setTechnicalResetDone(false);
+                  setTechnicalResetResult(null);
+                }}
+              >
+                🏠 Kembali
+              </GameButton>
+            </div>
+          </div>
+        )}
+
         {/* Destructive actions — gated */}
         <GameButton
           variant="danger"
@@ -280,6 +356,75 @@ export function SettingsScreen({
         }}
         onCancel={() => setDeleteModalOpen(false)}
       />
+
+      {/* Technical Reset confirmation modal */}
+      {technicalResetModalOpen && (
+        <TechnicalResetConfirmModal
+          onConfirm={handleTechnicalReset}
+          onCancel={() => setTechnicalResetModalOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Technical Reset Confirmation Modal
+ * Gentle warning — not a destructive action.
+ */
+function TechnicalResetConfirmModal({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const [checked, setChecked] = useState(false);
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="surface-panel rounded-[2rem] p-6 max-w-sm w-full shadow-2xl border-4 border-[#D4B483] text-center">
+        <div className="text-5xl mb-3">🛠️</div>
+        <h2 className="font-display font-black text-xl text-[#5A3515] mb-2">
+          Reset Data Teknis?
+        </h2>
+        <p className="text-sm font-bold text-[#8C6B45] mb-1">
+          Fitur ini akan menghapus cache, session sementara, dan data teknis
+          yang bisa mengganggu setelah update aplikasi.
+        </p>
+        <p className="text-xs font-bold text-[#2E8B12] mb-4">
+          ✅ Capaian misi, poin, lencana, profil, dan laporan{" "}
+          <strong>tidak akan dihapus</strong>.
+        </p>
+
+        {/* Confirmation checkbox */}
+        <label className="flex items-center gap-3 p-3 rounded-[18px] bg-[#FDF8F0] border border-[#E8DCC2] mb-4 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={(e) => setChecked(e.target.checked)}
+            className="h-5 w-5 accent-[#2E8B12]"
+          />
+          <span className="text-xs font-bold text-[#5A3515] text-left">
+            Saya paham bahwa hanya data teknis yang dihapus.
+          </span>
+        </label>
+
+        <div className="flex gap-3">
+          <GameButton variant="ghost" size="md" onClick={onCancel} full>
+            Batal
+          </GameButton>
+          <GameButton
+            variant="secondary"
+            size="md"
+            onClick={onConfirm}
+            disabled={!checked}
+            full
+          >
+            Reset Data Teknis
+          </GameButton>
+        </div>
+      </div>
     </div>
   );
 }

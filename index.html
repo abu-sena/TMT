@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#51C625" />
+  <meta name="theme-color" content="#0A1628" />
   <meta name="description" content="Petualangan Ilmu & Akhlak untuk anak Indonesia" />
   <title>TMT</title>
   <style>
-    /* Prevent FOUC — show splash background immediately */
+    /* Prevent FOUC — show TMT splash background immediately */
     html, body {
       margin: 0;
       padding: 0;
@@ -16,7 +16,7 @@
       overflow-x: hidden;
     }
     body {
-      background: linear-gradient(180deg, #99E1FF 0%, #E6F8FF 100%);
+      background: linear-gradient(180deg, #0A1628 0%, #0F2847 30%, #1B3A5C 60%, #1E4D7B 100%);
       font-family: 'Nunito', system-ui, sans-serif;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
@@ -26,26 +26,95 @@
       min-height: 100dvh;
       overflow-x: hidden;
     }
-    .splash-loader {
+    .tmt-native-splash {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      width: 100%;
       text-align: center;
+      position: relative;
+      overflow: hidden;
     }
-    .splash-loader .icon {
-      font-size: 5rem;
+    .tmt-native-splash .splash-glow {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 130%;
+      height: 130%;
+      opacity: 0.2;
+      background: radial-gradient(ellipse at center, #FFD700 0%, #1E90FF 40%, transparent 70%);
+      animation: pulse-glow 3s ease-in-out infinite;
+    }
+    .tmt-native-splash .splash-logo {
+      position: relative;
+      z-index: 10;
+      width: min(82vw, 520px);
+      max-height: 40vh;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 20px rgba(30,144,255,0.4));
       animation: bob 2.5s ease-in-out infinite;
+    }
+    .tmt-native-splash .splash-subtitle {
+      font-weight: 800;
+      color: #87CEEB;
+      text-transform: uppercase;
+      letter-spacing: 0.25em;
+      font-size: 0.75rem;
+      margin-top: 1rem;
+      text-shadow: 0 0 10px rgba(135,206,235,0.5);
+      position: relative;
+      z-index: 10;
+    }
+    .tmt-native-splash .splash-loading-text {
+      color: rgba(135,206,235,0.7);
+      font-weight: 700;
+      font-size: 0.75rem;
+      margin-top: 1.5rem;
+      position: relative;
+      z-index: 10;
+    }
+    .tmt-native-splash .splash-dots {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      position: relative;
+      z-index: 10;
+    }
+    .tmt-native-splash .splash-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      animation: bob 2.5s ease-in-out infinite;
+    }
+    .tmt-native-splash .splash-dot:nth-child(1) { background: #FFD700; box-shadow: 0 0 6px #FFD700; animation-delay: 0s; }
+    .tmt-native-splash .splash-dot:nth-child(2) { background: #1E90FF; box-shadow: 0 0 6px #1E90FF; animation-delay: 150ms; }
+    .tmt-native-splash .splash-dot:nth-child(3) { background: #87CEEB; box-shadow: 0 0 6px #87CEEB; animation-delay: 300ms; }
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 0.15; transform: translate(-50%, -50%) scale(1); }
+      50% { opacity: 0.3; transform: translate(-50%, -50%) scale(1.1); }
     }
     @keyframes bob {
       0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-10px); }
+      50% { transform: translateY(-6px); }
     }
   </style>
   <script type="module" src="/src/capacitor-main.tsx"></script>
 </head>
 <body>
   <div id="root">
-    <div style="display:flex; align-items:center; justify-content:center; min-height:100dvh; width:100%;">
-      <div class="splash-loader">
-        <div class="icon">📜</div>
-        <p style="font-weight:700; color:#5A3515; font-size:1.25rem;">TMT</p>
+    <div class="tmt-native-splash">
+      <div class="splash-glow"></div>
+      <img src="./assets/logo.png" alt="TMT Logo" class="splash-logo" />
+      <p class="splash-subtitle">Petualangan Ilmu &amp; Akhlak</p>
+      <p class="splash-loading-text">Memuat Petualangan...</p>
+      <div class="splash-dots">
+        <span class="splash-dot"></span>
+        <span class="splash-dot"></span>
+        <span class="splash-dot"></span>
       </div>
     </div>
   </div>

@@ -1,7 +1,7 @@
 import type { Profile, ScreenId } from "@/types";
 import { DIFFICULTY_MAP, DIFFICULTY_UI_LABELS } from "@/data/constants";
 import { xpProgress } from "@/lib/leveling";
-import { getNextDifficulty, checkDifficultyUpgrade } from "@/lib/progress";
+import { getNextDifficulty, hasAnyPendingFinalRewards, getPendingFinalRewardDifficulty } from "@/lib/progress";
 import { GameButton } from "../game/GameButton";
 import { GameCard } from "../game/GameCard";
 import { XPBar } from "../game/XPBar";
@@ -12,12 +12,18 @@ interface Props {
   profile: Profile;
   onNavigate: (s: ScreenId) => void;
   onSwitchProfile: () => void;
+  onOpenPendingBox?: () => void;
+  onHomeUpgrade?: () => void;
 }
 
-export function HomeScreen({ profile, onNavigate, onSwitchProfile }: Props) {
+export function HomeScreen({ profile, onNavigate, onSwitchProfile, onOpenPendingBox, onHomeUpgrade }: Props) {
   const { store } = useGameStore();
   const diff = DIFFICULTY_MAP[profile.difficulty];
   const xp = xpProgress(profile);
+
+  // Check for pending final reward or upgrade
+  const hasPendingReward = hasAnyPendingFinalRewards(profile);
+  const pendingRewardDiff = getPendingFinalRewardDifficulty(profile);
 
   // Next reward
   const nextReward = (store.rewardMilestones || [])
@@ -70,6 +76,50 @@ export function HomeScreen({ profile, onNavigate, onSwitchProfile }: Props) {
       </header>
 
       <main className="content-wrapper mt-4 space-y-4 pb-8">
+        {/* ═══ Pending Final Reward Box ═══ */}
+        {hasPendingReward && pendingRewardDiff && (
+          <div className="w-full rounded-[26px] bg-gradient-to-br from-[#FFF9E6] to-[#FFE0A3] border-4 border-[#FFD700] p-4 text-center shadow-[0_0_20px_rgba(255,215,0,0.4)] animate-float">
+            <div className="text-4xl mb-2">🎁</div>
+            <div className="font-display font-black text-lg text-[#5A3515] mb-1">
+              Hadiah Akhir Level Menunggu!
+            </div>
+            <p className="text-xs font-bold text-[#8C6B45] mb-3">
+              Kamu punya hadiah spesial yang belum dibuka! ✨
+            </p>
+            <button
+              onClick={onOpenPendingBox}
+              className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#FFD700] to-[#FFA500] border-b-4 border-[#D48806] text-[#5A3515] font-black text-base shadow-sm active:translate-y-1 active:border-b-0 transition-all"
+            >
+              🎀 Buka Hadiah
+            </button>
+          </div>
+        )}
+
+        {/* ═══ Pending Difficulty Upgrade ("Nanti Dulu" was chosen) ═══ */}
+        {!hasPendingReward && profile.difficultyUpgradeAvailable && profile.pendingDifficultyUpgrade && (() => {
+          const pendingDiff = profile.pendingDifficultyUpgrade;
+          if (!pendingDiff) return null;
+          const nextLabel = DIFFICULTY_UI_LABELS[pendingDiff] || pendingDiff;
+          const nextInfo = DIFFICULTY_MAP[pendingDiff];
+          return (
+            <div className="w-full rounded-[26px] bg-gradient-to-br from-[#E8F5E9] to-[#A5D6A7] border-4 border-[#2E8B12] p-4 text-center shadow-pop">
+              <div className="text-3xl mb-2">{nextInfo?.emoji || "🚀"}</div>
+              <div className="font-display font-black text-lg text-[#2E8B12] mb-1">
+                Level Baru Terbuka!
+              </div>
+              <p className="text-xs font-bold text-[#5A3515] mb-3">
+                {nextLabel} sudah terbuka. Siap naik tingkat?
+              </p>
+              <button
+                onClick={onHomeUpgrade}
+                className="w-full py-3 rounded-2xl bg-gradient-meadow border-b-4 border-[#1B5E20] text-white font-black text-base shadow-sm active:translate-y-1 active:border-b-0 transition-all"
+              >
+                🚀 Naik Tingkat
+              </button>
+            </div>
+          );
+        })()}
+
         {/* Lanjutkan Misi button — big CTA */}
         <button
           onClick={() => onNavigate("map")}
@@ -81,7 +131,7 @@ export function HomeScreen({ profile, onNavigate, onSwitchProfile }: Props) {
         {/* Main grid — colorful tiles */}
         <div className="grid grid-cols-2 gap-3">
           <ColorTile emoji="🌍" title="Peta Petualangan" onClick={() => onNavigate("map")} color="green" />
-          <ColorTile emoji="☀️" title="Misi Harian Adab" subtitle="Baru" onClick={() => onNavigate("daily-missions")} color="orange" />
+          <ColorTile emoji="☀️" title="Misi Harian" subtitle="Baru" onClick={() => onNavigate("daily-missions")} color="orange" />
           <ColorTile emoji="🏅" title="Koleksi Lencana" onClick={() => onNavigate("badges")} color="purple" />
           <ColorTile emoji="📊" title="Status Window" onClick={() => onNavigate("stats")} color="blue" />
         </div>
@@ -146,31 +196,7 @@ export function HomeScreen({ profile, onNavigate, onSwitchProfile }: Props) {
           </button>
         )}
 
-        {/* Difficulty Upgrade Banner */}
-        {profile.difficultyUpgradeAvailable && (() => {
-          const nextDiff = getNextDifficulty(profile.difficulty);
-          if (!nextDiff) return null;
-          const nextLabel = DIFFICULTY_UI_LABELS[nextDiff] || nextDiff;
-          return (
-            <button
-              onClick={() => onNavigate("map")}
-              className="w-full rounded-[26px] bg-gradient-to-br from-[#E8F5E9] to-[#A5D6A7] border-4 border-[#2E8B12] p-4 text-left shadow-pop active:translate-y-[4px] active:shadow-sm transition-all"
-            >
-              <div className="flex items-center gap-3">
-                <div className="text-3xl shrink-0">🚀</div>
-                <div className="min-w-0 flex-1">
-                  <div className="font-display font-black text-sm text-[#2E8B12] uppercase leading-tight">
-                    Bisa Naik Tingkat!
-                  </div>
-                  <div className="text-xs font-bold text-[#5A3515] mt-0.5">
-                    Kamu sudah menyelesaikan semua misi. Siap ke {nextLabel}?
-                  </div>
-                </div>
-                <div className="text-xl shrink-0">→</div>
-              </div>
-            </button>
-          );
-        })()}
+
 
         {/* Kontrol & Pengaturan section — at bottom */}
         <div className="pt-2">

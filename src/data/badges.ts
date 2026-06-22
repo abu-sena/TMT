@@ -44,12 +44,14 @@ export const BADGES: BadgeDef[] = [
   { id: "musyawarah-muda", name: "Musyawarah Muda", description: "Selesaikan 5 misi musyawarah.", emoji: "🏛️", color: "berry", unlockHint: "5 misi musyawarah." },
   { id: "rajin-battle", name: "Rajin Battle", description: "Mainkan 20 sesi battle.", emoji: "💪", color: "grape", unlockHint: "20 sesi battle." },
 
-  // ═══ Misi Harian Adab (5) ═══
+  // ═══ Misi Harian & Streak (7) ═══
   { id: "streak-3-hari", name: "Streak 3 Hari", description: "3 hari berturut-turut Misi Harian.", emoji: "🔥", color: "sun", unlockHint: "Misi Harian 3 hari." },
   { id: "streak-7-hari", name: "Streak 7 Hari", description: "7 hari berturut-turut Misi Harian.", emoji: "🌟", color: "sun", unlockHint: "Misi Harian 7 hari." },
   { id: "streak-30-hari", name: "Streak 30 Hari", description: "30 hari berturut-turut Misi Harian.", emoji: "👑", color: "sun", unlockHint: "Misi Harian 30 hari." },
   { id: "misi-harian-rajin", name: "Misi Harian Rajin", description: "Verifikasi orang tua 10x.", emoji: "✅", color: "leaf", unlockHint: "10 verifikasi orang tua." },
   { id: "membantu-orang-tua", name: "Membantu Orang Tua", description: "Selesaikan 10 checklist membantu.", emoji: "🤲", color: "berry", unlockHint: "10 checklist membantu." },
+  { id: "konsisten-7-hari", name: "Konsisten 7 Hari", description: "7 hari berturut-turut menyelesaikan Misi Harian.", emoji: "⭐", color: "sun", unlockHint: "Streak Misi Harian 7 hari." },
+  { id: "istiqamah-30-hari", name: "Istiqamah 30 Hari", description: "30 hari berturut-turut menyelesaikan Misi Harian.", emoji: "🏆", color: "sun", unlockHint: "Streak Misi Harian 30 hari." },
 
   // ═══ Peta Petualangan (5) ═══
   { id: "penjelajah-gua", name: "Penjelajah Gua", description: "Selesaikan dunia bertema gua.", emoji: "🕳️", color: "wood", unlockHint: "Selesaikan dunia gua." },

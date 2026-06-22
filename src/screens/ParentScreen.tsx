@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import type { Profile, Mission } from "@/types";
+import type { Profile, Mission, DailyMissionCategory, DailyMissionDifficultyWeight, DailyMissionAssignment } from "@/types";
 import { CATEGORIES, CATEGORY_MAP, DIFFICULTY_MAP } from "@/data/constants";
+import { DAILY_MISSION_CATEGORY_META } from "@/types";
 import {
   strongestCategory,
   weakestCategory,
@@ -13,7 +14,9 @@ import { xpProgress } from "@/lib/leveling";
 import { GameButton } from "../game/GameButton";
 import { RewardStars } from "../game/RewardStars";
 import { useGameStore } from "@/lib/storage";
-import type { LeaderboardEntry } from "@/types";
+import type { LeaderboardEntry, DailyMission } from "@/types";
+import { clampMissionPoints, getDefaultPointsForWeight, calculateDailyTotalPoints, exceedsSoftCap, exceedsHardCap, getPointCapWarning, getTodayAssignments, approveAssignment, rejectAssignment, grantDailyBonusIfEligible, updateStreakIfQualified, seedTodayAssignments } from "@/lib/dailyMissions";
+import { cn } from "@/lib/utils";
 
 interface Props {
   profile: Profile;
@@ -24,7 +27,11 @@ interface Props {
   onManageRewards: () => void;
 }
 
-export function ParentScreen({ profile, profiles, onBack, onExportProfile, onExportAll, onManageRewards }: Props) {
+export function ParentScreen({ profile: initialProfile, profiles: initialProfiles, onBack, onExportProfile, onExportAll, onManageRewards }: Props) {
+  const { store, updateProfile, updateGlobalState } = useGameStore();
+  const profiles = store.profiles;
+  const profile = profiles.find(p => p.id === initialProfile.id) || initialProfile;
+  const [activeTab, setActiveTab] = useState<"overview" | "settings">("overview");
   const [selectedChildId, setSelectedChildId] = useState<string>("__all__");
   const isAllChildren = selectedChildId === "__all__";
   
@@ -39,7 +46,33 @@ export function ParentScreen({ profile, profiles, onBack, onExportProfile, onExp
   const adabBest = adabBestChoiceCount(displayProfile);
   const recent = useMemo(() => recentCompletedMissions(displayProfile, 5), [displayProfile]);
   const recommended = useMemo(() => recommendedMissions(displayProfile, 3), [displayProfile]);
-  const { store } = useGameStore();
+  const [parentValidationTab, setParentValidationTab] = useState<"pending" | "approved" | "rejected">("pending");
+  const [validationFeedback, setValidationFeedback] = useState<string | null>(null);
+  const [processingAssignmentIds, setProcessingAssignmentIds] = useState<Set<string>>(new Set());
+  const [animatedAssignmentId, setAnimatedAssignmentId] = useState<string | null>(null);
+
+  // ── New Daily Mission Management State ──
+  const [showManageMissions, setShowManageMissions] = useState(false);
+  const [editingMission, setEditingMission] = useState<DailyMission | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [missionForm, setMissionForm] = useState({
+    title: "",
+    description: "",
+    category: "adab" as DailyMissionCategory,
+    difficultyWeight: "normal" as DailyMissionDifficultyWeight,
+    points: 20,
+    scheduleType: "daily" as "daily" | "once",
+    date: new Date().toISOString().split("T")[0],
+    requiresParentValidation: true,
+    assignedProfileIds: [] as string[],
+  });
+  const [dailyMissionFeedback, setDailyMissionFeedback] = useState<string | null>(null);
+  
+  // Store-managed daily missions (in-memory for now, persisted via global state)
+  const dailyMissions: DailyMission[] = (store as any).dailyMissions || [];
+  
+  // Get today's assignments for the selected child
+  const todayAssignments = displayProfile ? getTodayAssignments(displayProfile) : [];
 
   // ── Insight texts ──
   const insights = useMemo(() => {
@@ -357,6 +390,815 @@ export function ParentScreen({ profile, profiles, onBack, onExportProfile, onExp
             />
           </div>
         </div>
+
+        {/* ═══════════════════════════════════════════
+            KELOLA MISI HARIAN
+           ═══════════════════════════════════════════ */}
+        <div className="rounded-[28px] bg-gradient-to-br from-[#E3F2FD] to-[#BBDEFB] border-2 border-[#185E9F] p-4 shadow-card">
+          <h3 className="font-display font-black text-sm text-[#185E9F] uppercase mb-3 flex items-center gap-2">
+            <span>📋</span> Kelola Misi Harian
+          </h3>
+
+          {dailyMissionFeedback && (
+            <div className="mb-3 p-2.5 rounded-xl bg-white/80 border border-[#185E9F]/30 text-sm font-bold text-[#185E9F] text-center">
+              {dailyMissionFeedback}
+            </div>
+          )}
+
+          {/* Empty state: no missions yet */}
+          {dailyMissions.length === 0 && !showManageMissions && (
+            <div className="text-center py-4">
+              <div className="text-4xl mb-2">📋</div>
+              <p className="text-xs font-bold text-[#5A3515] mb-3">
+                Belum ada Misi Harian. Buat misi pertama untuk anak.
+              </p>
+              <button
+                onClick={() => {
+                  setEditingMission(null);
+                  setMissionForm({
+                    title: "", description: "", category: "custom" as DailyMissionCategory,
+                    difficultyWeight: "normal" as DailyMissionDifficultyWeight, points: 20,
+                    scheduleType: "daily", date: new Date().toISOString().split("T")[0],
+                    requiresParentValidation: true, assignedProfileIds: [],
+                  });
+                  setShowManageMissions(true);
+                }}
+                className="py-3 px-6 rounded-xl bg-[#185E9F] text-white font-black text-sm active:scale-95 transition-transform"
+              >
+                ➕ Buat Misi Harian
+              </button>
+            </div>
+          )}
+
+          {/* Active missions list */}
+          {dailyMissions.length > 0 && !showManageMissions && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] font-bold text-[#8C6B45] uppercase">
+                  Misi Aktif ({dailyMissions.filter(m => m.isActive).length})
+                </div>
+                <button
+                  onClick={() => {
+                    setEditingMission(null);
+                    setMissionForm({
+                      title: "", description: "", category: "custom" as DailyMissionCategory,
+                      difficultyWeight: "normal" as DailyMissionDifficultyWeight, points: 20,
+                      scheduleType: "daily", date: new Date().toISOString().split("T")[0],
+                      requiresParentValidation: true, assignedProfileIds: [],
+                    });
+                    setShowManageMissions(true);
+                  }}
+                  className="py-1.5 px-3 rounded-lg bg-[#185E9F] text-white font-black text-[10px] active:scale-95 transition-transform"
+                >
+                  ➕ Buat Misi
+                </button>
+              </div>
+
+              {/* Delete confirmation */}
+              {showDeleteConfirm && (
+                <div className="rounded-xl bg-[#FFEBEE] border-2 border-[#E53935] p-3 text-center">
+                  <p className="text-xs font-bold text-[#E53935] mb-2">
+                    Hapus misi ini? Reward yang sudah diberikan tetap aman.
+                  </p>
+                  <div className="flex gap-2 justify-center">
+                    <button
+                      onClick={() => {
+                        const updated = dailyMissions.map(m =>
+                          m.id === showDeleteConfirm ? { ...m, isActive: false, updatedAt: new Date().toISOString() } : m
+                        );
+                        updateGlobalState({ dailyMissions: updated });
+                        setDailyMissionFeedback("✅ Misi dinonaktifkan. Riwayat reward tetap aman.");
+                        setTimeout(() => setDailyMissionFeedback(null), 3000);
+                        setShowDeleteConfirm(null);
+                      }}
+                      className="py-1.5 px-3 rounded-lg bg-[#E53935] text-white font-bold text-xs"
+                    >
+                      Ya, Nonaktifkan
+                    </button>
+                    <button
+                      onClick={() => setShowDeleteConfirm(null)}
+                      className="py-1.5 px-3 rounded-lg bg-gray-200 text-[#5A3515] font-bold text-xs"
+                    >
+                      Batal
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {dailyMissions.filter(m => m.isActive).map(m => {
+                const catMeta = DAILY_MISSION_CATEGORY_META[m.category];
+                const assignedNames = m.assignedProfileIds
+                  .map(pid => profiles.find(p => p.id === pid)?.name || "?")
+                  .join(", ");
+                return (
+                  <div key={m.id} className="bg-white/60 rounded-xl p-2.5 border border-[#E8DCC2]">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-base">{catMeta?.emoji || "✨"}</span>
+                      <span className="flex-1 text-xs font-bold text-[#5A3515] truncate">{m.title}</span>
+                      <span className="text-[10px] font-black text-[#D48806]">+{m.points}pts</span>
+                    </div>
+                    <div className="text-[9px] text-[#8C6B45] mb-1.5">
+                      {m.scheduleType === "daily" ? "🔄 Setiap hari" : `📅 ${m.date}`}
+                      {" · "}{assignedNames}
+                    </div>
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={() => {
+                          setEditingMission(m);
+                          setMissionForm({
+                            title: m.title,
+                            description: m.description,
+                            category: m.category,
+                            difficultyWeight: m.difficultyWeight,
+                            points: m.points,
+                            scheduleType: m.scheduleType as "daily" | "once",
+                            date: m.date,
+                            requiresParentValidation: m.requiresParentValidation,
+                            assignedProfileIds: [...m.assignedProfileIds],
+                          });
+                          setShowManageMissions(true);
+                        }}
+                        className="flex-1 py-1.5 rounded-lg bg-white border border-[#185E9F]/30 text-[#185E9F] font-bold text-[10px]"
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button
+                        onClick={() => setShowDeleteConfirm(m.id)}
+                        className="flex-1 py-1.5 rounded-lg bg-white border border-[#E53935]/30 text-[#E53935] font-bold text-[10px]"
+                      >
+                        🗑 Hapus
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Inactive missions */}
+              {dailyMissions.filter(m => !m.isActive).length > 0 && (
+                <div className="mt-3 pt-2 border-t border-[#185E9F]/20">
+                  <div className="text-[9px] font-bold text-[#8C6B45] uppercase mb-1">
+                    Nonaktif ({dailyMissions.filter(m => !m.isActive).length})
+                  </div>
+                  {dailyMissions.filter(m => !m.isActive).map(m => (
+                    <div key={m.id} className="flex items-center gap-2 py-1">
+                      <span className="text-xs text-[#8C6B45] truncate flex-1 opacity-60">{m.title}</span>
+                      <button
+                        onClick={() => {
+                          const updated = dailyMissions.map(dm => dm.id === m.id ? { ...dm, isActive: true, updatedAt: new Date().toISOString() } : dm);
+                          updateGlobalState({ dailyMissions: updated });
+                          setDailyMissionFeedback("✅ Misi diaktifkan kembali.");
+                          setTimeout(() => setDailyMissionFeedback(null), 2000);
+                        }}
+                        className="text-[9px] px-1.5 py-0.5 rounded bg-[#E8F5E9] text-[#2E8B12] font-bold"
+                      >
+                        Aktifkan
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Create/Edit Mission Form */}
+        {showManageMissions && (
+          <div className="rounded-[28px] bg-white border-2 border-[#D4B483] p-4 shadow-card">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-display font-black text-sm text-[#5A3515]">
+                {editingMission ? "✏️ Edit Misi Harian" : "➕ Buat Misi Harian"}
+              </h4>
+              <button onClick={() => { setShowManageMissions(false); setEditingMission(null); }} className="text-sm text-[#8C6B45] font-bold">✕ Tutup</button>
+            </div>
+
+            {/* Edit warning if mission has pending/rejected assignments */}
+            {editingMission && (() => {
+              const hasPending = profiles.some(p => {
+                const assigns = (p.dailyMissionAssignments || []).filter(a => a.missionId === editingMission.id);
+                return assigns.some(a => a.status === "pending_parent_validation" || a.status === "checked_by_child");
+              });
+              if (hasPending) {
+                return (
+                  <div className="mb-3 p-2 rounded-xl bg-[#FFF3E0] border border-[#FF9800]/30 text-[10px] font-bold text-[#E65100]">
+                    ⚠️ Misi ini sedang menunggu validasi. Mengubah misi dapat mengembalikan status ke Belum Dilakukan.
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
+            <div className="space-y-2.5">
+              {/* 1. Judul Misi */}
+              <div>
+                <label className="text-[10px] font-bold text-[#8C6B45] uppercase block mb-0.5">
+                  1. Judul Misi <span className="text-[#E53935]">*</span>
+                </label>
+                <input
+                  type="text" value={missionForm.title}
+                  onChange={e => setMissionForm({ ...missionForm, title: e.target.value })}
+                  placeholder="Contoh: Membaca buku 10 menit"
+                  className="w-full rounded-xl border border-[#D4B483] p-2.5 text-sm font-bold text-[#5A3515] outline-none focus:border-[#185E9F] placeholder:text-[#CBB794]"
+                />
+              </div>
+
+              {/* 2. Untuk Anak */}
+              <div>
+                <label className="text-[10px] font-bold text-[#8C6B45] uppercase block mb-0.5">
+                  2. Untuk Anak <span className="text-[#E53935]">*</span>
+                </label>
+                <div className="space-y-1 mb-1">
+                  {profiles.map(p => (
+                    <label key={p.id} className="flex items-center gap-2 p-1.5 rounded-lg bg-[#FDF8F0] border border-[#E8DCC2] text-xs font-bold text-[#5A3515]">
+                      <input
+                        type="checkbox"
+                        checked={missionForm.assignedProfileIds.includes(p.id)}
+                        onChange={e => {
+                          if (e.target.checked) {
+                            setMissionForm({ ...missionForm, assignedProfileIds: [...missionForm.assignedProfileIds, p.id] });
+                          } else {
+                            setMissionForm({ ...missionForm, assignedProfileIds: missionForm.assignedProfileIds.filter(id => id !== p.id) });
+                          }
+                        }}
+                        className="h-4 w-4"
+                      />
+                      {p.avatar} {p.name}
+                    </label>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setMissionForm({ ...missionForm, assignedProfileIds: profiles.map(p => p.id) })}
+                  className="text-[9px] font-bold text-[#185E9F] underline"
+                >
+                  ✅ Semua Anak
+                </button>
+              </div>
+
+              {/* 3. Poin/EXP */}
+              <div>
+                <label className="text-[10px] font-bold text-[#8C6B45] uppercase block mb-0.5">
+                  3. Poin/EXP <span className="text-[#E53935]">*</span>
+                </label>
+                <input
+                  type="number" min={5} max={75}
+                  value={missionForm.points}
+                  onChange={e => setMissionForm({ ...missionForm, points: clampMissionPoints(parseInt(e.target.value) || 5) })}
+                  className="w-full rounded-xl border border-[#D4B483] p-2.5 text-sm font-bold text-[#5A3515] outline-none focus:border-[#185E9F]"
+                />
+                <p className="text-[9px] text-[#8C6B45] mt-0.5">
+                  Saran: 10 ringan, 20 normal, 30 sedang, 50 berat.
+                </p>
+              </div>
+
+              {/* 4. Jadwal */}
+              <div>
+                <label className="text-[10px] font-bold text-[#8C6B45] uppercase block mb-0.5">
+                  4. Jadwal <span className="text-[#E53935]">*</span>
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setMissionForm({ ...missionForm, scheduleType: "daily" })}
+                    className={cn(
+                      "flex-1 py-2 rounded-xl text-xs font-bold transition-all",
+                      missionForm.scheduleType === "daily"
+                        ? "bg-[#185E9F] text-white"
+                        : "bg-white border border-[#D4B483] text-[#5A3515]"
+                    )}
+                  >
+                    🔄 Ulang Setiap Hari
+                  </button>
+                  <button
+                    onClick={() => setMissionForm({ ...missionForm, scheduleType: "once" })}
+                    className={cn(
+                      "flex-1 py-2 rounded-xl text-xs font-bold transition-all",
+                      missionForm.scheduleType === "once"
+                        ? "bg-[#185E9F] text-white"
+                        : "bg-white border border-[#D4B483] text-[#5A3515]"
+                    )}
+                  >
+                    📅 Tanggal Tertentu
+                  </button>
+                </div>
+                {missionForm.scheduleType === "once" && (
+                  <input
+                    type="date" value={missionForm.date}
+                    onChange={e => setMissionForm({ ...missionForm, date: e.target.value })}
+                    className="w-full rounded-xl border border-[#D4B483] p-2 mt-1.5 text-xs font-bold text-[#5A3515] outline-none"
+                  />
+                )}
+              </div>
+
+              {/* 5. Deskripsi & Kategori (optional) */}
+              <div>
+                <label className="text-[10px] font-bold text-[#8C6B45] uppercase block mb-0.5">
+                  5. Deskripsi & Kategori <span className="text-[#8C6B45]">(opsional)</span>
+                </label>
+                <input
+                  type="text" value={missionForm.description}
+                  onChange={e => setMissionForm({ ...missionForm, description: e.target.value })}
+                  placeholder="Catatan singkat untuk anak..."
+                  className="w-full rounded-xl border border-[#D4B483] p-2 text-xs font-bold text-[#5A3515] outline-none focus:border-[#185E9F] placeholder:text-[#CBB794]"
+                />
+                <select
+                  value={missionForm.category}
+                  onChange={e => setMissionForm({ ...missionForm, category: e.target.value as DailyMissionCategory })}
+                  className="w-full rounded-xl border border-[#D4B483] p-2 mt-1.5 text-xs font-bold text-[#5A3515] outline-none"
+                >
+                  {Object.entries(DAILY_MISSION_CATEGORY_META).map(([k, v]) => (
+                    <option key={k} value={k}>{v.emoji} {v.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Point cap warning */}
+              {(() => {
+                const testAssignments: DailyMissionAssignment[] = [{
+                  id: "test", missionId: "test", profileId: profiles[0]?.id || "",
+                  date: new Date().toISOString().split("T")[0],
+                  title: missionForm.title, description: missionForm.description,
+                  category: missionForm.category, points: missionForm.points,
+                  status: "not_started", rewardGranted: false, pointsAwarded: 0,
+                }];
+                const allAssets = [...todayAssignments, ...testAssignments];
+                const warning = getPointCapWarning(allAssets);
+                if (warning) {
+                  return (
+                    <div className={cn(
+                      "p-2 rounded-xl text-[10px] font-bold",
+                      exceedsHardCap(allAssets) ? "bg-[#FFEBEE] text-[#E53935]" : "bg-[#FFF3E0] text-[#E65100]"
+                    )}>
+                      ⚠️ {warning}
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
+              {/* Action buttons */}
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => { setShowManageMissions(false); setEditingMission(null); }}
+                  className="flex-1 py-2.5 rounded-xl bg-gray-200 text-[#5A3515] font-bold text-sm active:scale-95 transition-transform"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={() => {
+                    if (!missionForm.title.trim()) {
+                      setDailyMissionFeedback("⚠️ Judul misi tidak boleh kosong.");
+                      setTimeout(() => setDailyMissionFeedback(null), 2500);
+                      return;
+                    }
+                    if (missionForm.assignedProfileIds.length === 0) {
+                      setDailyMissionFeedback("⚠️ Pilih minimal satu anak.");
+                      setTimeout(() => setDailyMissionFeedback(null), 2500);
+                      return;
+                    }
+                    if (missionForm.points < 5) {
+                      setDailyMissionFeedback("⚠️ Poin minimal 5.");
+                      setTimeout(() => setDailyMissionFeedback(null), 2500);
+                      return;
+                    }
+                    if (missionForm.points > 75) {
+                      setDailyMissionFeedback("⚠️ Poin maksimal per misi adalah 75.");
+                      setTimeout(() => setDailyMissionFeedback(null), 2500);
+                      return;
+                    }
+                    // Check hard cap for each assigned child
+                    for (const pid of missionForm.assignedProfileIds) {
+                      const child = profiles.find(p => p.id === pid);
+                      if (child) {
+                        const childAssignments = getTodayAssignments(child);
+                        const testAssignments: DailyMissionAssignment[] = [{
+                          id: "test", missionId: "test", profileId: pid,
+                          date: new Date().toISOString().split("T")[0],
+                          title: missionForm.title, description: missionForm.description,
+                          category: missionForm.category, points: missionForm.points,
+                          status: "not_started", rewardGranted: false, pointsAwarded: 0,
+                        }];
+                        const allAssets = [...childAssignments, ...testAssignments];
+                        if (exceedsHardCap(allAssets)) {
+                          setDailyMissionFeedback(`⚠️ Total poin harian ${child.name} akan melebihi 250. Kurangi poin.`);
+                          setTimeout(() => setDailyMissionFeedback(null), 3000);
+                          return;
+                        }
+                      }
+                    }
+
+                    const mission: DailyMission = {
+                      id: editingMission?.id || crypto.randomUUID(),
+                      title: missionForm.title.trim(),
+                      description: missionForm.description.trim(),
+                      category: missionForm.category,
+                      difficultyWeight: missionForm.difficultyWeight,
+                      points: clampMissionPoints(missionForm.points),
+                      assignedProfileIds: missionForm.assignedProfileIds,
+                      date: missionForm.date,
+                      scheduleType: missionForm.scheduleType,
+                      requiresParentValidation: true,
+                      isActive: true,
+                      createdAt: editingMission?.createdAt || new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                    };
+
+                    const updated = editingMission
+                      ? dailyMissions.map(m => m.id === mission.id ? mission : m)
+                      : [...dailyMissions, mission];
+                    updateGlobalState({ dailyMissions: updated });
+
+                    // Seed today's assignments for assigned children
+                    for (const pid of mission.assignedProfileIds) {
+                      const child = profiles.find(p => p.id === pid);
+                      if (child) {
+                        const seeded = seedTodayAssignments(child, [mission]);
+                        updateProfile(child.id, seeded);
+                      }
+                    }
+
+                    setDailyMissionFeedback(editingMission ? "✅ Misi diperbarui!" : "✅ Misi baru dibuat! Muncul di halaman anak.");
+                    setTimeout(() => setDailyMissionFeedback(null), 3000);
+                    setShowManageMissions(false);
+                    setEditingMission(null);
+                  }}
+                  disabled={
+                    !missionForm.title.trim() ||
+                    missionForm.assignedProfileIds.length === 0 ||
+                    missionForm.points < 5 ||
+                    missionForm.points > 75
+                  }
+                  className={cn(
+                    "flex-[2] py-2.5 rounded-xl font-black text-sm active:translate-y-0.5 transition-all",
+                    (!missionForm.title.trim() || missionForm.assignedProfileIds.length === 0 || missionForm.points < 5 || missionForm.points > 75)
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "bg-gradient-meadow border-b-2 border-[#2E8B12] text-white"
+                  )}
+                >
+                  💾 Simpan Misi
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════
+            VALIDASI MISI HARIAN (Parent - Section Grouped)
+           ═══════════════════════════════════════════ */}
+        {!showManageMissions && (
+          <div className="rounded-[28px] bg-gradient-to-br from-[#E8F5E9] to-[#C8E6C9] border-2 border-[#2E8B12] p-4 shadow-card">
+            <h3 className="font-display font-black text-sm text-[#2E8B12] uppercase mb-3 flex items-center gap-2">
+              <span>✅</span> Validasi Misi Harian
+            </h3>
+
+            {/* Validation feedback toast */}
+            {validationFeedback && (
+              <div className="mb-3 p-2.5 rounded-xl bg-white/90 border-2 border-[#2E8B12]/40 text-xs font-bold text-[#2E8B12] text-center animate-pop-in shadow-sm">
+                {validationFeedback}
+              </div>
+            )}
+
+            {/* Child selector for validation */}
+            {profiles.length > 1 && (
+              <div className="mb-3">
+                <select
+                  value={selectedChildId}
+                  onChange={(e) => setSelectedChildId(e.target.value)}
+                  className="w-full rounded-xl bg-white/80 border-2 border-[#2E8B12]/30 p-2 text-[#5A3515] font-bold text-xs focus:border-[#2E8B12] outline-none"
+                >
+                  <option value="__all__">👨‍👩‍👧‍👦 Semua Anak</option>
+                  {profiles.map(p => (
+                    <option key={p.id} value={p.id}>{p.avatar} {p.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* ═══ Validation Sections ═══ */}
+            {(() => {
+              const childrenToCheck = isAllChildren ? profiles : [displayProfile];
+              let allItems: { profile: Profile; assignment: DailyMissionAssignment }[] = [];
+
+              for (const child of childrenToCheck) {
+                const assigns = getTodayAssignments(child);
+                for (const a of assigns) {
+                  // Only show items needing validation or already handled
+                  const s = a.status;
+                  if (s === "pending_parent_validation" || s === "checked_by_child" ||
+                      s === "approved_by_parent" || s === "rejected_by_parent") {
+                    allItems.push({ profile: child, assignment: a });
+                  }
+                }
+              }
+
+              // Group items
+              const pendingItems = allItems.filter(
+                p => p.assignment.status === "pending_parent_validation" || p.assignment.status === "checked_by_child"
+              );
+              const rejectedItems = allItems.filter(
+                p => p.assignment.status === "rejected_by_parent"
+              );
+              const approvedItems = allItems.filter(
+                p => p.assignment.status === "approved_by_parent"
+              );
+
+              const totalPending = pendingItems.length;
+              const totalApproved = approvedItems.length;
+              const totalRejected = rejectedItems.length;
+
+              // Count total points given today
+              const totalPointsGiven = approvedItems.reduce(
+                (sum, p) => sum + p.assignment.pointsAwarded, 0
+              );
+              const totalPendingPoints = pendingItems.reduce(
+                (sum, p) => sum + p.assignment.points, 0
+              );
+
+              // If no items at all
+              if (allItems.length === 0) {
+                return (
+                  <div className="text-center py-5">
+                    <div className="text-4xl mb-2">📋</div>
+                    <p className="text-sm font-bold text-[#8C6B45]">
+                      Belum ada misi yang perlu divalidasi.
+                    </p>
+                    <p className="text-[10px] text-[#8C6B45]/70 mt-1">
+                      Misi akan muncul di sini setelah anak mencentang.
+                    </p>
+                  </div>
+                );
+              }
+
+              // Render a single validation item card
+              const renderValidationItem = (
+                child: Profile,
+                a: DailyMissionAssignment,
+                isPending: boolean,
+                isApproved: boolean,
+                isRejected: boolean
+              ) => {
+                const catMeta = DAILY_MISSION_CATEGORY_META[a.category];
+                const isProcessing = processingAssignmentIds.has(a.id);
+                const isAnimating = animatedAssignmentId === a.id;
+
+                const handleApprove = () => {
+                  if (isProcessing || a.rewardGranted) return;
+                  setProcessingAssignmentIds(prev => new Set(prev).add(a.id));
+
+                  setTimeout(() => {
+                    const result = approveAssignment(child, a.id);
+                    if (result) {
+                      let updated = result.profile;
+                      updated = grantDailyBonusIfEligible(updated) || updated;
+                      updated = updateStreakIfQualified(updated);
+                      updateProfile(child.id, updated);
+                      setAnimatedAssignmentId(a.id);
+                      setValidationFeedback(
+                        `✅ "${a.title}" disetujui. +${result.pointsAwarded} poin diberikan.`
+                      );
+                      setTimeout(() => setValidationFeedback(null), 3500);
+                      setTimeout(() => setAnimatedAssignmentId(null), 600);
+                    }
+                    setProcessingAssignmentIds(prev => {
+                      const next = new Set(prev);
+                      next.delete(a.id);
+                      return next;
+                    });
+                  }, 350);
+                };
+
+                const handleReject = () => {
+                  if (isProcessing) return;
+                  setProcessingAssignmentIds(prev => new Set(prev).add(a.id));
+
+                  setTimeout(() => {
+                    const result = rejectAssignment(child, a.id);
+                    if (result) {
+                      updateProfile(child.id, result);
+                      setAnimatedAssignmentId(a.id);
+                      setValidationFeedback(
+                        `🔄 "${a.title}" dikembalikan untuk diulang.`
+                      );
+                      setTimeout(() => setValidationFeedback(null), 3500);
+                      setTimeout(() => setAnimatedAssignmentId(null), 600);
+                    }
+                    setProcessingAssignmentIds(prev => {
+                      const next = new Set(prev);
+                      next.delete(a.id);
+                      return next;
+                    });
+                  }, 350);
+                };
+
+                const cardBg = isPending
+                  ? "bg-[#FFF8E1] border-[#FF9800]/30"
+                  : isApproved
+                    ? "bg-[#E8F5E9] border-[#4CAF50]/30"
+                    : "bg-[#FFEBEE] border-[#E53935]/20";
+
+                return (
+                  <div
+                    key={a.id}
+                    className={cn(
+                      "rounded-[18px] bg-white/80 border p-3 transition-all duration-300",
+                      cardBg,
+                      isAnimating && "animate-pop-in scale-[0.97] shadow-md"
+                    )}
+                  >
+                    <div className="flex items-start gap-2 mb-2">
+                      <span className="text-lg shrink-0">{child.avatar}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-xs text-[#5A3515]">{child.name}</span>
+                          <span className="text-[10px] text-[#8C6B45]">·</span>
+                          <span className={cn(
+                            "font-bold text-xs",
+                            isApproved ? "text-[#2E7D32]" : isRejected ? "text-[#C62828]" : "text-[#5A3515]"
+                          )}>
+                            {a.title}
+                          </span>
+                        </div>
+                        <div className="flex gap-2 mt-0.5 flex-wrap">
+                          <span className="text-[9px] text-[#8C6B45]">{catMeta?.emoji} {catMeta?.label}</span>
+                          <span className="text-[9px] font-black text-[#D48806]">+{a.points} pts</span>
+                        </div>
+                        {a.checkedAt && (
+                          <p className="text-[9px] text-[#8C6B45]/70 mt-0.5">
+                            Dicentang: {new Date(a.checkedAt).toLocaleTimeString("id", { hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        )}
+                        {a.parentNote && isRejected && (
+                          <p className="text-[9px] text-[#C62828]/80 mt-0.5 italic">
+                            💬 {a.parentNote}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Action buttons for pending */}
+                    {isPending && (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleApprove}
+                          disabled={isProcessing}
+                          className={cn(
+                            "flex-1 py-2.5 rounded-xl font-black text-xs transition-all duration-200",
+                            isProcessing
+                              ? "bg-gray-300 text-gray-500 cursor-wait"
+                              : "bg-[#2E8B12] text-white active:scale-95"
+                          )}
+                        >
+                          {isProcessing ? (
+                            <span className="inline-flex items-center gap-1">
+                              <span className="animate-spin inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full" />
+                              Menyetujui…
+                            </span>
+                          ) : (
+                            "✅ Setujui"
+                          )}
+                        </button>
+                        <button
+                          onClick={handleReject}
+                          disabled={isProcessing}
+                          className={cn(
+                            "flex-1 py-2.5 rounded-xl font-black text-xs transition-all duration-200",
+                            isProcessing
+                              ? "bg-gray-300 text-gray-500 cursor-wait"
+                              : "bg-[#E53935] text-white active:scale-95"
+                          )}
+                        >
+                          {isProcessing ? (
+                            <span className="inline-flex items-center gap-1">
+                              <span className="animate-spin inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full" />
+                              Memproses…
+                            </span>
+                          ) : (
+                            "🔄 Perlu Diulang"
+                          )}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Status badge for approved */}
+                    {isApproved && (
+                      <div className="flex items-center gap-2 text-xs font-bold px-2 py-1.5 rounded-full bg-[#E8F5E9] text-[#2E7D32] border border-[#4CAF50]/30">
+                        <span>✅</span>
+                        <span>Disetujui · +{a.pointsAwarded} poin</span>
+                      </div>
+                    )}
+
+                    {/* Status badge for rejected */}
+                    {isRejected && (
+                      <div className="flex items-center gap-2 text-xs font-bold px-2 py-1.5 rounded-full bg-[#FFEBEE] text-[#C62828] border border-[#E53935]/20">
+                        <span>🔄</span>
+                        <span>Dikembalikan untuk diulang</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              };
+
+              return (
+                <div className="space-y-4">
+                  {/* Summary mini-card */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="bg-[#FFF3E0] rounded-xl p-2.5 text-center border border-[#FF9800]/20">
+                      <div className="text-lg">⏳</div>
+                      <div className="font-black text-base text-[#E65100]">{totalPending}</div>
+                      <div className="text-[9px] font-bold text-[#8C6B45]">Menunggu</div>
+                      {totalPendingPoints > 0 && (
+                        <div className="text-[8px] text-[#D48806] mt-0.5">{totalPendingPoints} pts</div>
+                      )}
+                    </div>
+                    <div className="bg-[#E8F5E9] rounded-xl p-2.5 text-center border border-[#4CAF50]/20">
+                      <div className="text-lg">✅</div>
+                      <div className="font-black text-base text-[#2E7D32]">{totalApproved}</div>
+                      <div className="text-[9px] font-bold text-[#8C6B45]">Disetujui</div>
+                      {totalPointsGiven > 0 && (
+                        <div className="text-[8px] text-[#2E8B12] mt-0.5">+{totalPointsGiven} pts</div>
+                      )}
+                    </div>
+                    <div className="bg-[#FFEBEE] rounded-xl p-2.5 text-center border border-[#E53935]/20">
+                      <div className="text-lg">🔄</div>
+                      <div className="font-black text-base text-[#C62828]">{totalRejected}</div>
+                      <div className="text-[9px] font-bold text-[#8C6B45]">Diulang</div>
+                    </div>
+                  </div>
+
+                  {/* Section: Menunggu Validasi */}
+                  {pendingItems.length > 0 && (
+                    <div>
+                      <h4 className="font-display font-black text-xs text-[#E65100] mb-2 flex items-center gap-1.5">
+                        <span>⏳</span> Menunggu Validasi
+                        <span className="text-[9px] font-bold text-[#8C6B45] bg-white/60 px-1.5 py-0.5 rounded-full">
+                          {pendingItems.length}
+                        </span>
+                      </h4>
+                      <div className="space-y-2">
+                        {pendingItems.map(({ profile: child, assignment: a }) =>
+                          renderValidationItem(child, a, true, false, false)
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Section: Perlu Diulang */}
+                  {rejectedItems.length > 0 && (
+                    <div>
+                      <h4 className="font-display font-black text-xs text-[#C62828] mb-2 flex items-center gap-1.5">
+                        <span>🔄</span> Perlu Diulang
+                        <span className="text-[9px] font-bold text-[#8C6B45] bg-white/60 px-1.5 py-0.5 rounded-full">
+                          {rejectedItems.length}
+                        </span>
+                      </h4>
+                      <div className="space-y-2">
+                        {rejectedItems.map(({ profile: child, assignment: a }) =>
+                          renderValidationItem(child, a, false, false, true)
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Section: Disetujui Hari Ini */}
+                  {approvedItems.length > 0 && (
+                    <div>
+                      <h4 className="font-display font-black text-xs text-[#2E7D32] mb-2 flex items-center gap-1.5">
+                        <span>✅</span> Disetujui Hari Ini
+                        <span className="text-[9px] font-bold text-[#8C6B45] bg-white/60 px-1.5 py-0.5 rounded-full">
+                          {approvedItems.length}
+                        </span>
+                      </h4>
+                      <div className="space-y-2">
+                        {approvedItems.map(({ profile: child, assignment: a }) =>
+                          renderValidationItem(child, a, false, true, false)
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Empty pending */}
+                  {pendingItems.length === 0 && allItems.length === 0 && (
+                    <div className="text-center py-3">
+                      <p className="text-[10px] font-bold text-[#8C6B45]/70">
+                        Semua validasi hari ini sudah selesai.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* All done state */}
+                  {pendingItems.length === 0 && allItems.length > 0 && (
+                    <div className="text-center py-2">
+                      <div className="text-2xl mb-1">🎉</div>
+                      <p className="text-xs font-bold text-[#2E7D32]">
+                        Semua validasi hari ini sudah selesai!
+                      </p>
+                      <p className="text-[10px] text-[#8C6B45] mt-0.5">
+                        Total {totalPointsGiven} poin diberikan hari ini.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+        )}
 
         {/* ═══ Insights ═══ */}
         {insights.length > 0 && (

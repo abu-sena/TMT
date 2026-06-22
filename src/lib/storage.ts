@@ -58,6 +58,11 @@ export function createProfile(name: string, avatar: string, difficulty: Difficul
     currentDifficulty: difficulty,
     completedDifficulties: [],
     difficultyUpgradeAvailable: false,
+    // Difficulty completion rewards (stage 500)
+    claimedFinalRewardsByDifficulty: {},
+    pendingDifficultyUpgrade: null,
+    pendingFinalRewardDifficulty: null,
+    claimedStageRewardIds: [],
   };
 }
 

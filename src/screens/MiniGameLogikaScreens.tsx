@@ -111,8 +111,12 @@ function LogicGameScreen({
         <div className="bg-white/50 px-3 py-1.5 rounded-full font-black text-[#5A3515] text-sm border-2 border-[#CBB794] ml-auto">{correctCount + wrongCount}/{Math.min(questions.length, 15)}</div>
       </header>
       <main className="flex-1 flex flex-col items-center justify-center min-h-0 overflow-y-auto">
-        <GameCard tone="cream" className={`w-full max-w-sm text-center py-6 mb-4 border-4 shrink-0 ${selectedIdx !== null ? (selectedIdx === question.correctIdx ? "border-[#2E8B12] bg-[#E8F5E9]" : "border-[#A02020] bg-[#FFEBEE]") : "border-[#CBB794]"}`}>
-          <p className="font-bold text-base sm:text-lg text-[#5A3515] leading-snug px-2">{question.prompt}</p>
+        <GameCard tone="cream" className={`w-full max-w-sm py-6 mb-4 border-4 shrink-0 ${selectedIdx !== null ? (selectedIdx === question.correctIdx ? "border-[#2E8B12] bg-[#E8F5E9]" : "border-[#A02020] bg-[#FFEBEE]") : "border-[#CBB794]"}`}>
+          <div className="px-3">
+            {question.prompt.split("\n").map((line, i) => (
+              <p key={i} className={`font-bold text-sm sm:text-base text-[#5A3515] leading-snug ${i > 0 ? "mt-0.5" : ""}`}>{line}</p>
+            ))}
+          </div>
         </GameCard>
         {selectedIdx !== null && (
           <div className="w-full max-w-sm mb-4 p-4 rounded-2xl bg-white/80 border-2 border-[#CBB794]">

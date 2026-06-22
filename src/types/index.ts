@@ -72,11 +72,11 @@ export type StageType = "mission" | "boss" | "review" | "reward" | "challenge";
 // ══════════════════════════════════════════
 
 export interface WorldDefinition {
-  id: string;
+  id: string; // will be used as mapSegmentId
   name: string;
   description: string;
   difficulty: DifficultyId;
-  categoryFocus: CategoryId[];
+  backgroundTheme: string;
   themeColor: string;
   icon: string;
   stageRange: [number, number];
@@ -91,11 +91,12 @@ export interface Stage {
   id: string;
   stageNumber: number;
   difficulty: DifficultyId;
-  worldId: string;
-  worldName: string;
+  mapSegmentId: string;
+  backgroundTheme: string;
   category: CategoryId;
   stageType: StageType;
-  missionType: MissionType;
+  challengeType: MiniGameType | MissionType; // Used for routing renderer
+  missionType: MissionType; // kept for legacy compat
   title: string;
   story: string;
   instruction: string;
@@ -125,6 +126,16 @@ export interface Stage {
   mapPosition?: { x: number; y: number };
   options?: MissionOption[];
   rewardBadgeId?: string;
+  // Story Adventure fields (optional, added by stageToMission)
+  storyTitle?: string;
+  introText?: string;
+  userRoleText?: string;
+  challengeContext?: string;
+  successText?: string;
+  failureText?: string;
+  worldImpactText?: string;
+  companionId?: string;
+  companionHint?: string;
 }
 
 export interface MissionOption {
@@ -143,8 +154,11 @@ export interface BaseMission {
   gradeRange: string;
   category: CategoryId;
   secondaryCategory?: CategoryId;
+  challengeType?: MiniGameType | MissionType;
   missionType: MissionType;
-  worldArea?: string;
+  mapSegmentId?: string;
+  backgroundTheme?: string;
+  worldArea?: string; // Legacy
   mapPosition?: { x: number; y: number };
   story: string;
   instruction: string;
@@ -344,6 +358,8 @@ export interface MissionProgress {
   stars: number; // 0..3
   bestPoints: number;
   attempts: number;
+  completedCount: number; // how many times this mission was completed (stars > 0). 0 = never, 1 = first, 2+ = replay
+  firstCompletedAt: number; // timestamp of first completion (0 if never)
   bestChoiceSelected?: boolean;
   fastestTimeSeconds?: number;
   completedAt: number;
@@ -376,7 +392,13 @@ export interface Profile {
   
   // New features:
   dailyMissionState?: DailyMissionState;
-  dailyAdabChecklist?: DailyAdabChecklist;
+  dailyAdabChecklist?: DailyAdabChecklist; // @deprecated — migrated to dailyMissionAssignments
+  claimedStageRewardIds: string[];
+  
+  // New Daily Mission System (parent-managed)
+  dailyMissionAssignments?: DailyMissionAssignment[];
+  dailyMissionRewardLedger?: DailyMissionRewardLedgerEntry[];
+  dailyMissionStreak?: DailyMissionStreak;
 
   // Difficulty upgrade system
   unlockedDifficulties: DifficultyId[];
@@ -384,6 +406,10 @@ export interface Profile {
   completedDifficulties: DifficultyId[];
   difficultyUpgradeAvailable: boolean;
   upgradedAt?: number;
+  // Difficulty completion rewards (stage 500)
+  claimedFinalRewardsByDifficulty: Partial<Record<DifficultyId, DifficultyCompletionReward>>;
+  pendingDifficultyUpgrade: DifficultyId | null;
+  pendingFinalRewardDifficulty: DifficultyId | null;
 }
 
 export interface DailyMissionState {
@@ -430,20 +456,34 @@ export interface LeaderboardEntry {
 }
 
 // ══════════════════════════════════════════
-// Daily Adab Checklist (Real-World)
+// Daily Adab Checklist (Legacy — migrated to Daily Mission System)
 // ══════════════════════════════════════════
 
+export type DailyAdabItemStatus =
+  | "not_started"
+  | "checked_by_child"
+  | "pending_parent_validation"
+  | "approved_by_parent"
+  | "rejected_by_parent";
+
+/** @deprecated Use DailyMissionAssignment instead */
 export interface DailyAdabChecklist {
   id: string;
   profileId: string;
   date: string;
   items: DailyAdabChecklistItem[];
   completedCount: number;
+  pendingValidationCount: number;
+  approvedCount: number;
+  rejectedCount: number;
   verifiedCount: number;
   rewardClaimed: boolean;
   streak: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
+/** @deprecated Use DailyMissionAssignment instead */
 export interface DailyAdabChecklistItem {
   id: string;
   title: string;
@@ -451,9 +491,144 @@ export interface DailyAdabChecklistItem {
   requiresParentVerification: boolean;
   isChecked: boolean;
   isVerified: boolean;
+  status: DailyAdabItemStatus;
   checkedAt?: string;
   verifiedAt?: string;
+  approvedAt?: string;
+  rejectedAt?: string;
+  parentNote?: string;
+  rewardGranted: boolean;
+  rewardGrantedAt?: string;
 }
+
+// ══════════════════════════════════════════
+// New Daily Mission System (Parent-Managed)
+// ══════════════════════════════════════════
+
+export type DailyMissionCategory =
+  | "adab"
+  | "ibadah"
+  | "belajar"
+  | "membaca"
+  | "tanggung-jawab"
+  | "kesehatan"
+  | "keluarga"
+  | "custom";
+
+export type DailyMissionDifficultyWeight = "ringan" | "normal" | "sedang" | "berat" | "spesial";
+
+export const DAILY_MISSION_CATEGORY_META: Record<DailyMissionCategory, { label: string; emoji: string }> = {
+  adab: { label: "Adab", emoji: "🌟" },
+  ibadah: { label: "Ibadah", emoji: "🕌" },
+  belajar: { label: "Belajar", emoji: "📚" },
+  membaca: { label: "Membaca", emoji: "📖" },
+  "tanggung-jawab": { label: "Tanggung Jawab", emoji: "🏠" },
+  kesehatan: { label: "Kesehatan", emoji: "💪" },
+  keluarga: { label: "Keluarga", emoji: "👨‍👩‍👧" },
+  custom: { label: "Custom", emoji: "✨" },
+};
+
+export const DAILY_MISSION_WEIGHT_DEFAULTS: Record<DailyMissionDifficultyWeight, { label: string; defaultPoints: number }> = {
+  ringan: { label: "Ringan", defaultPoints: 10 },
+  normal: { label: "Normal", defaultPoints: 20 },
+  sedang: { label: "Sedang", defaultPoints: 30 },
+  berat: { label: "Berat", defaultPoints: 50 },
+  spesial: { label: "Spesial", defaultPoints: 75 },
+};
+
+export type DailyMissionScheduleType = "daily" | "once" | "custom";
+
+export type DailyMissionAssignmentStatus =
+  | "not_started"
+  | "checked_by_child"
+  | "pending_parent_validation"
+  | "approved_by_parent"
+  | "rejected_by_parent";
+
+export interface DailyMissionTemplate {
+  id: string;
+  title: string;
+  description: string;
+  category: DailyMissionCategory;
+  difficultyWeight: DailyMissionDifficultyWeight;
+  defaultPoints: number;
+  requiresParentValidation: boolean;
+  isBuiltIn: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DailyMission {
+  id: string;
+  templateId?: string;
+  title: string;
+  description: string;
+  category: DailyMissionCategory;
+  difficultyWeight: DailyMissionDifficultyWeight;
+  points: number;
+  assignedProfileIds: string[];
+  date: string; // YYYY-MM-DD
+  scheduleType: DailyMissionScheduleType;
+  repeatDays?: number[]; // 0=Sun..6=Sat
+  requiresParentValidation: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DailyMissionAssignment {
+  id: string;
+  missionId: string;
+  profileId: string;
+  date: string; // YYYY-MM-DD
+  title: string;
+  description: string;
+  category: DailyMissionCategory;
+  points: number;
+  status: DailyMissionAssignmentStatus;
+  checkedAt?: string;
+  approvedAt?: string;
+  rejectedAt?: string;
+  parentNote?: string;
+  childNote?: string;
+  rewardGranted: boolean;
+  rewardGrantedAt?: string;
+  pointsAwarded: number;
+}
+
+export interface DailyMissionRewardLedgerEntry {
+  id: string;
+  profileId: string;
+  assignmentId: string;
+  date: string;
+  points: number;
+  reason: "mission_approved" | "daily_bonus" | "streak_reward";
+  grantedAt: string;
+}
+
+export interface DailyMissionStreak {
+  profileId: string;
+  currentStreak: number;
+  longestStreak: number;
+  lastQualifiedDate: string; // YYYY-MM-DD
+  streakRewardsClaimed: number[]; // streak day milestones claimed (3, 7, 14, 30)
+}
+
+// ── Daily Mission System Constants ──
+
+export const DAILY_MISSION_SOFT_CAP = 150;
+export const DAILY_MISSION_HARD_CAP = 250;
+export const DAILY_MISSION_MIN_POINTS = 5;
+export const DAILY_MISSION_MAX_POINTS_PER_MISSION = 75;
+export const DAILY_MISSION_ALL_DONE_BONUS = 25;
+
+export const DAILY_MISSION_STREAK_MILESTONES: Record<number, { points: number; badge?: string }> = {
+  3: { points: 30 },
+  7: { points: 75, badge: "konsisten-7-hari" },
+  14: { points: 150 },
+  30: { points: 300, badge: "istiqamah-30-hari" },
+};
 
 export type ScreenId =
   | "splash"
@@ -487,8 +662,11 @@ export type ScreenId =
   | "minigame-ubah-posisi"
   | "minigame-cocok-bayangan"
   | "minigame-jalur-tercepat"
+  | "minigame-rantai-warna"
+  | "minigame-jalur-angka"
   | "minigame-misi-keluarga"
   | "minigame-family-challenge"
+  | "minigame-kode-warna"
   | "battle"
   | "my-rewards"
   | "reward-setup"
@@ -547,7 +725,10 @@ export type MiniGameType =
   | "match-shadow"
   | "fastest-path"
   | "family-mission"
-  | "family-challenge";
+  | "family-challenge"
+  | "color-code"
+  | "color-sequence-path"
+  | "number-path-puzzle";
 
 export interface MiniGameAttempt {
   id: string;
@@ -685,6 +866,35 @@ export interface BattleHistoryEntry {
 }
 
 // ══════════════════════════════════════════
+// Difficulty Completion Reward (Stage 500)
+// ══════════════════════════════════════════
+
+export interface DifficultyCompletionReward {
+  difficulty: DifficultyId;
+  stageNumber: number; // always 500
+  rewardClaimed: boolean;
+  rewardPending: boolean; // pending box not yet opened
+  claimedAt: number; // timestamp
+  expAwarded: number;
+  coinsAwarded: number;
+  gemsAwarded: number;
+  lencanaAwarded: string[];
+  nextDifficultyUnlocked: boolean;
+  upgradePromptShown: boolean;
+}
+
+export const FINAL_STAGE_NUMBER = 500;
+
+export const DIFFICULTY_COMPLETION_REWARDS: Record<DifficultyId, { exp: number; coins: number; gems: number; lencana: string[] }> = {
+  tk: { exp: 1000, coins: 300, gems: 5, lencana: ["tk-complete"] },
+  "sd-bawah": { exp: 1500, coins: 500, gems: 8, lencana: ["sd-bawah-complete"] },
+  "sd-atas": { exp: 2000, coins: 700, gems: 10, lencana: ["sd-atas-complete"] },
+  smp: { exp: 2500, coins: 1000, gems: 15, lencana: ["smp-complete"] },
+  sma: { exp: 3000, coins: 1500, gems: 20, lencana: ["sma-complete"] },
+  universitas: { exp: 5000, coins: 2500, gems: 30, lencana: ["universitas-complete", "the-true-mastermind"] },
+};
+
+// ══════════════════════════════════════════
 // Hadiah Dunia Nyata (Offline Reward)
 // ══════════════════════════════════════════
 
@@ -732,4 +942,6 @@ export interface GameStoreState {
   miniGameLeaderboards: Record<string, LeaderboardEntry[]>;
   battleHistory: BattleHistoryEntry[];
   rewardMilestones: RewardMilestone[];
+  difficultyCompletionRewards: DifficultyCompletionReward[];
+  dailyMissions: DailyMission[];
 }

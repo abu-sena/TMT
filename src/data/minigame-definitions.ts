@@ -1,7 +1,100 @@
 /**
- * Mini-Game Definitions — all 20 mini-games in 5 packages
+ * Mini-Game Definitions — all mini-games with flat list support.
+ * 
+ * Categories (packageId) are kept as metadata/tags only.
+ * Primary navigation uses MINI_GAME_LIST (ordered flat list).
  */
 import type { MiniGamePackage, MiniGameDefinition, MiniGamePackageId, DifficultyId } from "@/types";
+
+// ═══════════════════════════════════════════
+// Flat Mini-Game List (ordered per spec)
+// ═══════════════════════════════════════════
+
+export interface FlatGameEntry {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  categoryTag: string;      // short tag like "Logika" or "Adab"
+  categoryEmoji: string;
+  isAdabGame: boolean;
+  isMiniGameEnabled: boolean;
+  isBattleEnabled: boolean;
+  supportedDifficulties: DifficultyId[];
+  minDifficulty?: DifficultyId; // locked below this
+  estimatedDuration?: string;
+  screenId?: string;
+  battleAdapterKey?: string;
+  order: number;
+}
+
+export const MINI_GAME_FLAT_LIST: FlatGameEntry[] = [
+  { id: "hitung-kilat", title: "Hitung Kilat", description: "Jawab soal matematika secepat mungkin.", icon: "⚡", categoryTag: "Cepat", categoryEmoji: "⚡", isAdabGame: false, isMiniGameEnabled: true, isBattleEnabled: true, supportedDifficulties: ["tk","sd-bawah","sd-atas","smp","sma","universitas"], estimatedDuration: "2-3 mnt", screenId: "minigame-hitung", battleAdapterKey: "hitung", order: 1 },
+  { id: "pola-kilat", title: "Pola Kilat", description: "Temukan pola selanjutnya dari urutan.", icon: "🧩", categoryTag: "Cepat", categoryEmoji: "⚡", isAdabGame: false, isMiniGameEnabled: true, isBattleEnabled: true, supportedDifficulties: ["tk","sd-bawah","sd-atas","smp","sma","universitas"], estimatedDuration: "2-3 mnt", screenId: "minigame-pola", battleAdapterKey: "pola", order: 2 },
+  { id: "ingatan-cepat", title: "Ingatan Cepat", description: "Hafalkan urutan gambar, lalu pilih kembali.", icon: "🧠", categoryTag: "Cepat", categoryEmoji: "⚡", isAdabGame: false, isMiniGameEnabled: true, isBattleEnabled: true, supportedDifficulties: ["tk","sd-bawah","sd-atas","smp","sma","universitas"], estimatedDuration: "2-3 mnt", screenId: "minigame-ingatan", battleAdapterKey: "ingatan", order: 3 },
+  { id: "cari-berbeda", title: "Cari yang Berbeda", description: "Temukan objek yang berbeda dari yang mirip.", icon: "🔍", categoryTag: "Cepat", categoryEmoji: "⚡", isAdabGame: false, isMiniGameEnabled: true, isBattleEnabled: true, supportedDifficulties: ["tk","sd-bawah","sd-atas","smp","sma","universitas"], estimatedDuration: "2-3 mnt", screenId: "minigame-cari-beda", battleAdapterKey: "cari-beda", order: 4 },
+  { id: "kode-warna", title: "Kode Warna", description: "Pecahkan kode bentuk dan hitung hasilnya.", icon: "🧩", categoryTag: "Logika", categoryEmoji: "🧠", isAdabGame: false, isMiniGameEnabled: true, isBattleEnabled: true, supportedDifficulties: ["tk","sd-bawah","sd-atas","smp","sma","universitas"], estimatedDuration: "2-3 mnt", screenId: "minigame-kode-warna", battleAdapterKey: "kode-warna", order: 5 },
+  { id: "cocok-bayangan", title: "Cocokkan Bayangan", description: "Temukan bayangan hitam yang cocok dengan bentuk.", icon: "👤", categoryTag: "Spasial", categoryEmoji: "🔷", isAdabGame: false, isMiniGameEnabled: true, isBattleEnabled: true, supportedDifficulties: ["tk","sd-bawah","sd-atas","smp","sma","universitas"], estimatedDuration: "2-3 mnt", screenId: "minigame-cocok-bayangan", battleAdapterKey: "cocok-bayangan", order: 6 },
+  { id: "ubah-posisi", title: "Ubah Posisi", description: "Ikuti instruksi gerakan, tentukan posisi akhir.", icon: "🔄", categoryTag: "Spasial", categoryEmoji: "🔷", isAdabGame: false, isMiniGameEnabled: true, isBattleEnabled: true, supportedDifficulties: ["sd-bawah","sd-atas","smp","sma","universitas"], minDifficulty: "sd-bawah", estimatedDuration: "3-5 mnt", screenId: "minigame-ubah-posisi", battleAdapterKey: "ubah-posisi", order: 7 },
+  { id: "jalur-tercepat", title: "Jalur Tercepat", description: "Bantu monyet sampai ke pisang di grid!", icon: "🐒", categoryTag: "Spasial", categoryEmoji: "🔷", isAdabGame: false, isMiniGameEnabled: true, isBattleEnabled: true, supportedDifficulties: ["sd-bawah","sd-atas","smp","sma","universitas"], minDifficulty: "sd-bawah", estimatedDuration: "3-5 mnt", screenId: "minigame-jalur-tercepat", battleAdapterKey: "jalur-tercepat", order: 8 },
+  { id: "detektif-petunjuk", title: "Detektif Petunjuk", description: "Gunakan petunjuk untuk memecahkan misteri.", icon: "🕵️", categoryTag: "Logika", categoryEmoji: "🧠", isAdabGame: false, isMiniGameEnabled: true, isBattleEnabled: true, supportedDifficulties: ["tk","sd-bawah","sd-atas","smp","sma","universitas"], estimatedDuration: "3-5 mnt", screenId: "minigame-detektif", battleAdapterKey: "detektif", order: 9 },
+  { id: "tebak-aturan", title: "Tebak Aturan", description: "Temukan aturan tersembunyi dari contoh.", icon: "📐", categoryTag: "Logika", categoryEmoji: "🧠", isAdabGame: false, isMiniGameEnabled: true, isBattleEnabled: true, supportedDifficulties: ["tk","sd-bawah","sd-atas","smp","sma","universitas"], estimatedDuration: "3-5 mnt", screenId: "minigame-tebak-aturan", battleAdapterKey: "tebak-aturan", order: 10 },
+  { id: "pilih-kesimpulan", title: "Pilih Kesimpulan", description: "Baca fakta, lalu pilih kesimpulan paling tepat.", icon: "💡", categoryTag: "Logika", categoryEmoji: "🧠", isAdabGame: false, isMiniGameEnabled: true, isBattleEnabled: true, supportedDifficulties: ["tk","sd-bawah","sd-atas","smp","sma","universitas"], estimatedDuration: "3-5 mnt", screenId: "minigame-kesimpulan", battleAdapterKey: "kesimpulan", order: 11 },
+  { id: "benar-atau-salah", title: "Benar atau Salah", description: "Tentukan apakah pernyataan benar atau salah.", icon: "✅", categoryTag: "Logika", categoryEmoji: "🧠", isAdabGame: false, isMiniGameEnabled: true, isBattleEnabled: true, supportedDifficulties: ["tk","sd-bawah","sd-atas","smp","sma","universitas"], estimatedDuration: "2-3 mnt", screenId: "minigame-benar-salah", battleAdapterKey: "benar-salah", order: 12 },
+  // ═══════════════════════════════════════════
+  // Rantai Warna — Mini-Game baru (2026-06-22)
+  // ═══════════════════════════════════════════
+  { id: "rantai-warna", title: "Rantai Warna", description: "Hubungkan warna sesuai urutan angka.", icon: "🎨", categoryTag: "Cepat", categoryEmoji: "⚡", isAdabGame: false, isMiniGameEnabled: true, isBattleEnabled: true, supportedDifficulties: ["tk","sd-bawah","sd-atas","smp","sma","universitas"], estimatedDuration: "2-5 mnt", screenId: "minigame-rantai-warna", battleAdapterKey: "rantai-warna", order: 13 },
+  // ═══════════════════════════════════════════
+  // Jalur Angka — Mini-Game baru (2026-06-22)
+  // ═══════════════════════════════════════════
+  { id: "jalur-angka", title: "Jalur Angka", description: "Isi kotak kosong agar jalur hitung menjadi benar.", icon: "🔢", categoryTag: "Logika", categoryEmoji: "🧠", isAdabGame: false, isMiniGameEnabled: true, isBattleEnabled: true, supportedDifficulties: ["tk","sd-bawah","sd-atas","smp","sma","universitas"], estimatedDuration: "3-8 mnt", screenId: "minigame-jalur-angka", battleAdapterKey: "jalur-angka", order: 14 },
+  // ═══════════════════════════════════════════
+  // Game Adab — disembunyikan dari Mini-Game (2026-06-22)
+  // Tetap tersedia di Peta Petualangan via challengeType.
+  // ═══════════════════════════════════════════
+  { id: "pilih-sikap", title: "Pilih Sikap Terbaik", description: "Pilih sikap terbaik dalam cerita sehari-hari.", icon: "🌟", categoryTag: "Adab", categoryEmoji: "💖", isAdabGame: true, isMiniGameEnabled: false, isBattleEnabled: false, supportedDifficulties: ["tk","sd-bawah","sd-atas","smp","sma","universitas"], estimatedDuration: "2-3 mnt", screenId: "minigame-pilih-sikap", order: 15 },
+  { id: "nasihat-lembut", title: "Nasihat dengan Lembut", description: "Pilih kata-kata terbaik untuk menasihati teman.", icon: "💬", categoryTag: "Adab", categoryEmoji: "💖", isAdabGame: true, isMiniGameEnabled: false, isBattleEnabled: false, supportedDifficulties: ["tk","sd-bawah","sd-atas","smp","sma","universitas"], estimatedDuration: "2-3 mnt", screenId: "minigame-nasihat", order: 16 },
+  { id: "urutkan-adab", title: "Urutkan Adab", description: "Susun langkah-langkah adab dalam urutan benar.", icon: "📋", categoryTag: "Adab", categoryEmoji: "💖", isAdabGame: true, isMiniGameEnabled: false, isBattleEnabled: false, supportedDifficulties: ["tk","sd-bawah","sd-atas","smp","sma","universitas"], estimatedDuration: "2-3 mnt", screenId: "minigame-urutkan-adab", order: 17 },
+  { id: "dilema-bijak", title: "Dilema Bijak", description: "Hadapi dilema moral, pilih keputusan paling bijak.", icon: "⚖️", categoryTag: "Adab", categoryEmoji: "💖", isAdabGame: true, isMiniGameEnabled: false, isBattleEnabled: false, supportedDifficulties: ["smp","sma","universitas"], minDifficulty: "smp", estimatedDuration: "3-5 mnt", screenId: "minigame-dilema", order: 18 },
+];
+
+/** Get flat list filtered for mini-game display */
+export function getFlatMiniGames(): FlatGameEntry[] {
+  return MINI_GAME_FLAT_LIST.filter(g => g.isMiniGameEnabled).sort((a, b) => a.order - b.order);
+}
+
+/** Get flat list filtered for battle display (non-adab, battle-enabled) */
+export function getFlatBattleGames(): FlatGameEntry[] {
+  return MINI_GAME_FLAT_LIST.filter(g => g.isBattleEnabled && !g.isAdabGame && g.battleAdapterKey);
+}
+
+/** Check if a game is playable for a given difficulty */
+export function isGamePlayable(game: FlatGameEntry, difficulty: DifficultyId): boolean {
+  if (game.minDifficulty) {
+    const DIFF_ORDER = ["tk", "sd-bawah", "sd-atas", "smp", "sma", "universitas"];
+    const minIdx = DIFF_ORDER.indexOf(game.minDifficulty);
+    const userIdx = DIFF_ORDER.indexOf(difficulty);
+    return userIdx >= minIdx;
+  }
+  return game.supportedDifficulties.includes(difficulty);
+}
+
+/** Get mini-games playable for a difficulty */
+export function getPlayableMiniGames(difficulty: DifficultyId): FlatGameEntry[] {
+  return getFlatMiniGames().filter(g => isGamePlayable(g, difficulty));
+}
+
+/** Get random playable mini-game (not locked, not disabled) */
+export function getRandomPlayableGame(difficulty: DifficultyId): FlatGameEntry | null {
+  const playable = getPlayableMiniGames(difficulty);
+  if (playable.length === 0) return null;
+  return playable[Math.floor(Math.random() * playable.length)];
+}
+
+// ═══════════════════════════════════════════
+// Legacy package structure (kept for backward compat)
+// ═══════════════════════════════════════════
 
 // ═══════════════════════════════════════════
 // Packages
@@ -241,6 +334,57 @@ export const MINI_GAMES: MiniGameDefinition[] = [
     isFamilyMode: false,
     isActive: true,
     screenId: "minigame-benar-salah",
+  },
+  {
+    id: "kode-warna",
+    packageId: "logika",
+    title: "Kode Warna",
+    description: "Pahami kode bentuk dan hitung hasilnya.",
+    icon: "🧩",
+    supportedDifficulties: ALL_DIFFICULTIES,
+    gameType: "color-code",
+    hasTimer: true,
+    hasLeaderboard: true,
+    hasStages: false,
+    isFamilyMode: false,
+    isActive: true,
+    screenId: "minigame-kode-warna",
+  },
+  // ═══════════════════════════════════════════
+  // Rantai Warna — Mini-Game baru (2026-06-22)
+  // ═══════════════════════════════════════════
+  {
+    id: "rantai-warna",
+    packageId: "fokus-cepat",
+    title: "Rantai Warna",
+    description: "Hubungkan warna sesuai urutan angka yang diberikan.",
+    icon: "🎨",
+    supportedDifficulties: ALL_DIFFICULTIES,
+    gameType: "color-sequence-path",
+    hasTimer: true,
+    hasLeaderboard: true,
+    hasStages: false,
+    isFamilyMode: false,
+    isActive: true,
+    screenId: "minigame-rantai-warna",
+  },
+  // ═══════════════════════════════════════════
+  // Jalur Angka — Mini-Game baru (2026-06-22)
+  // ═══════════════════════════════════════════
+  {
+    id: "jalur-angka",
+    packageId: "logika",
+    title: "Jalur Angka",
+    description: "Isi kotak kosong agar jalur hitung menjadi benar.",
+    icon: "🔢",
+    supportedDifficulties: ALL_DIFFICULTIES,
+    gameType: "number-path-puzzle",
+    hasTimer: true,
+    hasLeaderboard: true,
+    hasStages: false,
+    isFamilyMode: false,
+    isActive: true,
+    screenId: "minigame-jalur-angka",
   },
 
   // ─── Paket Spasial ───

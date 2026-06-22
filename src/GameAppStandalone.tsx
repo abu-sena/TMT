@@ -8,10 +8,10 @@
  */
 
 import { useMemo, useState, useRef, useEffect } from "react";
-import type { BadgeDef, Mission, ScreenId } from "@/types";
+import type { BadgeDef, Mission, ScreenId, DifficultyId } from "@/types";
 import { CATEGORIES, DIFFICULTY_UI_LABELS, DIFFICULTY_MAP } from "@/data/constants";
 import { applyXP } from "@/lib/leveling";
-import { checkBadges, missionsForDifficulty, newlyUnlockedBadges, checkDifficultyUpgrade, getNextDifficulty } from "@/lib/progress";
+import { checkBadges, missionsForDifficulty, newlyUnlockedBadges, getNextDifficulty, isFinalStage, hasClaimedDifficultyCompletionReward, hasCompletedStage500, getDifficultyCompletionRewardDef, markFinalRewardPending, claimDifficultyCompletionReward, unlockNextDifficulty, setPendingDifficultyUpgrade, clearPendingDifficultyUpgrade, isFirstCompletion, markDifficultyCompleted, hasAnyPendingFinalRewards, getPendingFinalRewardDifficulty } from "@/lib/progress";
 import { scoreMission } from "@/lib/scoring";
 import { createProfile, useGameStore } from "@/lib/storage";
 import { MISSIONS } from "@/data/missions";
@@ -33,13 +33,15 @@ import { MiniGamePolaScreen } from "@/screens/MiniGamePolaScreen";
 import { MiniGameIngatanScreen } from "@/screens/MiniGameIngatanScreen";
 import { MiniGameAdabScreen } from "@/screens/MiniGameAdabScreen";
 import { MiniGameCenter } from "@/screens/MiniGameCenter";
-import { MiniGamePackageScreen } from "@/screens/MiniGamePackageScreen";
 // New mini-game screens
 import { CariBerbedaScreen } from "@/screens/MiniGameCariBerbedaScreen";
 import { BenarSalahScreen } from "@/screens/MiniGameBenarSalahScreen";
 import { PilihKesimpulanScreen, DetektifScreen, TebakAturanScreen } from "@/screens/MiniGameLogikaScreens";
 import { NasihatLembutScreen, DilemaBijakScreen, UrutkanAdabScreen } from "@/screens/MiniGameAdabScreens";
 import { UbahPosisiGame, CocokBayanganGame, JalurTercepatGame, MisiKeluargaScreen } from "@/screens/MiniGameSpasialKeluargaScreens";
+import { MiniGameRantaiWarnaScreen } from "@/screens/MiniGameRantaiWarnaScreen";
+import { MiniGameJalurAngkaScreen } from "@/screens/MiniGameJalurAngkaScreen";
+import { ColorCodeGame } from "@/screens/MiniGameColorCodeScreen";
 import { BattleScreen } from "@/screens/BattleScreen";
 import { ParentScreen } from "@/screens/ParentScreen";
 import { SettingsScreen } from "@/screens/SettingsScreen";
@@ -50,6 +52,9 @@ import { MissionPopup } from "@/components/missions/MissionPopup";
 import { ParentGate } from "@/components/safety/ParentGate";
 import { ScreenTimeReminder } from "@/components/safety/ScreenTimeReminder";
 import { RewardCelebration } from "@/components/rewards/RewardCelebration";
+import { DifficultyCompletionBox } from "@/components/rewards/DifficultyCompletionBox";
+import { DifficultyUnlockModal } from "@/components/rewards/DifficultyUnlockModal";
+import { MasteryCompleteModal } from "@/components/rewards/MasteryCompleteModal";
 
 interface ResultData {
   mission: Mission;
@@ -61,6 +66,7 @@ interface ResultData {
   newBadges: BadgeDef[];
   breakdown: any;
   bossStepResults?: any[];
+  isFirstCompletion: boolean;
 }
 
 export function GameAppStandalone() {
@@ -89,6 +95,13 @@ export function GameAppStandalone() {
   const [activeMission, setActiveMission] = useState<Mission | null>(null);
   const [popupMission, setPopupMission] = useState<Mission | null>(null);
   const [lastResult, setLastResult] = useState<ResultData | null>(null);
+  const [lastResultStage500, setLastResultStage500] = useState<{
+    difficulty: string;
+    hasPendingReward: boolean;
+    hasClaimedReward: boolean;
+    nextDifficulty: string | null;
+    isUniversitas: boolean;
+  } | null>(null);
 
   // Screen time tracking
   const sessionStartRef = useRef(Date.now());
@@ -109,23 +122,27 @@ export function GameAppStandalone() {
   const rewardsCheckedRef = useRef(false);
 
   // Mini-game package navigation state
-  const [activeMiniGamePackage, setActiveMiniGamePackage] = useState<string | null>(null);
-
-  // Difficulty upgrade state
-  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
-  const [pendingUpgradeDifficulty, setPendingUpgradeDifficulty] = useState<string | null>(null);
-  const upgradeCheckedRef = useRef(false);
+  // Stage 500 difficulty completion flow (REPLACES old upgrade system)
+  const [completionBoxOpen, setCompletionBoxOpen] = useState(false);
+  const [completionDifficulty, setCompletionDifficulty] = useState<string | null>(null);
+  const [unlockModalOpen, setUnlockModalOpen] = useState(false);
+  const [masteryModalOpen, setMasteryModalOpen] = useState(false);
+  const completionCheckedRef = useRef(false);
+  const [pendingCompletion, setPendingCompletion] = useState(false);
 
   // Android back button handler
   const backHandler = useAndroidBackButton({
     screen,
-    hasModal: popupMission !== null || parentGateOpen || screenTimeReminderOpen || celebrationOpen,
+    hasModal: popupMission !== null || parentGateOpen || screenTimeReminderOpen || celebrationOpen || completionBoxOpen || unlockModalOpen || masteryModalOpen,
     onBack: () => {
       soundService.play("back_click");
       if (popupMission) { setPopupMission(null); return; }
       if (parentGateOpen) { setParentGateOpen(false); setScreen("home"); return; }
       if (screenTimeReminderOpen) { setScreenTimeReminderOpen(false); return; }
       if (celebrationOpen) { setCelebrationOpen(false); return; }
+      if (completionBoxOpen) { /* Keep box open - user must claim or use nanti button */ return; }
+      if (unlockModalOpen) { setUnlockModalOpen(false); return; }
+      if (masteryModalOpen) { setMasteryModalOpen(false); return; }
       
       // Mini-game screens: delegate to internal handler
       if (screen.startsWith("minigame-") && miniGameBackRef.current) {
@@ -139,7 +156,7 @@ export function GameAppStandalone() {
         case "result": setScreen("map"); break;
         case "badges": case "stats": case "settings": case "privacy": case "parent": case "daily-missions":
         case "minigame-hitung": case "minigame-pola": case "minigame-ingatan": case "minigame-adab":
-        case "minigame-center": case "minigame-package":
+        case "minigame-center":
         case "battle": case "my-rewards":
           setScreen("home"); break;
         case "reward-setup": setScreen("parent"); break;
@@ -245,18 +262,79 @@ export function GameAppStandalone() {
     }
   }, [screen]);
 
-  // Check difficulty upgrade eligibility after mission completion
+  // Note: Old "checkDifficultyUpgrade" (complete all missions) has been deprecated.
+  // Difficulty unlock now ONLY happens via stage 500 completion flow.
+
+  // ── Boot-time data repair: fix incomplete Stage 500 progression state ──
   useEffect(() => {
-    if (activeProfile && !upgradeCheckedRef.current && (screen === "result" || screen === "map")) {
-      upgradeCheckedRef.current = true;
-      const nextDiff = checkDifficultyUpgrade(activeProfile);
-      if (nextDiff) {
-        setPendingUpgradeDifficulty(nextDiff);
-        // Small delay so result screen renders first, then modal appears
-        setTimeout(() => setUpgradeModalOpen(true), 1200);
+    if (!hydrated || !store.profiles.length) return;
+    let needsUpdate = false;
+    const updatedProfiles = store.profiles.map(profile => {
+      let updated = { ...profile };
+
+      // Check each difficulty: if stage 500 completed but reward not pending/claimed
+      for (const diff of (["tk", "sd-bawah", "sd-atas", "smp", "sma", "universitas"] as DifficultyId[])) {
+        const stage500Completed = hasCompletedStage500(updated, diff);
+        const rewardClaimed = hasClaimedDifficultyCompletionReward(updated, diff);
+        const rewardPending = !!updated.pendingFinalRewardDifficulty;
+
+        if (stage500Completed && !rewardClaimed && !rewardPending) {
+          // Stage 500 completed but reward never marked pending — repair
+          updated = markFinalRewardPending(updated, diff);
+          needsUpdate = true;
+          console.log(`[TMT Repair] Created pending reward for ${diff} (stage 500 completed but no reward state)`);
+        }
+
+        if (rewardClaimed) {
+          // Ensure difficulty is marked completed
+          if (!updated.completedDifficulties.includes(diff)) {
+            updated = markDifficultyCompleted(updated, diff);
+            needsUpdate = true;
+            console.log(`[TMT Repair] Marked ${diff} as completed (reward already claimed)`);
+          }
+
+          // Ensure next difficulty is unlocked (except universitas)
+          if (diff !== "universitas") {
+            const next = getNextDifficulty(diff);
+            if (next && !updated.unlockedDifficulties.includes(next)) {
+              updated = unlockNextDifficulty(updated, diff) || updated;
+              needsUpdate = true;
+              console.log(`[TMT Repair] Unlocked ${next} (${diff} reward already claimed)`);
+            }
+          }
+
+          // If current difficulty is the completed one but no upgrade pending, offer upgrade
+          if (updated.currentDifficulty === diff && diff !== "universitas") {
+            const next = getNextDifficulty(diff);
+            if (next && !updated.pendingDifficultyUpgrade && !updated.difficultyUpgradeAvailable) {
+              updated = setPendingDifficultyUpgrade(updated, next);
+              needsUpdate = true;
+              console.log(`[TMT Repair] Created pending upgrade from ${diff} to ${next}`);
+            }
+          }
+        }
+      }
+
+      // Universitas should never have pending upgrade
+      if (updated.difficulty === "universitas" && updated.pendingDifficultyUpgrade) {
+        updated = clearPendingDifficultyUpgrade(updated);
+        needsUpdate = true;
+        console.log(`[TMT Repair] Cleared invalid pending upgrade for Universitas`);
+      }
+
+      return updated;
+    });
+
+    if (needsUpdate) {
+      // Apply repairs batch
+      for (const repaired of updatedProfiles) {
+        const original = store.profiles.find(p => p.id === repaired.id);
+        if (original && JSON.stringify(original) !== JSON.stringify(repaired)) {
+          updateProfile(repaired.id, repaired);
+        }
       }
     }
-  }, [activeProfile?.id, screen]);
+  }, [hydrated]);
 
   // ---- Splash / onboarding flow ----
   const onSplashDone = () => {
@@ -311,7 +389,7 @@ export function GameAppStandalone() {
       elapsedSeconds: result.elapsedSeconds,
     });
 
-    const xpResult = applyXP(prev, score.xpGain);
+    // xpResult will be calculated below after reward multiplier is determined
     const stats = { ...prev.categoryStats };
     const cats = [activeMission.category, activeMission.secondaryCategory].filter(Boolean) as (typeof CATEGORIES)[number]["id"][];
     for (const c of cats) {
@@ -332,12 +410,27 @@ export function GameAppStandalone() {
       }
     }
 
-    const priorStars = prev.missionProgress[activeMission.id]?.stars ?? 0;
-    const priorBest = prev.missionProgress[activeMission.id]?.bestPoints ?? 0;
+    const prevProgress = prev.missionProgress[activeMission.id];
+    const prevCompletedCount = prevProgress?.completedCount ?? 0;
+    const priorStars = prevProgress?.stars ?? 0;
+    const priorBest = prevProgress?.bestPoints ?? 0;
     const newStars = Math.max(priorStars, score.stars);
     const newBestPoints = Math.max(priorBest, score.finalPoint);
     const wasNewlyCompleted = priorStars === 0 && score.stars > 0;
+    const newCompletedCount = prevCompletedCount + (wasNewlyCompleted ? 1 : 0);
     const minutesPlayed = Math.ceil(result.elapsedSeconds / 60);
+
+    // ── Reward multiplier: 1.0 first completion, 0.25 replay ──
+    const isFirstCompletion = prevCompletedCount === 0 && result.isCorrect;
+    const isReplay = prevCompletedCount >= 1 && result.isCorrect;
+    const rewardMultiplier = isFirstCompletion ? 1.0 : (isReplay ? 0.25 : 1.0);
+    const awardedPoints = Math.max(0, Math.floor(score.finalPoint * rewardMultiplier));
+    const awardedXP = Math.max((result.isCorrect ? 1 : 0), Math.floor(score.xpGain * rewardMultiplier));
+    const awardedCoins = result.isCorrect
+      ? Math.floor((activeMission.isBossMission ? 25 : 5) * rewardMultiplier)
+      : 0;
+
+    const xpResultAdjusted = applyXP(prev, awardedXP);
 
     const isAdabMission = activeMission.category === "moral" ||
       activeMission.secondaryCategory === "moral" ||
@@ -362,12 +455,15 @@ export function GameAppStandalone() {
       }
     }
 
+    const now = Date.now();
+    const existingProgress = prev.missionProgress[activeMission.id];
+
     const updated = {
       ...prev,
-      xp: xpResult.xp,
-      level: xpResult.level,
-      points: prev.points + score.finalPoint,
-      coins: prev.coins + (result.isCorrect ? (activeMission.isBossMission ? 25 : 5) : 0),
+      xp: xpResultAdjusted.xp,
+      level: xpResultAdjusted.level,
+      points: prev.points + awardedPoints,
+      coins: prev.coins + awardedCoins,
       hearts: result.isCorrect ? prev.hearts : Math.max(0, prev.hearts - 1),
       streak: result.isCorrect ? prev.streak + 1 : 0,
       adabStreak: newAdabStreak,
@@ -382,10 +478,12 @@ export function GameAppStandalone() {
           missionId: activeMission.id,
           stars: newStars,
           bestPoints: newBestPoints,
-          attempts: (prev.missionProgress[activeMission.id]?.attempts ?? 0) + 1,
-          bestChoiceSelected: prev.missionProgress[activeMission.id]?.bestChoiceSelected || result.isBestChoice,
-          fastestTimeSeconds: Math.min(prev.missionProgress[activeMission.id]?.fastestTimeSeconds ?? Infinity, result.elapsedSeconds),
-          completedAt: Date.now(),
+          attempts: (existingProgress?.attempts ?? 0) + 1,
+          completedCount: newCompletedCount,
+          firstCompletedAt: existingProgress?.firstCompletedAt ?? (wasNewlyCompleted ? now : 0),
+          bestChoiceSelected: existingProgress?.bestChoiceSelected || result.isBestChoice,
+          fastestTimeSeconds: Math.min(existingProgress?.fastestTimeSeconds ?? Infinity, result.elapsedSeconds),
+          completedAt: now,
         },
       },
     };
@@ -393,25 +491,32 @@ export function GameAppStandalone() {
     const newBadgeIds = checkBadges(updated);
     const unlocked = newlyUnlockedBadges(prev.badges, newBadgeIds);
     updated.badges = newBadgeIds;
+
+    // Check if this stage reward has been claimed before (first time only)
+    if (isFirstCompletion && result.isCorrect && !prev.claimedStageRewardIds.includes(activeMission.id)) {
+      updated.claimedStageRewardIds = [...prev.claimedStageRewardIds, activeMission.id];
+    }
+
     updateProfile(prev.id, updated);
 
     setLastResult({
       mission: activeMission,
       isCorrect: result.isCorrect,
       stars: score.stars,
-      finalPoint: score.finalPoint,
-      xpGain: score.xpGain,
-      leveledUp: xpResult.leveledUp,
+      finalPoint: awardedPoints,
+      xpGain: awardedXP,
+      leveledUp: xpResultAdjusted.leveledUp,
       newBadges: unlocked,
       breakdown: score.breakdown,
       bossStepResults: result.bossStepResults,
+      isFirstCompletion,
     });
     
     // Play sound based on result
     if (result.isCorrect) {
       soundService.play("answer_correct");
       if (score.stars >= 3) soundService.play("star_earned");
-      if (xpResult.leveledUp) soundService.play("level_up");
+      if (xpResultAdjusted.leveledUp) soundService.play("level_up");
       if (unlocked.length > 0) soundService.play("badge_unlock");
       setTimeout(() => soundService.play("success_complete"), 500);
     } else {
@@ -419,8 +524,8 @@ export function GameAppStandalone() {
     }
 
     // Check if any rewards unlocked due to level up
-    if (xpResult.leveledUp) {
-      const newRewards = checkRewardsForProfile(prev.id, xpResult.level);
+    if (xpResultAdjusted.leveledUp) {
+      const newRewards = checkRewardsForProfile(prev.id, xpResultAdjusted.level);
       if (newRewards.length > 0) {
         setCelebrationRewards(newRewards);
         setCelebrationIndex(0);
@@ -429,7 +534,198 @@ export function GameAppStandalone() {
       }
     }
     
+    // ═══ Stage 500 Completion Check (PRIMARY UNLOCK MECHANISM) ═══
+    // Stage 300 is NOT a completion trigger.
+    // Only stage 500 triggers difficulty completion.
+    if (result.isCorrect && isFinalStage(activeMission.number)) {
+      const diff = activeMission.difficulty;
+      const alreadyClaimed = hasClaimedDifficultyCompletionReward(updated, diff);
+      const alreadyPending = !!updated.pendingFinalRewardDifficulty;
+      
+      // Store stage 500 info for ResultScreen
+      setLastResultStage500({
+        difficulty: diff,
+        hasPendingReward: !alreadyClaimed && !alreadyPending,
+        hasClaimedReward: alreadyClaimed,
+        nextDifficulty: alreadyClaimed ? getNextDifficulty(diff) : null,
+        isUniversitas: diff === "universitas",
+      });
+
+      if (!alreadyClaimed && !alreadyPending) {
+        // Mark the reward as pending (box will appear)
+        const withPending = markFinalRewardPending(updated, diff);
+        updateProfile(prev.id, withPending);
+        // Store completion for later box display
+        setPendingCompletion(true);
+        setCompletionDifficulty(diff);
+      }
+    } else {
+      setLastResultStage500(null);
+    }
+    
+    // Log replay vs first completion for debugging
+    if (isFirstCompletion) {
+      console.log(`[TMT] First completion: stage ${activeMission.number} (${activeMission.difficulty}), full reward`);
+    } else if (result.isCorrect) {
+      console.log(`[TMT] Replay: stage ${activeMission.number} (${activeMission.difficulty}), 1/4 reward`);
+    }
+    
     setScreen("result");
+  };
+
+  // After result screen: show completion box if pending
+  useEffect(() => {
+    if (screen === "result" && pendingCompletion && completionDifficulty) {
+      const timer = setTimeout(() => {
+        setCompletionBoxOpen(true);
+        setPendingCompletion(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [screen, pendingCompletion, completionDifficulty]);
+
+  // ═══ Difficulty Completion Handlers ═══
+
+  // ═══ Stage 500 Difficulty Completion Handlers ═══
+
+  const handleCompletionBoxClaim = () => {
+    if (!activeProfile || !completionDifficulty) return;
+    const diff = completionDifficulty as import("@/types").DifficultyId;
+    const current = store.profiles.find(p => p.id === activeProfile.id);
+    if (!current) return;
+
+    // Anti-double-claim: check if already claimed
+    if (hasClaimedDifficultyCompletionReward(current, diff)) {
+      setCompletionBoxOpen(false);
+      return;
+    }
+
+    // Claim the reward (includes EXP, coins, gems, badges)
+    const claimed = claimDifficultyCompletionReward(current, diff);
+    if (!claimed) return;
+
+    updateProfile(current.id, claimed);
+    setCompletionBoxOpen(false);
+    soundService.play("badge_unlock");
+
+    // Show appropriate modal after reward
+    setTimeout(() => {
+      if (diff === "universitas") {
+        // Universitas is final — Mastery Complete!
+        setMasteryModalOpen(true);
+      } else {
+        // Unlock next difficulty (does NOT change current difficulty)
+        const withUnlock = unlockNextDifficulty(claimed, diff);
+        if (withUnlock) {
+          updateProfile(activeProfile.id, withUnlock);
+        }
+        setUnlockModalOpen(true);
+      }
+    }, 600);
+  };
+
+  const handleCompletionBoxClose = () => {
+    // User wants to claim later — keep pending state, reward box stays available
+    setCompletionBoxOpen(false);
+    setPendingCompletion(false);
+  };
+
+  const handleUnlockNow = () => {
+    if (!activeProfile || !completionDifficulty) return;
+    const diff = completionDifficulty as import("@/types").DifficultyId;
+    const current = store.profiles.find(p => p.id === activeProfile.id);
+    if (!current) return;
+
+    const nextDiff = getNextDifficulty(diff);
+    if (!nextDiff) return;
+
+    // Apply the difficulty upgrade — change current difficulty to next
+    const upgraded = clearPendingDifficultyUpgrade({
+      ...current,
+      difficulty: nextDiff,
+      currentDifficulty: nextDiff,
+      difficultyUpgradeAvailable: false,
+      pendingDifficultyUpgrade: null,
+      upgradedAt: Date.now(),
+    });
+
+    updateProfile(current.id, upgraded);
+    setUnlockModalOpen(false);
+    setCompletionDifficulty(null);
+    soundService.play("level_up");
+    
+    // Navigate to map for new difficulty
+    setScreen("map");
+  };
+
+  const handleUnlockLater = () => {
+    if (!activeProfile || !completionDifficulty) return;
+    const diff = completionDifficulty as import("@/types").DifficultyId;
+    const current = store.profiles.find(p => p.id === activeProfile.id);
+    if (!current) return;
+
+    const nextDiff = getNextDifficulty(diff);
+    if (!nextDiff) return;
+
+    // Set pending upgrade — user stays on current difficulty but can upgrade later
+    const withPending = setPendingDifficultyUpgrade(current, nextDiff);
+    updateProfile(current.id, withPending);
+
+    setUnlockModalOpen(false);
+    setCompletionDifficulty(null);
+  };
+
+  const handleUnlockModalClose = () => {
+    setUnlockModalOpen(false);
+    setCompletionDifficulty(null);
+  };
+
+  const handleMasteryClose = () => {
+    setMasteryModalOpen(false);
+    setCompletionDifficulty(null);
+  };
+
+  const handleMasteryViewBadges = () => {
+    setMasteryModalOpen(false);
+    setCompletionDifficulty(null);
+    setScreen("badges");
+  };
+
+  const handleMasteryBackToMap = () => {
+    setMasteryModalOpen(false);
+    setCompletionDifficulty(null);
+    setScreen("map");
+  };
+
+  // Handle "Naik Tingkat" from Home or Map
+  const handleHomeUpgrade = () => {
+    if (!activeProfile) return;
+    const current = store.profiles.find(p => p.id === activeProfile.id);
+    if (!current) return;
+    
+    const pendingDiff = current.pendingDifficultyUpgrade;
+    if (!pendingDiff) return;
+
+    // Apply the pending difficulty upgrade — switch to next difficulty
+    const upgraded = clearPendingDifficultyUpgrade({
+      ...current,
+      difficulty: pendingDiff,
+      currentDifficulty: pendingDiff,
+      upgradedAt: Date.now(),
+    });
+
+    updateProfile(current.id, upgraded);
+    soundService.play("level_up");
+    setScreen("map");
+  };
+
+  // Handle "Buka Hadiah" from Home (reopen pending reward box)
+  const handleOpenPendingBox = () => {
+    if (!activeProfile) return;
+    const current = store.profiles.find(p => p.id === activeProfile.id);
+    if (!current || !current.pendingFinalRewardDifficulty) return;
+    setCompletionDifficulty(current.pendingFinalRewardDifficulty);
+    setCompletionBoxOpen(true);
   };
 
   const nextMission = (): Mission | null => {
@@ -439,48 +735,7 @@ export function GameAppStandalone() {
     return orderedMissions[idx + 1] ?? null;
   };
 
-  // ---- Difficulty Upgrade Handlers ----
-  const handleUpgradeConfirm = () => {
-    if (!activeProfile || !pendingUpgradeDifficulty) return;
-    const next = pendingUpgradeDifficulty as import("@/types").DifficultyId;
-
-    // Add current difficulty to completed
-    const completed = [...(activeProfile.completedDifficulties || [])];
-    if (!completed.includes(activeProfile.difficulty)) {
-      completed.push(activeProfile.difficulty);
-    }
-
-    // Unlock next difficulty
-    const unlocked = [...(activeProfile.unlockedDifficulties || [])];
-    if (!unlocked.includes(next)) {
-      unlocked.push(next);
-    }
-
-    updateProfile(activeProfile.id, {
-      difficulty: next,
-      currentDifficulty: next,
-      unlockedDifficulties: unlocked,
-      completedDifficulties: completed,
-      difficultyUpgradeAvailable: false,
-      upgradedAt: Date.now(),
-    });
-
-    setUpgradeModalOpen(false);
-    setPendingUpgradeDifficulty(null);
-    upgradeCheckedRef.current = false;
-    soundService.play("level_up");
-  };
-
-  const handleUpgradeLater = () => {
-    if (!activeProfile) return;
-    // Mark upgrade as available but don't change difficulty
-    updateProfile(activeProfile.id, {
-      difficultyUpgradeAvailable: true,
-    });
-    setUpgradeModalOpen(false);
-    setPendingUpgradeDifficulty(null);
-    upgradeCheckedRef.current = false;
-  };
+  // Old upgrade handlers removed — difficulty unlock is now ONLY via stage 500 completion.
 
   // ---- Render ----
   // During boot, always show SplashScreen first (never show blank/loading page)
@@ -541,6 +796,8 @@ export function GameAppStandalone() {
           profile={activeProfile}
           onNavigate={(s) => setScreen(s)}
           onSwitchProfile={() => setScreen("profile-select")}
+          onOpenPendingBox={handleOpenPendingBox}
+          onHomeUpgrade={handleHomeUpgrade}
         />
         {homeToast && (
           <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[200] bg-[#5A3515]/90 text-white px-6 py-3 rounded-full font-bold text-sm shadow-lg animate-bob">
@@ -555,7 +812,18 @@ export function GameAppStandalone() {
     const popupStars = popupMission ? activeProfile.missionProgress[popupMission.id]?.stars ?? 0 : 0;
     return (
       <>
-        <MapScreen profile={activeProfile} onBack={() => setScreen("home")} onOpenMission={(m) => setPopupMission(m)} />
+        <MapScreen 
+          profile={activeProfile} 
+          onBack={() => setScreen("home")} 
+          onOpenMission={(m) => setPopupMission(m)} 
+          onChangeDifficulty={(diff) => {
+            const current = store.profiles.find(p => p.id === activeProfile.id);
+            if (current) {
+              updateProfile(current.id, { difficulty: diff, currentDifficulty: diff });
+            }
+          }}
+          onHomeUpgrade={handleHomeUpgrade}
+        />
         {popupMission ? (
           <MissionPopup mission={popupMission} stars={popupStars} onClose={() => setPopupMission(null)} onPlay={() => startMission(popupMission)} />
         ) : null}
@@ -571,29 +839,79 @@ export function GameAppStandalone() {
     return (
       <ResultScreen
         {...lastResult}
+        isStage500={!!lastResultStage500}
+        stage500Difficulty={lastResultStage500?.difficulty}
+        hasPendingFinalReward={lastResultStage500?.hasPendingReward}
+        hasClaimedFinalReward={lastResultStage500?.hasClaimedReward}
+        nextDifficulty={lastResultStage500?.nextDifficulty}
+        isUniversitas={lastResultStage500?.isUniversitas}
+        onOpenRewardBox={() => {
+          if (lastResultStage500?.difficulty) {
+            const current = store.profiles.find(p => p.id === activeProfile!.id);
+            if (current && current.pendingFinalRewardDifficulty) {
+              setCompletionDifficulty(current.pendingFinalRewardDifficulty);
+              setCompletionBoxOpen(true);
+            } else {
+              // Fallback: use the difficulty from result
+              setCompletionDifficulty(lastResultStage500.difficulty as DifficultyId);
+              setCompletionBoxOpen(true);
+            }
+          }
+        }}
         onNextMission={() => {
           const nm = nextMission();
-          if (nm) { setActiveMission(nm); setLastResult(null); setScreen("play"); }
-          else setScreen("map");
+          if (nm) { setActiveMission(nm); setLastResult(null); setLastResultStage500(null); setScreen("play"); }
+          else { setLastResult(null); setLastResultStage500(null); setScreen("map"); }
         }}
-        onBackToMap={() => { setLastResult(null); setScreen("map"); }}
+        onBackToMap={() => { setLastResult(null); setLastResultStage500(null); setScreen("map"); }}
       />
     );
   }
 
   if (screen === "badges") return <BadgesScreen profile={activeProfile} onBack={() => setScreen("home")} />;
   if (screen === "stats") return <StatsScreen profile={activeProfile} onBack={() => setScreen("home")} />;
-  if (screen === "daily-missions") return <DailyMissionsScreen profile={activeProfile} onBack={() => setScreen("home")} onPlayMission={() => {}} onPlayMiniGame={() => {}} />;
+  if (screen === "daily-missions") return <DailyMissionsScreen profile={activeProfile} onBack={() => setScreen("home")} />;
 
   if (screen === "minigame-hitung") return <MiniGameHitungScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
   if (screen === "minigame-pola") return <MiniGamePolaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
   if (screen === "minigame-ingatan") return <MiniGameIngatanScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
   if (screen === "minigame-cari-beda") return <CariBerbedaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
 
-  if (screen === "minigame-pilih-sikap") return <MiniGameAdabScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
-  if (screen === "minigame-nasihat") return <NasihatLembutScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
-  if (screen === "minigame-urutkan-adab") return <UrutkanAdabScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
-  if (screen === "minigame-dilema") return <DilemaBijakScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
+  // ═══════════════════════════════════════════
+  // Game Adab — disembunyikan dari Mini-Game (2026-06-22)
+  // Redirect ke Mini-Game Center dengan pesan
+  // ═══════════════════════════════════════════
+  if (screen === "minigame-pilih-sikap" || screen === "minigame-nasihat" || screen === "minigame-urutkan-adab" || screen === "minigame-dilema") {
+    const gameName =
+      screen === "minigame-pilih-sikap" ? "Pilih Sikap Terbaik" :
+      screen === "minigame-nasihat" ? "Nasihat dengan Lembut" :
+      screen === "minigame-urutkan-adab" ? "Urutkan Adab" :
+      "Dilema Bijak";
+    return (
+      <div className="h-[100dvh] bg-gradient-sky flex flex-col">
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="bg-white rounded-3xl p-8 text-center max-w-sm w-full border-4 border-[#FF9800]/30 shadow-2xl animate-pop-in">
+            <div className="text-5xl mb-4">📋</div>
+            <h2 className="font-display font-black text-xl text-[#5A3515] mb-2">
+              Game Tidak Tersedia
+            </h2>
+            <p className="text-sm font-bold text-[#8C6B45] mb-1">
+              "{gameName}" tidak tersedia lagi di menu Mini-Game.
+            </p>
+            <p className="text-xs text-[#8C6B45]/70 mb-6">
+              Game adab tetap bisa dimainkan di Peta Petualangan ya! ✨
+            </p>
+            <button
+              onClick={() => setScreen("minigame-center")}
+              className="w-full py-3 rounded-2xl bg-gradient-meadow border-b-4 border-[#2E8B12] text-white font-black text-base active:translate-y-1 active:border-b-0 transition-all"
+            >
+              🎮 Kembali ke Mini-Game
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (screen === "minigame-detektif") return <DetektifScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
   if (screen === "minigame-tebak-aturan") return <TebakAturanScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
@@ -603,32 +921,20 @@ export function GameAppStandalone() {
   if (screen === "minigame-ubah-posisi") return <UbahPosisiGame profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
   if (screen === "minigame-cocok-bayangan") return <CocokBayanganGame profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
   if (screen === "minigame-jalur-tercepat") return <JalurTercepatGame profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
+  if (screen === "minigame-kode-warna") return <ColorCodeGame profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
+  if (screen === "minigame-rantai-warna") return <MiniGameRantaiWarnaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
+  if (screen === "minigame-jalur-angka") return <MiniGameJalurAngkaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
 
   if (screen === "minigame-misi-keluarga") return <MisiKeluargaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
   if (screen === "minigame-family-challenge") return <BattleScreen profiles={store.profiles} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
 
-  // Mini Game Center & Package screens
+  // Mini Game Center — flat list (no package step)
   if (screen === "minigame-center") {
     return (
       <MiniGameCenter
         profile={activeProfile}
         onBack={() => setScreen("home")}
         onNavigate={setScreen}
-        onOpenPackage={(pkgId) => {
-          setActiveMiniGamePackage(pkgId);
-          setScreen("minigame-package");
-        }}
-      />
-    );
-  }
-
-  if (screen === "minigame-package" && activeMiniGamePackage) {
-    return (
-      <MiniGamePackageScreen
-        profile={activeProfile}
-        packageId={activeMiniGamePackage as import("@/types").MiniGamePackageId}
-        onBack={() => setScreen("minigame-center")}
-        onPlayGame={(s) => setScreen(s)}
       />
     );
   }
@@ -665,7 +971,7 @@ export function GameAppStandalone() {
   if (screen === "settings") {
     return (
       <>
-        <SettingsScreen profile={activeProfile} onBack={() => setScreen("home")}
+        <SettingsScreen profile={activeProfile} onBack={() => setScreen("home")} onReload={() => window.location.reload()}
           onUpdate={(patch) => updateProfile(activeProfile.id, { settings: { ...activeProfile.settings, ...patch } })}
           onReset={() => resetProfileProgress(activeProfile.id)}
           onDeleteAll={() => { localStorage.clear(); window.location.reload(); }}
@@ -702,48 +1008,37 @@ export function GameAppStandalone() {
         />
       )}
 
-      {/* Difficulty Upgrade Modal */}
-      {upgradeModalOpen && pendingUpgradeDifficulty && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-gradient-to-b from-[#FFF9E6] to-[#FFE0A3] rounded-[2rem] p-6 text-center shadow-2xl max-w-sm w-full border-4 border-[#D48806] animate-pop-in">
-            <div className="text-6xl mb-3">🎓</div>
-            <h2 className="font-display font-black text-2xl sm:text-3xl text-[#5A3515] leading-tight mb-2">
-              Selamat!
-            </h2>
-            <p className="text-sm font-bold text-[#8C6B45] mb-1">
-              Kamu sudah menyelesaikan semua misi
-            </p>
-            <p className="text-base font-black text-[#185E9F] mb-3">
-              {DIFFICULTY_MAP[activeProfile?.difficulty || "sd-bawah"]?.label || activeProfile?.difficulty}
-            </p>
-            <p className="text-sm font-bold text-[#5A3515] mb-4">
-              Mau naik ke{" "}
-              <span className="text-[#2E8B12] font-black text-base">
-                {pendingUpgradeDifficulty ? (DIFFICULTY_UI_LABELS[pendingUpgradeDifficulty as import("@/types").DifficultyId] || pendingUpgradeDifficulty) : ""}
-              </span>
-              ?
-            </p>
+      {/* Stage 500 Completion Box */}
+      {completionBoxOpen && completionDifficulty && (
+        <DifficultyCompletionBox
+          difficulty={completionDifficulty as import("@/types").DifficultyId}
+          onOpen={handleCompletionBoxClaim}
+          onClose={handleCompletionBoxClose}
+        />
+      )}
 
-            <div className="space-y-3">
-              <button
-                onClick={handleUpgradeConfirm}
-                className="w-full py-3 rounded-2xl bg-gradient-meadow border-b-4 border-[#2E8B12] text-white font-black text-lg shadow-sm active:translate-y-1 active:border-b-0 transition-all"
-              >
-                🚀 Naik Tingkat
-              </button>
-              <button
-                onClick={handleUpgradeLater}
-                className="w-full py-3 rounded-2xl bg-white/60 border-2 border-[#D4B483] text-[#5A3515] font-black text-base shadow-sm active:translate-y-1 transition-all"
-              >
-                ⏳ Nanti Dulu
-              </button>
-            </div>
+      {/* Difficulty Unlock Modal (stage 500) */}
+      {unlockModalOpen && completionDifficulty && (() => {
+        const nextDiff = getNextDifficulty(completionDifficulty as import("@/types").DifficultyId);
+        if (!nextDiff) return null;
+        return (
+          <DifficultyUnlockModal
+            currentDifficulty={completionDifficulty as import("@/types").DifficultyId}
+            nextDifficulty={nextDiff}
+            onUpgradeNow={handleUnlockNow}
+            onUpgradeLater={handleUnlockLater}
+            onClose={handleUnlockModalClose}
+          />
+        );
+      })()}
 
-            <p className="text-[10px] font-bold text-[#8C6B45] mt-3">
-              Progresmu saat ini tetap aman dan bisa dilihat kapan saja.
-            </p>
-          </div>
-        </div>
+      {/* Mastery Complete Modal (Universitas) */}
+      {masteryModalOpen && (
+        <MasteryCompleteModal
+          onViewBadges={handleMasteryViewBadges}
+          onBackToMap={handleMasteryBackToMap}
+          onClose={handleMasteryClose}
+        />
       )}
     </>
   );

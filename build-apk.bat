@@ -14,7 +14,7 @@ echo ============================================
 echo.
 
 REM --- Step 1: Check for JDK 17 ---
-set JDK_DIR=%PROJECT_DIR%jdk-17.0.19+10
+set JDK_DIR=%PROJECT_DIR%jdk-21.0.11+10
 set JAVA_EXE=%JDK_DIR%\bin\java.exe
 
 if exist "%JAVA_EXE%" (
@@ -69,7 +69,7 @@ if %ERRORLEVEL% neq 0 (
 echo [OK] Sync complete
 
 echo.
-echo [STEP 3/3] Building APK with Gradle + JDK 17...
+echo [STEP 3/3] Building APK with Gradle + JDK 21...
 set JAVA_HOME=%JDK_DIR%
 cd android
 

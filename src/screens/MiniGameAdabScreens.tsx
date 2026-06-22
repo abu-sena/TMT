@@ -122,7 +122,7 @@ function NasihatGameScreen({ profile, onBack, backRef }: { profile: Profile; onB
             {shuffled.map((opt, i) => (
               <button key={i} onClick={() => handleSelect(opt.idx)}
                 className="w-full text-left p-3 rounded-2xl bg-white border-3 border-[#CBB794] text-[#5A3515] font-bold text-sm shadow-pop active:translate-y-1 transition-all hover:border-[#A02020] flex items-center gap-2">
-                <span className="text-lg shrink-0">{["🌟","💚","💛","💙","💜","🧡"][i % 6]}</span>
+                <span className="text-lg shrink-0">{["💬","🔷","📌","🔹","💠","🔸"][i % 6]}</span>
                 <span className="leading-tight">{opt.text}</span>
               </button>
             ))}
@@ -210,7 +210,7 @@ function DilemaGameScreen({ profile, onBack, backRef }: { profile: Profile; onBa
             {shuffled.map((opt, i) => (
               <button key={i} onClick={() => { setSelected(opt.idx); if (opt.idx === question.bestIdx) setScore(s => s + 150); else if (opt.idx === question.acceptableIdx) setScore(s => s + 80); }}
                 className="w-full text-left p-3 rounded-2xl bg-white border-3 border-[#CBB794] text-[#5A3515] font-bold text-sm shadow-pop active:translate-y-1 transition-all hover:border-[#185E9F]">
-                <span className="text-lg mr-2">{["🌟","💚","💛","💙"][i % 4]}</span>{opt.text}
+                <span className="text-lg mr-2">{["💬","🔷","📌","🔹"][i % 4]}</span>{opt.text}
               </button>
             ))}
           </div>
@@ -224,19 +224,74 @@ function DilemaGameScreen({ profile, onBack, backRef }: { profile: Profile; onBa
 // Urutkan Adab
 // ═══════════════════════════
 
-const URUTKAN_QUESTIONS = [
-  { title: "Urutan berwudhu", steps: ["Niat", "Cuci tangan", "Berkumur", "Cuci muka", "Cuci tangan sampai siku", "Usap kepala", "Cuci kaki"], emoji: "💧" },
-  { title: "Urutan sebelum makan", steps: ["Cuci tangan", "Duduk", "Baca doa makan (Bismillah)", "Makan dengan tangan kanan", "Baca doa selesai (Alhamdulillah)"], emoji: "🍽️" },
-  { title: "Urutan meminjam barang", steps: ["Ucapkan salam", "Minta izin meminjam", "Gunakan dengan hati-hati", "Kembalikan", "Ucapkan terima kasih"], emoji: "🤝" },
-  { title: "Urutan masuk masjid", steps: ["Masuk dengan kaki kanan", "Baca doa masuk masjid", "Shalat tahiyatul masjid", "Duduk dengan tenang", "Keluar dengan kaki kiri"], emoji: "🕌" },
-];
+interface UrutkanAdabStep {
+  id: number;
+  text: string;
+  correctOrder: number;
+}
+
+interface UrutkanAdabQuestion {
+  title: string;
+  correctSteps: UrutkanAdabStep[];
+  shuffledSteps: UrutkanAdabStep[];
+  emoji: string;
+  explanation?: string;
+  successText?: string;
+  failureText?: string;
+}
+
+function buildUrutkanAdabQuestions(): UrutkanAdabQuestion[] {
+  const rawQuestions = [
+    { title: "Urutan berwudhu", steps: ["Niat", "Cuci tangan", "Berkumur", "Cuci muka", "Cuci tangan sampai siku", "Usap kepala", "Cuci kaki"], emoji: "💧" },
+    { title: "Urutan sebelum makan", steps: ["Cuci tangan", "Duduk", "Baca doa makan (Bismillah)", "Makan dengan tangan kanan", "Baca doa selesai (Alhamdulillah)"], emoji: "🍽️" },
+    { title: "Urutan meminjam barang", steps: ["Ucapkan salam", "Minta izin meminjam", "Gunakan dengan hati-hati", "Kembalikan", "Ucapkan terima kasih"], emoji: "🤝" },
+    { title: "Urutan masuk masjid", steps: ["Masuk dengan kaki kanan", "Baca doa masuk masjid", "Shalat tahiyatul masjid", "Duduk dengan tenang", "Keluar dengan kaki kiri"], emoji: "🕌" },
+  ];
+
+  return rawQuestions.map(q => {
+    const correctSteps: UrutkanAdabStep[] = q.steps.map((text, i) => ({
+      id: i,
+      text,
+      correctOrder: i,
+    }));
+
+    // Shuffle steps, re-shuffle if same as correct order
+    let shuffledSteps: UrutkanAdabStep[];
+    do {
+      shuffledSteps = shuffleArray(correctSteps);
+    } while (shuffledSteps.every((s, i) => s.correctOrder === i));
+
+    return {
+      title: q.title,
+      correctSteps,
+      shuffledSteps,
+      emoji: q.emoji,
+      successText: "Benar! Ini urutan adab yang baik.",
+      failureText: "Belum tepat. Yuk lihat urutan yang lebih baik.",
+    };
+  });
+}
+
+function prepareUrutkanQuestion(raw: UrutkanAdabQuestion): UrutkanAdabQuestion {
+  // Re-shuffle for each play
+  let shuffledSteps: UrutkanAdabStep[];
+  do {
+    shuffledSteps = shuffleArray(raw.correctSteps);
+  } while (shuffledSteps.every((s, i) => s.correctOrder === i));
+
+  return {
+    ...raw,
+    shuffledSteps,
+  };
+}
 
 function UrutkanAdabScreen({ profile, onBack, backRef }: { profile: Profile; onBack: () => void; backRef: React.MutableRefObject<(() => boolean) | null> }) {
   const { addMiniGameSession, store } = useGameStore();
   const [phase, setPhase] = useState<"start" | "playing" | "feedback" | "result">("start");
   const [score, setScore] = useState(0);
   const [qIdx, setQIdx] = useState(0);
-  const [question, setQuestion] = useState(URUTKAN_QUESTIONS[0]);
+  const [questions] = useState<UrutkanAdabQuestion[]>(() => buildUrutkanAdabQuestions());
+  const [question, setQuestion] = useState<UrutkanAdabQuestion>(questions[0]);
   const [userOrder, setUserOrder] = useState<number[]>([]);
   const [showResult, setShowResult] = useState(false);
   const [session, setSession] = useState<MiniGameSession | null>(null);
@@ -244,15 +299,19 @@ function UrutkanAdabScreen({ profile, onBack, backRef }: { profile: Profile; onB
   const mySessions = store.miniGameSessions.filter(s => s.profileId === profile.id && s.gameType === "urutkan-adab");
   const personalBest = mySessions.reduce((max, s) => Math.max(max, s.score), 0);
 
-  const available = question.steps.map((_, i) => i).filter(i => !userOrder.includes(i));
+  const shuffledIds = question.shuffledSteps.map(s => s.id);
+  const availableShuffledIds = shuffledIds.filter(id => !userOrder.includes(id));
 
-  const tapStep = (idx: number) => {
-    if (showResult || available.length === 0 && userOrder.length < question.steps.length) return;
-    if (!userOrder.includes(idx)) {
-      setUserOrder(prev => [...prev, idx]);
-      if (userOrder.length + 1 === question.steps.length) {
-        // All selected — validate
-        const isCorrect = userOrder.concat(idx).every((val, i) => val === i);
+  const tapStep = (shuffledStepId: number) => {
+    if (showResult || (availableShuffledIds.length === 0 && userOrder.length < shuffledIds.length)) return;
+    if (!userOrder.includes(shuffledStepId)) {
+      setUserOrder(prev => [...prev, shuffledStepId]);
+      if (userOrder.length + 1 === shuffledIds.length) {
+        // All selected — validate against correct order
+        const isCorrect = userOrder.concat(shuffledStepId).every((id, i) => {
+          const step = question.correctSteps.find(s => s.id === id);
+          return step?.correctOrder === i;
+        });
         setShowResult(true);
         if (isCorrect) setScore(s => s + 200);
       }
@@ -260,17 +319,26 @@ function UrutkanAdabScreen({ profile, onBack, backRef }: { profile: Profile; onB
   };
 
   const resetSteps = () => { setShowResult(false); setUserOrder([]); };
+
   const nextQ = () => {
-    if (qIdx >= URUTKAN_QUESTIONS.length - 1) {
+    if (qIdx >= questions.length - 1) {
       const sess = createMiniGameSession(profile, "urutkan-adab", "adab", score, qIdx + 1, 0, 0, 0, 1, profile.difficulty, qIdx + 1, 0);
       setSession(sess); addMiniGameSession(sess); setPhase("result"); return;
     }
-    setQIdx(prev => prev + 1);
-    setQuestion(URUTKAN_QUESTIONS[qIdx + 1]);
+    const nextIdx = qIdx + 1;
+    setQIdx(nextIdx);
+    setQuestion(prepareUrutkanQuestion(questions[nextIdx]));
     resetSteps();
   };
 
-  useEffect(() => { backRef.current = () => { if (phase === "playing") { onBack(); return true; } if (phase === "result") { setPhase("start"); return true; } return false; }; return () => { backRef.current = null; }; }, [backRef, phase, onBack]);
+  const startGame = () => {
+    setScore(0); setQIdx(0); setShowResult(false);
+    setQuestion(prepareUrutkanQuestion(questions[0]));
+    setUserOrder([]);
+    setPhase("playing");
+  };
+
+  useEffect(() => { backRef.current = () => { if (phase === "playing" || phase === "feedback") { onBack(); return true; } if (phase === "result") { setPhase("start"); return true; } return false; }; return () => { backRef.current = null; }; }, [backRef, phase, onBack]);
 
   if (phase === "start") return (
     <div className="h-[100dvh] bg-gradient-sky flex flex-col items-center justify-center p-4">
@@ -278,50 +346,71 @@ function UrutkanAdabScreen({ profile, onBack, backRef }: { profile: Profile; onB
         <div className="text-6xl mb-4">📋</div>
         <h1 className="font-display font-black text-3xl mb-1">Urutkan Adab</h1>
         <p className="text-sm font-bold opacity-80 mb-4">Susun langkah-langkah adab dalam urutan yang benar.</p>
-        <div className="flex gap-3"><GameButton variant="ghost" full onClick={onBack}>Kembali</GameButton><GameButton variant="primary" full onClick={() => { setPhase("playing"); }}>Mulai!</GameButton></div>
+        <div className="flex gap-3"><GameButton variant="ghost" full onClick={onBack}>Kembali</GameButton><GameButton variant="primary" full onClick={startGame}>Mulai!</GameButton></div>
       </GameCard>
     </div>
   );
 
-  if (phase === "result" && session) return (<MiniGameResultScreen profile={profile} session={session} gameTitle="Urutkan Adab" gameIcon="📋" isNewBest={score > personalBest} leaderboardRank={null} onPlayAgain={() => setPhase("start")} onLeaderboard={() => {}} onBack={() => setPhase("start")} />);
+  if (phase === "result" && session) return (<MiniGameResultScreen profile={profile} session={session} gameTitle="Urutkan Adab" gameIcon="📋" isNewBest={score > personalBest} leaderboardRank={null} onPlayAgain={startGame} onLeaderboard={() => {}} onBack={() => setPhase("start")} />);
+
+  // Check if the final answer is correct
+  const isAnswerCorrect = showResult && userOrder.length === shuffledIds.length &&
+    userOrder.every((id, i) => {
+      const step = question.correctSteps.find(s => s.id === id);
+      return step?.correctOrder === i;
+    });
 
   return (
     <div className="h-[100dvh] bg-gradient-sky flex flex-col p-3 sm:p-4">
       <header className="pt-safe flex items-center gap-2 mb-3 shrink-0">
         <button onClick={onBack} className="h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shrink-0 active:scale-95">✕</button>
-        <div className="bg-white/50 px-3 py-1.5 rounded-full font-black text-[#5A3515] text-sm border-2 border-[#CBB794] ml-auto">{qIdx + 1}/{URUTKAN_QUESTIONS.length}</div>
+        <div className="bg-white/50 px-3 py-1.5 rounded-full font-black text-[#5A3515] text-sm border-2 border-[#CBB794] ml-auto">{qIdx + 1}/{questions.length}</div>
       </header>
       <main className="flex-1 flex flex-col items-center justify-center min-h-0 overflow-y-auto">
-        <GameCard tone="cream" className={`w-full max-w-sm text-center py-6 mb-4 border-4 shrink-0 ${showResult ? (userOrder.every((v,i) => v===i) ? "border-[#2E8B12] bg-[#E8F5E9]" : "border-[#A02020] bg-[#FFEBEE]") : "border-[#CBB794]"}`}>
+        <GameCard tone="cream" className={`w-full max-w-sm text-center py-6 mb-4 border-4 shrink-0 ${showResult ? (isAnswerCorrect ? "border-[#2E8B12] bg-[#E8F5E9]" : "border-[#A02020] bg-[#FFEBEE]") : "border-[#CBB794]"}`}>
           <div className="text-3xl mb-2">{question.emoji}</div>
           <h2 className="font-display font-black text-xl text-[#5A3515]">{question.title}</h2>
         </GameCard>
         {showResult && (
           <div className="w-full max-w-sm mb-4 space-y-1">
-            {question.steps.map((s, i) => (
-              <div key={i} className={`p-2 rounded-xl text-sm font-bold flex items-center gap-2 ${userOrder[i] === i ? "bg-[#E8F5E9] text-[#2E8B12]" : "bg-[#FFEBEE] text-[#A02020]"}`}>
-                <span>{i + 1}.</span><span>{s}</span>
-                <span className="ml-auto">{userOrder[i] === i ? "✅" : "❌"}</span>
+            {isAnswerCorrect ? (
+              <div className="mb-2 p-3 rounded-xl bg-[#E8F5E9] text-[#2E8B12] text-sm font-bold text-center border border-[#2E8B12]/30">
+                {question.successText || "Benar! Ini urutan adab yang baik."}
               </div>
-            ))}
-            <div className="mt-3"><GameButton variant="primary" size="md" full onClick={nextQ}>{qIdx >= URUTKAN_QUESTIONS.length - 1 ? "Lihat Hasil" : "Lanjut →"}</GameButton></div>
+            ) : (
+              <div className="mb-2 p-3 rounded-xl bg-[#FFEBEE] text-[#A02020] text-sm font-bold text-center border border-[#A02020]/30">
+                {question.failureText || "Belum tepat. Yuk lihat urutan yang lebih baik."}
+              </div>
+            )}
+            <div className="text-xs font-bold text-[#8C6B45] mb-2">Urutan yang benar:</div>
+            {question.correctSteps.sort((a, b) => a.correctOrder - b.correctOrder).map((s, i) => {
+              const userSelectedId = userOrder[i];
+              const isStepCorrect = userSelectedId === s.id;
+              return (
+                <div key={s.id} className={`p-2 rounded-xl text-sm font-bold flex items-center gap-2 ${isStepCorrect ? "bg-[#E8F5E9] text-[#2E8B12]" : "bg-[#FFEBEE] text-[#A02020]"}`}>
+                  <span>{i + 1}.</span><span>{s.text}</span>
+                  <span className="ml-auto">{isStepCorrect ? "✅" : "❌"}</span>
+                </div>
+              );
+            })}
+            <div className="mt-3"><GameButton variant="primary" size="md" full onClick={nextQ}>{qIdx >= questions.length - 1 ? "Lihat Hasil" : "Lanjut →"}</GameButton></div>
           </div>
         )}
         {!showResult && (
           <div className="space-y-2 w-full max-w-sm">
             <div className="text-xs font-bold text-[#8C6B45] mb-1">Tap langkah sesuai urutan (1, 2, 3...)</div>
-            {question.steps.map((s, i) => {
-              const tapped = userOrder.includes(i);
-              const order = userOrder.indexOf(i);
+            {question.shuffledSteps.map((s) => {
+              const tapped = userOrder.includes(s.id);
+              const order = userOrder.indexOf(s.id);
               return (
-                <button key={i} onClick={() => tapStep(i)} disabled={tapped}
+                <button key={s.id} onClick={() => tapStep(s.id)} disabled={tapped}
                   className={`w-full text-left p-3 rounded-2xl border-3 font-bold text-sm transition-all ${tapped ? "bg-[#E8F5E9] border-[#2E8B12] text-[#2E8B12]" : "bg-white border-[#CBB794] text-[#5A3515] hover:border-[#185E9F]"} shadow-pop active:translate-y-1`}>
-                  {tapped ? `✅ ${order + 1}. ${s}` : `${s}`}
+                  {tapped ? `✅ ${order + 1}. ${s.text}` : `${s.text}`}
                 </button>
               );
             })}
-            {userOrder.length === question.steps.length && !showResult && (
-              <button onClick={resetSteps} className="w-full py-2 text-xs font-bold text-[#A02020] underline">Ulangi susunan</button>
+            {userOrder.length > 0 && (
+              <button onClick={resetSteps} className="w-full py-2 text-xs font-bold text-[#A02020] underline">🔄 Ulangi susunan</button>
             )}
           </div>
         )}

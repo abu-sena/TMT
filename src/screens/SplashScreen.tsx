@@ -9,7 +9,7 @@ export function SplashScreen({ onDone }: Props) {
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => setMinTimeElapsed(true), 2200);
+    const t = setTimeout(() => setMinTimeElapsed(true), 2000);
     return () => clearTimeout(t);
   }, []);
 

@@ -75,15 +75,15 @@ export function MiniGamePackageScreen({ profile, packageId, onBack, onPlayGame }
 
         {/* Game cards */}
         {(() => {
-          const supportedGames = games.filter(g => g.supportedDifficulties.includes(profile.difficulty));
-          if (supportedGames.length === 0) return (
+          if (games.length === 0) return (
             <GameCard tone="cream" className="text-center py-8">
               <div className="text-5xl mb-4">🔧</div>
               <h2 className="font-display font-black text-xl text-[#5A3515] mb-2">Belum Tersedia</h2>
-              <p className="text-sm font-bold text-[#8C6B45]">Mini-game di paket ini belum mendukung tingkat {profile.difficulty}. Coba tingkat lain atau tunggu update!</p>
+              <p className="text-sm font-bold text-[#8C6B45]">Mini-game di paket ini akan segera hadir!</p>
             </GameCard>
           );
-          return supportedGames.map(game => {
+          return games.map(game => {
+          const isSupported = game.supportedDifficulties.includes(profile.difficulty);
           const gameSessions = mySessions.filter(s => s.gameType === game.id);
           const bestScore = gameSessions.reduce((max, s) => Math.max(max, s.score), 0);
           const playCount = gameSessions.length;
@@ -92,6 +92,39 @@ export function MiniGamePackageScreen({ profile, packageId, onBack, onPlayGame }
           const leaderboardKey = game.id.replace(/-/g, "");
           const leaderboard = store.miniGameLeaderboards?.[leaderboardKey] || [];
           const rank = leaderboard.findIndex(e => e.profileId === profile.id);
+
+          if (!isSupported) {
+            // Find the lowest supported difficulty for display
+            const minDiff = game.supportedDifficulties[0] || "SD Bawah";
+            const diffLabel = minDiff === "sd-bawah" ? "SD Bawah" : minDiff === "sd-atas" ? "SD Atas" : minDiff.toUpperCase();
+            
+            return (
+              <div
+                key={game.id}
+                className="w-full rounded-[24px] p-4 text-left border-4 bg-white/50 border-[#E8DCC2] opacity-75"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-[18px] grid place-items-center text-2xl sm:text-3xl shrink-0 border-2 bg-black/5 border-black/10 grayscale">
+                    {game.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-display font-black text-base sm:text-lg text-[#5A3515]/70 truncate">
+                        {game.title}
+                      </h3>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/10 text-[#5A3515]/60 shrink-0">
+                        🔒 Terkunci
+                      </span>
+                    </div>
+                    <p className="text-xs font-bold text-[#8C6B45]/70 mt-1">
+                      Tersedia mulai {diffLabel}
+                    </p>
+                  </div>
+                  <div className="text-xl shrink-0 text-black/20">🔒</div>
+                </div>
+              </div>
+            );
+          }
 
           return (
             <button

@@ -2,6 +2,7 @@ import type { Mission } from "@/types";
 import { CATEGORY_MAP, DIFFICULTY_MAP } from "@/data/constants";
 import { GameButton } from "@/components/ui/GameButton";
 import { RewardStars } from "@/components/rewards/RewardStars";
+import { COMPANIONS } from "@/data/adventure-story";
 
 interface Props {
   mission: Mission;
@@ -15,17 +16,25 @@ export function MissionPopup({ mission, stars, onClose, onPlay }: Props) {
   const diff = DIFFICULTY_MAP[mission.difficulty];
   const isBoss = mission.missionType === "boss_mission" && mission.isBossMission;
   const bossMission = isBoss ? mission as any : null;
-  const stepCount = bossMission?.steps?.length ?? 0;
   const bossColor = bossMission?.bossThemeColor ?? "#A02020";
 
+  // Story fields (may not exist on legacy missions)
+  const introText = (mission as any).introText || "";
+  const challengeContext = (mission as any).challengeContext || "";
+  const companionId = (mission as any).companionId || null;
+  const companionHint = (mission as any).companionHint || "";
+  const companion = companionId ? COMPANIONS[companionId] : null;
+  const isFinalStage = mission.number === 500;
+
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 backdrop-blur-sm p-4 sm:p-6 animate-pop-in">
-      <div className={`w-full max-w-md max-h-[85dvh] flex flex-col overflow-hidden p-0 ${isBoss ? "rounded-[28px] border-4 shadow-2xl" : "surface-panel"}`}
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-pop-in">
+      <div className={`w-full max-w-md max-h-[88dvh] flex flex-col overflow-hidden p-0 ${isBoss ? "rounded-[28px] border-4 shadow-2xl" : "surface-panel shadow-2xl"}`}
         style={isBoss ? {
           background: `linear-gradient(180deg, #1a1a2e 0%, #2d1f3d 100%)`,
           borderColor: bossColor,
         } : {}}
       >
+        {/* Header */}
         <div className={isBoss
           ? "px-4 py-4 flex items-center gap-3 text-white border-b-4"
           : "bg-gradient-wood px-4 py-4 flex items-center gap-3 text-white border-b-4 border-[#5A3515]"}
@@ -43,19 +52,70 @@ export function MissionPopup({ mission, stars, onClose, onPlay }: Props) {
                 ⚡ BOSS MISSION ⚡
               </div>
             )}
-            <div className="text-[11px] uppercase tracking-wider opacity-80">Misi #{mission.number} · {diff.label}</div>
-            <h2 className="font-display font-bold text-lg leading-tight truncate">{mission.title}</h2>
+            {isFinalStage && (
+              <div className="text-[9px] font-black uppercase tracking-widest bg-[#FFD700]/30 rounded-full px-2 py-0.5 inline-block mb-1 text-[#FFD700]">
+                ⭐ FINAL STAGE ⭐
+              </div>
+            )}
+            <div className="text-[11px] uppercase tracking-wider opacity-80">Stage #{mission.number} · {diff.label}</div>
+            <h2 className="font-display font-bold text-lg leading-tight truncate">
+              {(mission as any).storyTitle || mission.title}
+            </h2>
           </div>
           <button
             onClick={onClose}
             aria-label="Tutup"
-            className="h-9 w-9 rounded-full bg-white/20 hover:bg-white/30 border-2 border-white/40 grid place-items-center text-white font-bold"
+            className="h-9 w-9 rounded-full bg-white/20 hover:bg-white/30 border-2 border-white/40 grid place-items-center text-white font-bold shrink-0"
           >
             ✕
           </button>
         </div>
 
+        {/* Story Content */}
         <div className={`p-5 space-y-4 overflow-y-auto overscroll-contain ${isBoss ? "text-white/80" : ""}`}>
+          {/* Story Intro — the heart of Story Adventure Map */}
+          {introText && (
+            <div className={`rounded-[18px] p-4 text-sm font-bold leading-relaxed border-2 ${
+              isBoss ? "bg-white/10 border-white/20 text-white" : "bg-[#E8DCC2]/60 border-[#CBB794] text-[#5A3515]"
+            }`}>
+              <div className="text-xs font-black uppercase tracking-wide mb-1 opacity-60">📖 Cerita</div>
+              <p>{introText}</p>
+            </div>
+          )}
+
+          {/* Challenge Context */}
+          {challengeContext && (
+            <div className={`rounded-[18px] p-4 text-base font-bold leading-relaxed text-center border-2 ${
+              isBoss ? "bg-white/10 border-white/20 text-white" : "bg-[#FFF9E6] border-[#D48806]/40 text-[#5A3515]"
+            }`}>
+              <p>🎯 {challengeContext}</p>
+            </div>
+          )}
+
+          {/* Companion Hint */}
+          {companion && (
+            <div className="flex items-start gap-3 rounded-[18px] p-4 border-2"
+              style={{
+                background: isBoss ? `${companion.colorTheme}15` : `${companion.colorTheme}10`,
+                borderColor: `${companion.colorTheme}40`,
+              }}
+            >
+              <div className="text-3xl shrink-0 w-12 h-12 rounded-full flex items-center justify-center"
+                style={{ background: `${companion.colorTheme}20` }}
+              >
+                {companion.avatar}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className={`text-xs font-black uppercase mb-0.5 ${isBoss ? "text-white/60" : "text-[#8C6B45]"}`}>
+                  {companion.name} — {companion.role}
+                </div>
+                <p className={`text-sm font-bold leading-relaxed ${isBoss ? "text-white/80" : "text-[#5A3515]"}`}>
+                  {companionHint || companion.introPhrase}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Boss step preview */}
           {isBoss && bossMission?.steps && (
             <div className="flex flex-wrap gap-1.5 mb-1">
@@ -70,6 +130,7 @@ export function MissionPopup({ mission, stars, onClose, onPlay }: Props) {
             </div>
           )}
 
+          {/* Tags */}
           <div className="flex flex-wrap gap-2">
             <span className={`px-3 py-1 rounded-full border-2 text-xs font-bold shadow-sm ${
               isBoss ? "bg-white/10 border-white/20 text-white" : "bg-[#E8DCC2] border-[#CBB794] text-[#5A3515]"
@@ -93,25 +154,7 @@ export function MissionPopup({ mission, stars, onClose, onPlay }: Props) {
                 ✨ Adab +{mission.adabBonus}
               </span>
             ) : null}
-            {isBoss && stepCount > 0 && (
-              <span className="px-3 py-1 rounded-full bg-white/10 border-2 border-white/20 text-white text-xs font-bold backdrop-blur-sm">
-                🎯 {stepCount} Langkah
-              </span>
-            )}
           </div>
-
-          <p className={`text-base font-bold leading-relaxed text-center ${isBoss ? "text-white" : "text-[#5A3515]"}`}>{mission.story}</p>
-
-          {isBoss && bossMission?.bossIntro && (
-            <div className={`rounded-[18px] p-4 text-sm border-2`}
-              style={{
-                background: `${bossColor}15`,
-                borderColor: `${bossColor}40`,
-              }}
-            >
-              <p className="font-bold text-white/70 italic text-center">"{bossMission.bossIntroNarration}"</p>
-            </div>
-          )}
 
           {stars > 0 ? (
             <div className={`flex items-center justify-between rounded-[18px] border-2 px-4 py-3 ${
@@ -122,20 +165,10 @@ export function MissionPopup({ mission, stars, onClose, onPlay }: Props) {
             </div>
           ) : null}
 
-          {!isBoss && (
-            <div className="rounded-[18px] bg-[#E8DCC2]/60 border-2 border-dashed border-[#CBB794] px-4 py-3">
-              <div className="text-[11px] font-black uppercase text-[#8C6B45] mb-2 tracking-wide">Booster (Segera)</div>
-              <div className="flex flex-wrap gap-2 text-sm">
-                <span className="px-3 py-1.5 rounded-xl bg-gradient-sun/70 border-2 border-[#D48806]/50 text-[#3a2400]/60 shadow-pop-sm font-bold">💡 Petunjuk</span>
-                <span className="px-3 py-1.5 rounded-xl bg-gradient-blue/70 border-2 border-[#185E9F]/50 text-white/60 shadow-pop-sm font-bold">⏱️ Waktu +</span>
-                <span className="px-3 py-1.5 rounded-xl bg-gradient-meadow/70 text-white/60 border-2 border-[#2E8B12]/50 shadow-pop-sm font-bold">2× Poin</span>
-              </div>
-            </div>
-          )}
-
+          {/* Action Buttons */}
           <div className="flex gap-3 pt-2">
             <GameButton variant={isBoss ? "ghost" : "wood"} size="lg" onClick={onClose} full>
-              Tutup
+              Kembali
             </GameButton>
             <GameButton
               variant="primary"
@@ -144,7 +177,7 @@ export function MissionPopup({ mission, stars, onClose, onPlay }: Props) {
               full
               leadingIcon={isBoss ? "👑" : "▶"}
             >
-              {isBoss ? "Hadapi Boss!" : "Main"}
+              {isBoss ? "Hadapi Boss!" : "Mulai Misi"}
             </GameButton>
           </div>
         </div>

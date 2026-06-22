@@ -490,6 +490,8 @@ export class StorageService {
       battleHistory: [],
       parentPasswordHash: null,
       rewardMilestones: [],
+      difficultyCompletionRewards: [],
+      dailyMissions: [],
     };
   }
 }

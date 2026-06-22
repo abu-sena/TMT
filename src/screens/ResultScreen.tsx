@@ -21,6 +21,14 @@ interface Props {
   newBadges: BadgeDef[];
   breakdown: any;
   bossStepResults?: BossStepResult[];
+  isFirstCompletion: boolean;
+  isStage500?: boolean;
+  stage500Difficulty?: string;
+  hasPendingFinalReward?: boolean;
+  hasClaimedFinalReward?: boolean;
+  nextDifficulty?: string | null;
+  isUniversitas?: boolean;
+  onOpenRewardBox?: () => void;
   onNextMission: () => void;
   onBackToMap: () => void;
 }
@@ -35,14 +43,22 @@ export function ResultScreen({
   newBadges,
   breakdown,
   bossStepResults,
+  isFirstCompletion,
+  isStage500,
+  stage500Difficulty,
+  hasPendingFinalReward,
+  hasClaimedFinalReward,
+  nextDifficulty,
+  isUniversitas,
+  onOpenRewardBox,
   onNextMission,
   onBackToMap,
 }: Props) {
   const [showConfetti, setShowConfetti] = useState(isCorrect);
 
   // ── Gift Box State ──
-  // Show gift box when mission is completed with 3 stars (perfect completion)
-  const showGiftBox = isCorrect && stars === 3 && (mission as any).isBossMission !== true;
+  // Show gift box only on first-time completion with 3 stars (not boss)
+  const showGiftBox = isFirstCompletion && isCorrect && stars === 3 && (mission as any).isBossMission !== true;
   const [isGiftOpened, setIsGiftOpened] = useState(false);
   const [isGiftAnimating, setIsGiftAnimating] = useState(false);
   const [giftRewardsRevealed, setGiftRewardsRevealed] = useState(false);
@@ -289,7 +305,26 @@ export function ResultScreen({
           </div>
         )}
 
-        <div className="mt-4 w-full rounded-[28px] surface-panel p-4 mb-4">
+        {/* Story Feedback */}
+        {isCorrect && (mission as any).successText && (
+          <div className="mt-4 w-full rounded-[28px] bg-gradient-to-br from-[#E8F5E9] to-[#C8E6C9] border-3 border-[#4CAF50] p-4 mb-2 shadow-pop-sm">
+            <div className="text-sm font-black uppercase text-[#2E8B12] mb-1">💬 Cerita</div>
+            <p className="text-base font-bold text-[#5A3515] leading-relaxed">{(mission as any).successText}</p>
+          </div>
+        )}
+        {!isCorrect && (mission as any).failureText && (
+          <div className="mt-4 w-full rounded-[28px] bg-gradient-to-br from-[#FFF3E0] to-[#FFE0B2] border-3 border-[#FF9800] p-4 mb-2 shadow-pop-sm">
+            <div className="text-sm font-black uppercase text-[#E65100] mb-1">💪 Jangan Menyerah!</div>
+            <p className="text-base font-bold text-[#5A3515] leading-relaxed">{(mission as any).failureText}</p>
+          </div>
+        )}
+        {isCorrect && (mission as any).worldImpactText && (
+          <div className="w-full rounded-[20px] bg-gradient-to-br from-[#E3F2FD] to-[#BBDEFB] border-2 border-[#2196F3]/40 p-3 mb-2">
+            <div className="text-[10px] font-black uppercase text-[#1565C0] mb-0.5">🌍 Dampak Dunia</div>
+            <p className="text-xs font-bold text-[#5A3515] italic">{(mission as any).worldImpactText}</p>
+          </div>
+        )}
+        <div className="mt-1 w-full rounded-[28px] surface-panel p-4 mb-4">
           <div className="text-sm font-black uppercase text-[#8C6B45]">{isCorrect ? "Penjelasan" : "Jawaban yang benar"}</div>
           <p className="text-base font-bold text-[#5A3515] mt-1 leading-relaxed">{mission.explanation}</p>
           {isCorrect && mission.adabFeedback ? (
@@ -367,14 +402,86 @@ export function ResultScreen({
             <p className="text-xs font-bold text-[#8C6B45] mb-1">Kamu juga bisa lanjut dulu, kado tetap ada ✨</p>
           </div>
         )}
+
+        {/* ═══ Stage 500 Completion Section ═══ */}
+        {isStage500 && isCorrect && stage500Difficulty && (
+          <div className="mt-4 w-full rounded-[28px] p-5 text-center border-4 shadow-2xl animate-pop-in" style={{
+            background: "linear-gradient(to bottom, #FFF9E6, #FFE0A3)",
+            borderColor: "#FFD700",
+            boxShadow: "0 0 30px rgba(255,215,0,0.5)"
+          }}>
+            <div className="text-5xl mb-2">🏆</div>
+            {!hasClaimedFinalReward ? (
+              <>
+                <h3 className="font-display font-black text-xl text-[#5A3515] mb-1">
+                  Kamu menyelesaikan 500/500 misi!
+                </h3>
+                <p className="text-sm font-bold text-[#8C6B45] mb-3">
+                  Level <span className="text-[#185E9F] font-black">{stage500Difficulty.toUpperCase()}</span> telah kamu taklukkan!
+                </p>
+                <div className="text-6xl mb-3 animate-bob">🎁</div>
+                <p className="text-xs font-bold text-[#2E8B12] mb-3">
+                  Hadiah akhir level sudah menunggu. Buka sekarang!
+                </p>
+                <button
+                  onClick={onOpenRewardBox}
+                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#FFD700] to-[#FFA500] border-b-4 border-[#D48806] text-[#5A3515] font-black text-lg shadow-sm active:translate-y-1 active:border-b-0 transition-all"
+                >
+                  🎁 Buka Reward
+                </button>
+              </>
+            ) : isUniversitas ? (
+              <>
+                <h3 className="font-display font-black text-xl text-[#5A3515] mb-1">
+                  Perjalanan Selesai!
+                </h3>
+                <p className="text-sm font-bold text-[#8C6B45] mb-3">
+                  Kamu telah menyelesaikan seluruh perjalanan The Mastermind Trials!
+                </p>
+                <GameButton variant="primary" size="md" full onClick={onBackToMap}>
+                  🗺️ Kembali ke Peta
+                </GameButton>
+              </>
+            ) : nextDifficulty ? (
+              <>
+                <h3 className="font-display font-black text-xl text-[#5A3515] mb-1">
+                  Level Baru Terbuka!
+                </h3>
+                <p className="text-sm font-bold text-[#8C6B45] mb-3">
+                  Level <span className="text-[#185E9F] font-black">{nextDifficulty.toUpperCase()}</span> sudah terbuka. Siap naik tingkat?
+                </p>
+                <GameButton variant="primary" size="md" full onClick={onBackToMap}>
+                  🚀 Lanjut ke Peta
+                </GameButton>
+              </>
+            ) : null}
+          </div>
+        )}
+
+        {/* Stage 300 reminder — NOT a completion trigger */}
+        {mission.number === 300 && isCorrect && !isStage500 && (
+          <div className="mt-4 w-full rounded-[20px] p-3 text-center bg-[#E3F2FD] border-2 border-[#2196F3]/40">
+            <p className="text-xs font-bold text-[#1565C0]">
+              🎯 Bagus! Lanjutkan ke 500 misi untuk hadiah akhir level.
+            </p>
+          </div>
+        )}
       </main>
 
       </div>
       {/* Sticky bottom buttons */}
       <footer className="shrink-0 content-wrapper pb-safe pt-2 space-y-2">
-        <GameButton variant="primary" size="xl" full onClick={onNextMission} trailingIcon="→">
-          Misi Berikutnya
-        </GameButton>
+        {/* Stage 500: hide "Misi Berikutnya" — no mission after 500 */}
+        {!isStage500 && (
+          <GameButton variant="primary" size="xl" full onClick={onNextMission} trailingIcon="→">
+            Misi Berikutnya
+          </GameButton>
+        )}
+        {isStage500 && (
+          <GameButton variant="primary" size="xl" full onClick={onBackToMap} trailingIcon="→">
+            🗺️ Lanjut ke Peta
+          </GameButton>
+        )}
         <GameButton variant="ghost" size="md" full onClick={onBackToMap}>
           🗺️ Kembali ke Peta
         </GameButton>
