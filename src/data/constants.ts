@@ -46,6 +46,12 @@ export const AVATARS = [
   { id: "shinobi-rose-hijabi-girl", label: "Petualang berhijab merah muda" },
   { id: "shinobi-orange-boy", label: "Petualang dengan syal kuning keemasan" },
   { id: "shinobi-emerald-hijabi-girl", label: "Petualang berhijab hijau tua" },
+  { id: "scout-indigo-boy", label: "Petualang berkulit gelap dengan kompas dan syal nila" },
+  { id: "scout-sage-hijabi-girl", label: "Petualang berhijab hijau sage dengan rompi kuning" },
+  { id: "scout-coral-hat-boy", label: "Petualang bertopi lebar dengan syal koral" },
+  { id: "scout-lilac-hijabi-girl", label: "Petualang berhijab ungu muda dengan keranjang" },
+  { id: "scout-teal-boy", label: "Petualang berambut ikal dengan teropong" },
+  { id: "scout-navy-hijabi-girl", label: "Petualang berhijab biru tua dengan lencana bintang" },
 ] as const;
 
 /** UI-friendly label for SD */
