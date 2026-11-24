@@ -6,7 +6,7 @@ interface Props {
   className?: string;
 }
 
-const AVATAR_SHEET = "./assets/field-guide/petualang-12.webp";
+const AVATAR_SHEET = "./assets/field-guide/petualang-24.webp";
 
 /** Existing portrait IDs retain their slot after the art update. */
 export function AvatarPortrait({ avatar, className }: Props) {
