@@ -24,8 +24,8 @@ export function AvatarPortrait({ avatar, className }: Props) {
   }
 
   const { label } = AVATARS[savedIndex];
-  const column = savedIndex % 4;
-  const row = Math.floor(savedIndex / 4);
+  const column = savedIndex % 6;
+  const row = Math.floor(savedIndex / 6);
 
   return (
     <span
@@ -34,8 +34,8 @@ export function AvatarPortrait({ avatar, className }: Props) {
       aria-label={label}
       style={{
         backgroundImage: `url(${AVATAR_SHEET})`,
-        backgroundSize: "400% 300%",
-        backgroundPosition: `${column * 100 / 3}% ${row * 50}%`,
+        backgroundSize: "600% 400%",
+        backgroundPosition: `${column * 20}% ${row * 100 / 3}%`,
       }}
     />
   );

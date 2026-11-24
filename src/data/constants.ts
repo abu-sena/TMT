@@ -52,6 +52,18 @@ export const AVATARS = [
   { id: "scout-lilac-hijabi-girl", label: "Cendekia berhijab keemasan dengan gulungan peta" },
   { id: "scout-teal-boy", label: "Pemanah berhijab biru dengan busur" },
   { id: "scout-navy-hijabi-girl", label: "Ahli tanaman berhijab hijau sage dengan keranjang" },
+  { id: "original-blue-hat-boy", label: "Penjelajah bertopi anyam dengan syal biru" },
+  { id: "original-teal-hijabi-girl", label: "Penjelajah berhijab biru kehijauan dengan medali" },
+  { id: "original-forest-boy", label: "Penjelajah berambut ikal dengan teropong" },
+  { id: "original-rose-hijabi-girl", label: "Penjelajah berhijab merah muda dengan keranjang" },
+  { id: "original-gold-scarf-boy", label: "Penjelajah dengan syal kuning keemasan dan gulungan peta" },
+  { id: "original-emerald-hijabi-girl", label: "Penjelajah berhijab hijau tua dengan liontin" },
+  { id: "extra-indigo-scarf-boy", label: "Penjelajah bersyal nila dengan kompas besar" },
+  { id: "extra-sage-hijabi-girl", label: "Penjelajah berhijab hijau sage dengan rompi kuning" },
+  { id: "extra-coral-hat-boy", label: "Penjelajah bertopi anyam dengan syal koral" },
+  { id: "extra-lilac-hijabi-girl", label: "Penjelajah berhijab ungu muda dengan keranjang" },
+  { id: "extra-teal-scout-boy", label: "Penjelajah berambut ikal dengan teropong dada" },
+  { id: "extra-navy-hijabi-girl", label: "Penjelajah berhijab biru tua dengan lencana bintang" },
 ] as const;
 
 /** UI-friendly label for SD */
