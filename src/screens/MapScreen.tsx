@@ -1,4 +1,4 @@
-import { X as TmtCloseGlyph, ArrowLeft, ChevronDown, ChevronUp, Lock } from "lucide-react";
+import { X as TmtCloseGlyph, ArrowLeft, ChevronDown, ChevronUp, Lock, MapPin } from "lucide-react";
 import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import type { Mission, Profile, DifficultyId } from "@/types";
 import { DIFFICULTY_MAP, DIFFICULTY_UI_LABELS } from "@/data/constants";
@@ -125,6 +125,9 @@ export function MapScreen({ profile, onBack, onOpenMission, onChangeDifficulty, 
 
   const selectedSegment = Math.min(activeSegmentIndex, segments.length - 1);
   const activeWorld = worlds[selectedSegment];
+  const activeWorldMissions = segments[selectedSegment]?.stages ?? [];
+  const completedInWorld = activeWorldMissions.filter(m => (profile.missionProgress[m.id]?.stars ?? 0) > 0).length;
+  const worldProgress = activeWorldMissions.length ? completedInWorld / activeWorldMissions.length * 100 : 0;
   const finalStage = worlds[worlds.length - 1]?.stageRange[1] ?? 0;
 
   const syncMapViewport = useCallback(() => {
@@ -167,7 +170,7 @@ export function MapScreen({ profile, onBack, onOpenMission, onChangeDifficulty, 
     const current = container.querySelector<HTMLElement>("[data-current-stage]");
     const section = current?.closest<HTMLElement>("[data-map-section]");
     container.scrollTop = current && section
-      ? section.offsetTop + current.offsetTop - container.clientHeight * .58
+      ? section.offsetTop + current.offsetTop - container.clientHeight * .5
       : currentStageNum > finalStage ? 0 : container.scrollHeight;
     syncMapViewport();
   }, [profile.difficulty, currentStageNum, finalStage, segments.length, syncMapViewport]);
@@ -208,12 +211,17 @@ export function MapScreen({ profile, onBack, onOpenMission, onChangeDifficulty, 
         </button>
         
         <div className="field-map-heading">
-          <h1 className="font-display font-black text-xl">
-            {activeWorld.name}
-          </h1>
-          <p className="text-sm font-bold">
-            Wilayah {selectedSegment + 1} dari {worlds.length} · Misi {activeWorld.stageRange[0]}–{activeWorld.stageRange[1]}
-          </p>
+          <div className="field-map-heading-top">
+            <div className="min-w-0">
+              <h1 className="font-display font-black text-xl">{activeWorld.name}</h1>
+              <p className="text-sm font-bold">Wilayah {selectedSegment + 1} dari {worlds.length} · Misi {activeWorld.stageRange[0]}–{activeWorld.stageRange[1]}</p>
+            </div>
+            <span className="field-map-current-chip">Tahap {currentStageNum}</span>
+          </div>
+          <div className="field-map-progress" role="progressbar" aria-label={`Progres ${activeWorld.name}`} aria-valuemin={0} aria-valuemax={activeWorldMissions.length} aria-valuenow={completedInWorld}>
+            <span style={{ width: `${worldProgress}%` }} />
+          </div>
+          <div className="field-map-progress-meta"><span>{completedInWorld} selesai</span><span>{activeWorldMissions.length - completedInWorld} tersisa</span></div>
         </div>
       </header>
 
@@ -451,17 +459,16 @@ function MapSegment({ index, missions, profile, world, highestCompleted, isUnloc
       style={{ height: segmentHeight }}
     >
       {/* Decorative SVG Path */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true" preserveAspectRatio="none" viewBox="0 0 100 100">
-        {/* Shadow/Border of path */}
-        <path d={pathD} stroke="#578975" strokeWidth="26" fill="none" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" opacity="0.38" />
-        {/* Main Dirt Path */}
-        <path d={pathD} stroke="#fff4d7" strokeWidth="21" fill="none" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
-        {/* Inner dashed detail */}
-        <path d={pathD} stroke="#aa8954" strokeWidth="2" fill="none" vectorEffect="non-scaling-stroke" strokeDasharray="7 12" />
+      <svg className="field-map-road absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true" preserveAspectRatio="none" viewBox="0 0 100 100">
+        <path className="field-map-road-shadow" d={pathD} />
+        <path className="field-map-road-edge" d={pathD} />
+        <path className="field-map-road-middle" d={pathD} />
+        <path className="field-map-road-center" d={pathD} />
       </svg>
       <span className="field-map-waypoint">
         {!isUnlocked && <Lock size={13} aria-hidden="true" />}
-        {world.name}
+        {isUnlocked && <MapPin size={13} aria-hidden="true" />}
+        {index === 0 ? "Mulai di sini" : world.name}
       </span>
 
       {/* Stage Nodes */}
@@ -651,10 +658,10 @@ function StageNode({ number, state, stars, isBoss, isReward, isFinalStage, onCli
 // ══════════════════════════════════════════
 function PlayerMarker({ avatar }: { avatar: string }) {
   return (
-    <div className="absolute -top-16 left-1/2 -translate-x-1/2 z-30 pointer-events-none flex flex-col items-center animate-bounce">
-      <div className="w-12 h-14 bg-[#8BC34A] border-4 border-white rounded-[24px] rounded-bl-none rotate-45 shadow-lg flex items-center justify-center">
-        <div className="-rotate-45 drop-shadow-sm">
-          <AvatarPortrait avatar={avatar || "🧒"} className="w-8 h-8 rounded-full" />
+    <div className="field-player-marker" aria-hidden="true">
+      <div className="field-player-marker-pin">
+        <div className="field-player-marker-avatar">
+          <AvatarPortrait avatar={avatar || "🧒"} className="size-full rounded-full" />
         </div>
       </div>
       <div className="w-4 h-2 bg-black/20 rounded-[100%] mt-2 blur-sm"></div>
