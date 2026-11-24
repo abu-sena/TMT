@@ -59,7 +59,7 @@ export function PuzzleObjectArt({ objectId, className, silhouette = false, rotat
         ? `Siluet ${object.name}${rotation ? `, diputar ${Math.abs(rotation)} derajat` : ""}${mirrored ? ", dicerminkan" : ""}`
         : object.name}
       style={{
-        backgroundImage: `url("${assetRoot}puzzles.webp")`,
+        backgroundImage: `url("${assetRoot}puzzles-v2.webp")`,
         backgroundSize: `${columns * 100}% ${rows * 100}%`,
         backgroundPosition: `${(object.index % columns) * 100 / (columns - 1)}% ${Math.floor(object.index / columns) * 100 / (rows - 1)}%`,
         filter: silhouette ? "brightness(0)" : undefined,
