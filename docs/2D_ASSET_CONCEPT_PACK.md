@@ -14,7 +14,7 @@ Use a cheerful, polished 2D mobile-game style with rounded silhouettes and soft 
 | `public/assets/2d/concepts/tmt-forest-map-bg-v1.png` | Portrait forest-and-river map background | 1054 × 1493 PNG. The winding path leaves room for level nodes rendered by the app; no labels or controls are baked in. |
 | `public/assets/2d/concepts/tmt-level-complete-modal-v1.png` | Level-complete reward popup illustration | Transparent 1024 × 1536 PNG with blank title, reward, and button areas for real UI text and controls. Introduces an original red-panda guide as concept art. |
 | `docs/assets/2d/tmt-world-biomes-atlas-v1.png` | Source art for world-banner scenery | 1024 × 1536 atlas with eight vertical environments. Production crops are compressed WebP images under `public/assets/2d/worlds/` and appear in the active-world banner on the map. |
-| `docs/assets/2d/tmt-memory-objects-atlas-v2.png` | Source art for the Memory mini-game | Transparent 1448 × 1086 atlas with twelve fruit and animal sprites. The game uses the optimized transparent WebP at `public/assets/2d/minigames/tmt-memory-objects-v2.webp`. |
+| `docs/assets/2d/tmt-memory-objects-atlas-v2.png` | Source art for the Memory mini-game | Transparent 1448 × 1086 atlas with six fruit and six faceless animal sprites. The game uses the optimized transparent WebP at `public/assets/2d/minigames/tmt-memory-objects-v2.webp`. |
 
 ## Integration direction
 
