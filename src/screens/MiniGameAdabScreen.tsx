@@ -4,6 +4,7 @@ import { GameButton } from "../game/GameButton";
 import { GameCard } from "../game/GameCard";
 import { useGameStore } from "@/lib/storage";
 import type React from "react";
+import { AvatarPortrait } from "@/components/profile/AvatarPortrait";
 
 // Fisher-Yates shuffle
 function shuffleArray<T>(array: T[]): T[] {
@@ -320,7 +321,7 @@ export function MiniGameAdabScreen({ profile, onBack, backRef }: Props) {
             <div className="mb-4 text-left">
               <div className="text-xs uppercase font-bold opacity-70 mb-1">Top 3</div>
               {leaderboard.slice(0, 3).map((e, i) => (
-                <div key={e.id} className="flex items-center gap-2 text-sm"><span className="font-black">{["🥇","🥈","🥉"][i]}</span><span>{e.avatar}</span><span className="truncate flex-1">{e.profileName}</span><span className="font-black">{e.score}</span></div>
+                <div key={e.id} className="flex items-center gap-2 text-sm"><span className="font-black">{["🥇","🥈","🥉"][i]}</span><AvatarPortrait avatar={e.avatar} className="w-6 h-6 rounded-full" /><span className="truncate flex-1">{e.profileName}</span><span className="font-black">{e.score}</span></div>
               ))}
             </div>
           )}
@@ -349,7 +350,7 @@ export function MiniGameAdabScreen({ profile, onBack, backRef }: Props) {
           ) : leaderboard.map((e, i) => (
             <div key={e.id} className={`rounded-2xl p-3 flex items-center gap-3 border-2 ${e.profileId === profile.id ? "bg-gradient-meadow/20 border-[#2E8B12]" : "bg-white/80 border-[#CBB794]/50"}`}>
               <div className="text-2xl font-black w-10 text-center shrink-0">{i<3 ? ["🥇","🥈","🥉"][i] : `#${i+1}`}</div>
-              <div className="text-2xl shrink-0">{e.avatar}</div>
+              <AvatarPortrait avatar={e.avatar} className="w-8 h-8 rounded-full shrink-0" />
               <div className="flex-1 min-w-0"><div className="font-bold text-[#5A3515] truncate text-sm">{e.profileName}</div><div className="text-[10px] text-[#8C6B45]">{e.correctCount} benar</div></div>
               <div className="font-display font-black text-xl text-[#5A3515] shrink-0">{e.score}</div>
             </div>

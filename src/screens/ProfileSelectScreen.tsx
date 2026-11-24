@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { DifficultyId, Profile, Gender } from "@/types";
 import { AVATARS, DIFFICULTIES } from "@/data/constants";
+import { AvatarPortrait } from "@/components/profile/AvatarPortrait";
 import { GameButton } from "../game/GameButton";
 import { GameCard } from "../game/GameCard";
 import { ProfileCard } from "../game/ProfileCard";
@@ -23,7 +24,7 @@ interface Props {
 export function ProfileSelectScreen({ profiles, activeId, onSelect, onCreate, onUpdate, onDelete, onContinue }: Props) {
   const [creating, setCreating] = useState(profiles.length === 0);
   const [name, setName] = useState("");
-  const [avatar, setAvatar] = useState(AVATARS[0]);
+  const [avatar, setAvatar] = useState<string>(AVATARS[0].id);
   const [gender, setGender] = useState<Gender>("unspecified");
   const [diff, setDiff] = useState<DifficultyId>("sd-bawah");
   const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
@@ -39,7 +40,7 @@ export function ProfileSelectScreen({ profiles, activeId, onSelect, onCreate, on
     setName("");
     setCreating(false);
     setEditingProfileId(null);
-    setAvatar(AVATARS[0]);
+    setAvatar(AVATARS[0].id);
     setGender("unspecified");
     setDiff("sd-bawah");
     if (isFirstProfile) onContinue(true);
@@ -58,7 +59,7 @@ export function ProfileSelectScreen({ profiles, activeId, onSelect, onCreate, on
     setName("");
     setCreating(false);
     setEditingProfileId(null);
-    setAvatar(AVATARS[0]);
+    setAvatar(AVATARS[0].id);
     setGender("unspecified");
     setDiff("sd-bawah");
   };
@@ -156,19 +157,21 @@ export function ProfileSelectScreen({ profiles, activeId, onSelect, onCreate, on
               <div>
                 <span id="avatar-label" className="text-xs font-bold uppercase text-[#8C6B45]">Pilih Avatar</span>
                 <div role="group" aria-labelledby="avatar-label" className="mt-2 flex flex-wrap gap-2 justify-start">
-                  {AVATARS.map((a) => (
+                  {AVATARS.map(({ id, label }) => (
                     <button
-                      key={a}
-                      onClick={() => setAvatar(a)}
+                      key={id}
+                      onClick={() => setAvatar(id)}
                       className={cn(
                         "w-12 h-12 sm:w-14 sm:h-14 rounded-[18px] text-2xl sm:text-3xl grid place-items-center border-[3px] transition-all",
-                        avatar === a
+                        avatar === id
                           ? "bg-gradient-meadow border-[#2E8B12] scale-110 shadow-candy-sm"
                           : "bg-[#FFF9E6] border-[#D4B483] hover:border-[#8C6B45]",
                       )}
-                      aria-pressed={avatar === a}
+                      aria-label={label}
+                      aria-pressed={avatar === id}
+                      type="button"
                     >
-                      {a}
+                      <AvatarPortrait avatar={id} className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl" />
                     </button>
                   ))}
                 </div>

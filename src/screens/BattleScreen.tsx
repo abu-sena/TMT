@@ -16,6 +16,7 @@ import {
   type BattleGameDefinition, type BattleQuestion, type BattleChoice,
 } from "@/lib/battle-game-pool";
 import type React from "react";
+import { AvatarPortrait } from "@/components/profile/AvatarPortrait";
 
 interface Props {
   profiles: Profile[];
@@ -487,7 +488,7 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
           return (
             <button key={p.id} onClick={() => togglePlayer(p.id)}
               className={`w-full rounded-2xl p-4 flex items-center gap-4 border-4 transition-all active:scale-[0.98] ${sel ? "bg-gradient-meadow/30 border-[#2E8B12]" : "bg-white/10 border-white/10"}`}>
-              <div className="h-14 w-14 rounded-2xl bg-white/20 grid place-items-center text-3xl shrink-0">{p.avatar}</div>
+              <AvatarPortrait avatar={p.avatar} className="h-14 w-14 rounded-2xl shrink-0" />
               <div className="flex-1 text-left min-w-0"><div className="font-display font-black text-lg text-white truncate">{p.name}</div><div className="text-xs text-white/60">Level {p.level} · {p.difficulty.toUpperCase()}</div></div>
               <div className={`h-8 w-8 rounded-full grid place-items-center text-lg shrink-0 ${sel ? "bg-[#2E8B12] text-white" : "bg-white/20 text-white/50"}`}>{sel ? "✓" : "+"}</div>
             </button>
@@ -647,7 +648,7 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
         <div className="w-full max-w-sm space-y-3 mb-8">
           {shuffledOrder.map((pid, i) => {
             const p = playerMap.get(pid); if (!p) return null;
-            return <div key={pid} className="flex items-center gap-4 p-3 rounded-2xl bg-white/10 border-2 border-white/20"><div className="h-10 w-10 rounded-full bg-gradient-blue grid place-items-center text-white font-black text-sm">{i + 1}</div><div className="text-3xl">{p.avatar}</div><div className="font-display font-black text-lg text-white">{p.profileName}</div></div>;
+            return <div key={pid} className="flex items-center gap-4 p-3 rounded-2xl bg-white/10 border-2 border-white/20"><div className="h-10 w-10 rounded-full bg-gradient-blue grid place-items-center text-white font-black text-sm">{i + 1}</div><AvatarPortrait avatar={p.avatar} className="w-10 h-10 rounded-full" /><div className="font-display font-black text-lg text-white">{p.profileName}</div></div>;
           })}
         </div>
         <GameButton variant="primary" size="lg" onClick={() => setPhase("turn-intro")}>⚡ Mulai Ronde 1</GameButton>
@@ -664,7 +665,7 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
         <GameCard tone="blue" className="text-center w-full max-w-sm p-8 text-white">
           <div className="text-3xl mb-3">{game.emoji}</div>
           <div className="text-xs uppercase font-bold opacity-60 mb-2">Ronde {session!.currentRound} · {game.title}</div>
-          <div className="text-6xl mb-3">{currentPlayer.avatar}</div>
+          <AvatarPortrait avatar={currentPlayer.avatar} className="w-16 h-16 rounded-full mx-auto mb-3" />
           <h1 className="font-display font-black text-3xl mb-1">Giliran {currentPlayer.profileName}</h1>
           <p className="text-sm font-bold opacity-80 mb-4">Skor: {session!.scores[currentPlayer.profileId] || 0}</p>
           <GameButton variant="primary" size="lg" full onClick={startTurn}>💪 Saya Siap!</GameButton>
@@ -691,7 +692,7 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
     return (
       <div className={`${darkBg} flex flex-col p-3 sm:p-4`}>
         <header className="pt-safe flex items-center gap-2 mb-3 shrink-0">
-          <div className="bg-white/10 px-3 py-1.5 rounded-full font-black text-white text-sm">{currentPlayer?.avatar} {currentPlayer?.profileName}</div>
+          <div className="bg-white/10 px-3 py-1.5 rounded-full font-black text-white text-sm flex items-center gap-2"><AvatarPortrait avatar={currentPlayer?.avatar || ""} className="w-6 h-6 rounded-full" />{currentPlayer?.profileName}</div>
           <div className="bg-white/10 px-3 py-1.5 rounded-full font-black text-white text-sm ml-auto">Ronde {session!.currentRound}</div>
         </header>
         <div className="h-3 rounded-full bg-white/10 mb-4 shrink-0 overflow-hidden"><div className="h-full rounded-full transition-all bg-green-400" style={{ width: `${timerPercent}%` }} /></div>
@@ -717,7 +718,7 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
     return (
       <div className={`${darkBg} flex flex-col p-3 sm:p-4`}>
         <header className="pt-safe flex items-center gap-2 mb-3 shrink-0">
-          <div className="bg-white/10 px-3 py-1.5 rounded-full font-black text-white text-sm">{currentPlayer?.avatar} {currentPlayer?.profileName}</div>
+          <div className="bg-white/10 px-3 py-1.5 rounded-full font-black text-white text-sm flex items-center gap-2"><AvatarPortrait avatar={currentPlayer?.avatar || ""} className="w-6 h-6 rounded-full" />{currentPlayer?.profileName}</div>
           <div className="bg-white/10 px-3 py-1.5 rounded-full font-black text-white text-sm ml-auto">Ronde {session!.currentRound}</div>
         </header>
         <div className="h-3 rounded-full bg-white/10 mb-4 shrink-0 overflow-hidden"><div className="h-full rounded-full transition-all duration-100" style={{ width: `${timerPercent}%`, backgroundColor: timerColor }} /></div>
@@ -754,7 +755,7 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
     return (
       <div className={`${darkBg} flex flex-col overflow-hidden`}>
         <header className="shrink-0 pt-safe mt-1 px-2 flex items-center gap-2">
-          <div className="bg-white/10 px-3 py-1.5 rounded-full font-black text-white text-xs">{currentPlayer?.avatar} {currentPlayer?.profileName}</div>
+          <div className="bg-white/10 px-3 py-1.5 rounded-full font-black text-white text-xs flex items-center gap-2"><AvatarPortrait avatar={currentPlayer?.avatar || ""} className="w-5 h-5 rounded-full" />{currentPlayer?.profileName}</div>
           <div className="flex-1 text-center font-black text-white text-xs">{currentGame?.title || "Jalur Tercepat"}</div>
           <div className="bg-white/10 px-2 py-1 rounded-full font-black text-white text-xs">⏱{timeLeft}s</div>
         </header>
@@ -800,7 +801,7 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
     return (
       <div className={`${darkBg} flex flex-col overflow-hidden`}>
         <header className="shrink-0 pt-safe mt-1 px-2 flex items-center gap-2">
-          <div className="bg-white/10 px-3 py-1.5 rounded-full font-black text-white text-xs">{currentPlayer?.avatar} {currentPlayer?.profileName}</div>
+          <div className="bg-white/10 px-3 py-1.5 rounded-full font-black text-white text-xs flex items-center gap-2"><AvatarPortrait avatar={currentPlayer?.avatar || ""} className="w-5 h-5 rounded-full" />{currentPlayer?.profileName}</div>
           <div className="flex-1 text-center font-black text-white text-xs">Ubah Posisi</div>
           <div className="bg-white/10 px-2 py-1 rounded-full font-black text-white text-xs">⏱{timeLeft}s</div>
         </header>
@@ -842,7 +843,7 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
     return (
       <div className={`${darkBg} flex flex-col overflow-hidden`}>
         <header className="shrink-0 pt-safe mt-1 px-2 flex items-center gap-2">
-          <div className="bg-white/10 px-3 py-1.5 rounded-full font-black text-white text-xs">{currentPlayer?.avatar} {currentPlayer?.profileName}</div>
+          <div className="bg-white/10 px-3 py-1.5 rounded-full font-black text-white text-xs flex items-center gap-2"><AvatarPortrait avatar={currentPlayer?.avatar || ""} className="w-5 h-5 rounded-full" />{currentPlayer?.profileName}</div>
           <div className="flex-1 text-center font-black text-white text-xs">Rantai Warna</div>
           <div className="bg-white/10 px-2 py-1 rounded-full font-black text-white text-xs">⏱{timeLeft}s</div>
         </header>
@@ -895,7 +896,7 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
     return (
       <div className={`${darkBg} flex flex-col overflow-hidden`}>
         <header className="shrink-0 pt-safe mt-1 px-2 flex items-center gap-2">
-          <div className="bg-white/10 px-3 py-1.5 rounded-full font-black text-white text-xs">{currentPlayer?.avatar} {currentPlayer?.profileName}</div>
+          <div className="bg-white/10 px-3 py-1.5 rounded-full font-black text-white text-xs flex items-center gap-2"><AvatarPortrait avatar={currentPlayer?.avatar || ""} className="w-5 h-5 rounded-full" />{currentPlayer?.profileName}</div>
           <div className="flex-1 text-center font-black text-white text-xs">Jalur Angka ⚡</div>
           <div className="bg-white/10 px-2 py-1 rounded-full font-black text-white text-xs">⏱{timeLeft}s</div>
         </header>
@@ -944,7 +945,7 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
             return (
               <div key={p.profileId} className={`rounded-2xl p-4 flex items-center gap-4 border-2 ${i === 0 ? "bg-gradient-coin/20 border-[#D48806]" : "bg-white/10 border-white/10"}`}>
                 <div className="text-2xl font-black w-10 text-center shrink-0 text-white">{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}</div>
-                <div className="text-3xl shrink-0">{p.avatar}</div>
+                <AvatarPortrait avatar={p.avatar} className="w-10 h-10 rounded-full shrink-0" />
                 <div className="flex-1 min-w-0"><div className="font-bold text-white truncate">{p.profileName}</div><div className="text-xs text-white/50">Ronde ini: +{roundScore}</div></div>
                 <div className="font-display font-black text-xl text-white text-right shrink-0">{session?.scores[p.profileId] || 0}</div>
               </div>
@@ -969,7 +970,7 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
           <header className="shrink-0 px-4 pt-safe mt-2 pb-3 text-center"><div className="text-6xl mb-2">{achieved ? "🎉" : "💪"}</div><h1 className="font-display font-black text-2xl sm:text-3xl text-white">{achieved ? "Target Tercapai!" : "Hampir Tercapai!"}</h1></header>
           <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-3 pb-4">
             <div className="rounded-2xl bg-white/10 border-2 border-white/20 p-5 text-center"><div className="font-display font-black text-4xl text-yellow-300">{totalScore}</div><div className="text-xs text-white/50 mt-1">Target: {target}</div></div>
-            {(session?.players || []).map(p => <div key={p.profileId} className="rounded-2xl bg-white/10 p-3 flex items-center gap-3"><div className="text-2xl">{p.avatar}</div><div className="flex-1 text-white font-bold text-sm">{p.profileName}</div><div className="font-black text-lg text-white">{session?.scores[p.profileId] || 0}</div></div>)}
+            {(session?.players || []).map(p => <div key={p.profileId} className="rounded-2xl bg-white/10 p-3 flex items-center gap-3"><AvatarPortrait avatar={p.avatar} className="w-8 h-8 rounded-full" /><div className="flex-1 text-white font-bold text-sm">{p.profileName}</div><div className="font-black text-lg text-white">{session?.scores[p.profileId] || 0}</div></div>)}
           </main>
           <div className="shrink-0 px-4 pb-safe pt-2 flex gap-3"><GameButton variant="ghost" size="md" onClick={onBack}>🏠 Home</GameButton><GameButton variant="primary" size="md" full onClick={() => { setPhase("select-players"); setSelectedPlayerIds(new Set()); setSession(null); }}>👨‍👩‍👧 Main Lagi</GameButton></div>
         </div>
@@ -982,11 +983,11 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
       <div className={`${darkBg} flex flex-col overflow-hidden`}>
         <header className="shrink-0 px-4 pt-safe mt-2 pb-3 text-center"><div className="text-5xl mb-2">👑</div><h1 className="font-display font-black text-2xl sm:text-3xl text-yellow-300">Pemenang Battle!</h1></header>
         <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-3 pb-4">
-          {winner && <div className="rounded-2xl bg-gradient-to-br from-yellow-400/30 to-yellow-600/20 border-2 border-yellow-400/50 p-5 text-center"><div className="text-7xl mb-2">{winner.avatar}</div><div className="font-display font-black text-2xl text-yellow-300">{winner.profileName}</div><div className="text-3xl font-black text-white mt-1">{session?.scores[winner.profileId]} poin</div></div>}
+          {winner && <div className="rounded-2xl bg-gradient-to-br from-yellow-400/30 to-yellow-600/20 border-2 border-yellow-400/50 p-5 text-center"><AvatarPortrait avatar={winner.avatar} className="w-20 h-20 rounded-full mx-auto mb-2" /><div className="font-display font-black text-2xl text-yellow-300">{winner.profileName}</div><div className="text-3xl font-black text-white mt-1">{session?.scores[winner.profileId]} poin</div></div>}
           {sorted.map((p, i) => (
             <div key={p.profileId} className={`rounded-2xl p-3 flex items-center gap-3 border-2 ${i === 0 ? "bg-yellow-400/10 border-yellow-400/30" : "bg-white/5 border-white/10"}`}>
               <div className="text-xl font-black w-8 text-center shrink-0 text-white">{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}</div>
-              <div className="text-2xl shrink-0">{p.avatar}</div><div className="flex-1 min-w-0"><div className="font-bold text-white truncate text-sm">{p.profileName}</div></div>
+              <AvatarPortrait avatar={p.avatar} className="w-8 h-8 rounded-full shrink-0" /><div className="flex-1 min-w-0"><div className="font-bold text-white truncate text-sm">{p.profileName}</div></div>
               <div className="font-black text-lg text-white shrink-0">{session?.scores[p.profileId]}</div>
             </div>
           ))}

@@ -10,6 +10,7 @@ import { FixedBottomActionArea } from "@/components/layout/FixedBottomActionArea
 import { GameButton } from "../game/GameButton";
 import { cn } from "@/lib/utils";
 import { CATEGORY_MAP } from "@/data/constants";
+import { AvatarPortrait } from "@/components/profile/AvatarPortrait";
 
 // ══════════════════════════════════════════
 // Map Configuration
@@ -611,8 +612,8 @@ function PlayerMarker({ avatar }: { avatar: string }) {
   return (
     <div className="absolute -top-16 left-1/2 -translate-x-1/2 z-30 pointer-events-none flex flex-col items-center animate-bounce">
       <div className="w-12 h-14 bg-[#8BC34A] border-4 border-white rounded-[24px] rounded-bl-none rotate-45 shadow-lg flex items-center justify-center">
-        <div className="-rotate-45 text-2xl drop-shadow-sm">
-          {avatar || "🧒"}
+        <div className="-rotate-45 drop-shadow-sm">
+          <AvatarPortrait avatar={avatar || "🧒"} className="w-8 h-8 rounded-full" />
         </div>
       </div>
       <div className="w-4 h-2 bg-black/20 rounded-[100%] mt-2 blur-sm"></div>

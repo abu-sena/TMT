@@ -4,6 +4,7 @@ import { GameButton } from "../game/GameButton";
 import { GameCard } from "../game/GameCard";
 import { useGameStore } from "@/lib/storage";
 import type React from "react";
+import { AvatarPortrait } from "@/components/profile/AvatarPortrait";
 
 // Fisher-Yates shuffle
 function shuffleArray<T>(array: T[]): T[] {
@@ -300,7 +301,7 @@ export function MiniGameHitungScreen({ profile, onBack, backRef }: Props) {
               {leaderboard.slice(0, 3).map((e, i) => (
                 <div key={e.id} className="flex items-center gap-2 text-sm">
                   <span className="font-black">{["🥇","🥈","🥉"][i]}</span>
-                  <span>{e.avatar}</span>
+                  <AvatarPortrait avatar={e.avatar} className="w-6 h-6 rounded-full" />
                   <span className="truncate flex-1">{e.profileName}</span>
                   <span className="font-black">{e.score}</span>
                 </div>
@@ -344,7 +345,7 @@ export function MiniGameHitungScreen({ profile, onBack, backRef }: Props) {
                 <div className="text-2xl font-black w-10 text-center shrink-0">
                   {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `#${i + 1}`}
                 </div>
-                <div className="text-2xl shrink-0">{e.avatar}</div>
+                <AvatarPortrait avatar={e.avatar} className="w-8 h-8 rounded-full shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-[#5A3515] truncate text-sm">{e.profileName}</div>
                   <div className="text-[10px] text-[#8C6B45]">{e.correctCount} benar · Stage {e.maxStage}</div>

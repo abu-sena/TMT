@@ -9,6 +9,7 @@ import { GameButton } from "../game/GameButton";
 import { GameCard } from "../game/GameCard";
 import { useGameStore } from "@/lib/storage";
 import type { SafeStats } from "@/lib/stats-service";
+import { AvatarPortrait } from "@/components/profile/AvatarPortrait";
 
 // ════════════════════════════════════════════════════════
 // Error Boundary for Stats Screen
@@ -101,9 +102,7 @@ export function StatsScreen({ profile, onBack }: Props) {
             ←
           </button>
           <div className="flex-1 min-w-0 flex items-center gap-2">
-            <div className="text-3xl bg-white rounded-full h-12 w-12 flex items-center justify-center border-2 border-[#CBB794] shrink-0">
-              {stats.avatar}
-            </div>
+            <AvatarPortrait avatar={stats.avatar} className="h-12 w-12 rounded-full border-2 border-[#CBB794]" />
             <div>
               <h1 className="font-display font-black text-xl sm:text-2xl text-[#5A3515] truncate">Status Window</h1>
               <p className="text-xs sm:text-sm text-[#5A3515]/80 truncate">

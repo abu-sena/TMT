@@ -39,7 +39,14 @@ export const CATEGORY_MAP: Record<CategoryId, CategoryInfo> =
   Object.fromEntries(CATEGORIES.map((c) => [c.id, c])) as Record<CategoryId, CategoryInfo>;
 
 
-export const AVATARS = ["🦊", "🐯", "🐼", "🦉", "🐧", "🐶", "🐱", "🦁", "🐵", "🐰", "🐨", "🦄"];
+export const AVATARS = [
+  { id: "shinobi-blue-boy", label: "Shinobi laki-laki berpakaian biru" },
+  { id: "shinobi-teal-hijabi-girl", label: "Shinobi perempuan berhijab teal" },
+  { id: "shinobi-green-boy", label: "Shinobi laki-laki berpakaian hijau" },
+  { id: "shinobi-rose-hijabi-girl", label: "Shinobi perempuan berhijab merah muda" },
+  { id: "shinobi-orange-boy", label: "Shinobi laki-laki berpakaian oranye" },
+  { id: "shinobi-emerald-hijabi-girl", label: "Shinobi perempuan berhijab hijau tua" },
+] as const;
 
 /** UI-friendly label for SD */
 export const DIFFICULTY_UI_LABELS: Record<DifficultyId, string> = {

@@ -7,6 +7,7 @@ import { GameCard } from "../game/GameCard";
 import { XPBar } from "../game/XPBar";
 import { GameScreen } from "@/components/layout/GameScreen";
 import { useGameStore } from "@/lib/storage";
+import { AvatarPortrait } from "@/components/profile/AvatarPortrait";
 
 interface Props {
   profile: Profile;
@@ -58,7 +59,7 @@ export function HomeScreen({ profile, onNavigate, onSwitchProfile, onOpenPending
             className="h-16 w-16 rounded-[20px] bg-white grid place-items-center text-4xl border-4 border-[#CBB794] shadow-sm shrink-0 active:translate-y-[2px] relative"
             aria-label="Ganti profil"
           >
-            {profile.avatar}
+            <AvatarPortrait avatar={profile.avatar} className="h-full w-full rounded-[16px]" />
             <span className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-gradient-meadow border-2 border-white grid place-items-center text-xs">🔄</span>
           </button>
           <div className="min-w-0 flex-1">

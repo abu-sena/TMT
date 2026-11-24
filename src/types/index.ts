@@ -370,7 +370,7 @@ export type Gender = "male" | "female" | "unspecified";
 export interface Profile {
   id: string;
   name: string;
-  avatar: string; // emoji
+  avatar: string; // Stable avatar ID or legacy emoji string
   gender: Gender;
   difficulty: DifficultyId;
   xp: number;

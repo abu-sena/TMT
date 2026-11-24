@@ -17,6 +17,7 @@ import { useGameStore } from "@/lib/storage";
 import type { LeaderboardEntry, DailyMission } from "@/types";
 import { clampMissionPoints, getDefaultPointsForWeight, calculateDailyTotalPoints, exceedsSoftCap, exceedsHardCap, getPointCapWarning, getTodayAssignments, approveAssignment, rejectAssignment, grantDailyBonusIfEligible, updateStreakIfQualified, seedTodayAssignments } from "@/lib/dailyMissions";
 import { cn } from "@/lib/utils";
+import { AvatarPortrait } from "@/components/profile/AvatarPortrait";
 
 interface Props {
   profile: Profile;
@@ -171,7 +172,7 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
               <option value="__all__">👨‍👩‍👧‍👦 Semua Anak</option>
               {profiles.map(p => (
                 <option key={p.id} value={p.id}>
-                  {p.avatar} {p.name} — {DIFFICULTY_MAP[p.difficulty]?.shortLabel || p.difficulty}
+                  {p.name} — {DIFFICULTY_MAP[p.difficulty]?.shortLabel || p.difficulty}
                 </option>
               ))}
             </select>
@@ -224,14 +225,14 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
                 {mostActive && (
                   <div className="bg-[#FFF9E6] rounded-[18px] p-3 border border-[#D48806]">
                     <div className="text-xs font-black uppercase text-[#D48806]">🏆 Paling Aktif</div>
-                    <div className="font-bold text-[#5A3515] mt-1">{mostActive.avatar} {mostActive.name}</div>
+                    <div className="font-bold text-[#5A3515] mt-1 flex items-center gap-2"><AvatarPortrait avatar={mostActive.avatar} className="w-7 h-7 rounded-full" />{mostActive.name}</div>
                     <div className="text-[10px] text-[#8C6B45]">{mostActive.totalMissionsCompleted} misi selesai</div>
                   </div>
                 )}
                 {needsPractice && (
                   <div className="bg-[#FFF0E5] rounded-[18px] p-3 border border-[#FF9800]">
                     <div className="text-xs font-black uppercase text-[#FF9800]">🎯 Perlu Latihan</div>
-                    <div className="font-bold text-[#5A3515] mt-1">{needsPractice.avatar} {needsPractice.name}</div>
+                    <div className="font-bold text-[#5A3515] mt-1 flex items-center gap-2"><AvatarPortrait avatar={needsPractice.avatar} className="w-7 h-7 rounded-full" />{needsPractice.name}</div>
                     <div className="text-[10px] text-[#8C6B45]">Streak adab: {needsPractice.adabStreak || 0} hari</div>
                   </div>
                 )}
@@ -243,9 +244,7 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
         {/* ═══ Profile Card ═══ */}
         {!isAllChildren && (
         <div className="rounded-[28px] bg-white border-2 border-[#D4B483] p-4 shadow-card flex items-center gap-4">
-          <div className="h-16 w-16 rounded-[20px] bg-gradient-to-br from-[#FFF5D1] to-[#FFE0A3] border-2 border-[#D48806] grid place-items-center text-4xl shadow-sm shrink-0">
-            {displayProfile.avatar}
-          </div>
+          <AvatarPortrait avatar={displayProfile.avatar} className="h-16 w-16 rounded-[20px] border-2 border-[#D48806] shadow-sm" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <h2 className="font-display font-black text-xl text-[#5A3515] truncate">
@@ -621,7 +620,7 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
                         }}
                         className="h-4 w-4"
                       />
-                      {p.avatar} {p.name}
+                      <AvatarPortrait avatar={p.avatar} className="inline-block w-6 h-6 align-middle rounded-full mr-2" />{p.name}
                     </label>
                   ))}
                 </div>
@@ -865,7 +864,7 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
                 >
                   <option value="__all__">👨‍👩‍👧‍👦 Semua Anak</option>
                   {profiles.map(p => (
-                    <option key={p.id} value={p.id}>{p.avatar} {p.name}</option>
+                    <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
                 </select>
               </div>
@@ -1003,7 +1002,7 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
                     )}
                   >
                     <div className="flex items-start gap-2 mb-2">
-                      <span className="text-lg shrink-0">{child.avatar}</span>
+                      <AvatarPortrait avatar={child.avatar} className="w-7 h-7 rounded-full shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-bold text-xs text-[#5A3515]">{child.name}</span>

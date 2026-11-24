@@ -3,6 +3,7 @@ import type { Profile, RewardMilestone, RewardStatus, ScreenId } from "@/types";
 import { REWARD_ICONS } from "@/types";
 import { useGameStore } from "@/lib/storage";
 import { GameButton } from "../game/GameButton";
+import { AvatarPortrait } from "@/components/profile/AvatarPortrait";
 
 interface Props {
   profiles: Profile[];
@@ -217,7 +218,7 @@ export function RewardSetupScreen({ profiles, onBack }: Props) {
                     : "bg-white border-[#CBB794] text-[#5A3515]"
                 }`}
               >
-                {p.avatar} {p.name}
+                <AvatarPortrait avatar={p.avatar} className="w-7 h-7 rounded-full" /> {p.name}
               </button>
             ))}
           </div>
@@ -278,7 +279,7 @@ export function RewardSetupScreen({ profiles, onBack }: Props) {
               >
                 {profiles.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.avatar} {p.name}
+                    {p.name}
                   </option>
                 ))}
               </select>
@@ -441,7 +442,7 @@ export function RewardSetupScreen({ profiles, onBack }: Props) {
                             Level {reward.targetLevel}
                             {profile && (
                               <span className="ml-1">
-                                · {profile.avatar} {profile.name}
+                                · {profile.name}
                               </span>
                             )}
                           </div>
