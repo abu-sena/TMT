@@ -26,42 +26,32 @@ export function OnboardingScreen({ onStart }: Props) {
         </p>
 
         <GameCard tone="cream" className="mt-8 w-full max-w-sm sm:max-w-md space-y-4 shadow-card border-4">
-          <div className="text-center font-bold text-[#5A3515] mb-2 leading-relaxed">
-            Restorasi Kota Ilmu menantimu. Selesaikan misi seru untuk mendapatkan bintang, lencana, dan poin!
-          </div>
+          <p className="text-center font-bold text-[#5A3515] leading-relaxed">
+            Pulihkan Kota Ilmu sambil mengasah ilmu dan akhlak. Tuntaskan misi untuk meraih bintang dan menjelajahi wilayah baru!
+          </p>
 
-          <div className="space-y-3 bg-[#E8DCC2]/30 p-3 rounded-2xl border-2 border-[#D4B483]/30">
-            <div className="flex items-start gap-3">
-              <div className="text-2xl mt-1">📶</div>
-              <div>
-                <div className="font-display font-extrabold text-[#5A3515]">Main Offline</div>
-                <div className="text-[13px] font-semibold text-[#8C6B45] leading-tight">
-                  Tersimpan di HP — tanpa kuota internet!
-                </div>
-              </div>
-            </div>
-            
-            <div className="h-0.5 bg-[#D4B483]/30 rounded-full w-full"></div>
-            
-            <div className="flex items-start gap-3">
-              <div className="text-2xl mt-1">☁️</div>
-              <div>
-                <div className="font-display font-extrabold text-[#5A3515]">Sinkron Google</div>
-                <div className="text-[13px] font-semibold text-[#8C6B45] leading-tight">
-                  Cadangkan progres secara opsional.
-                </div>
-              </div>
-            </div>
-          </div>
+          <ol className="space-y-3 bg-[#E8DCC2]/30 p-4 rounded-2xl border-2 border-[#D4B483]/30">
+            {[
+              ["1", "Buat profil petualang"],
+              ["2", "Pilih misi pertama di peta"],
+              ["3", "Selesaikan misi dan raih bintang"],
+            ].map(([step, label]) => (
+              <li key={step} className="flex items-center gap-3 text-sm font-extrabold text-[#5A3515]">
+                <span className="h-8 w-8 rounded-full bg-white border-2 border-[#D4B483] grid place-items-center shrink-0">{step}</span>
+                {label}
+              </li>
+            ))}
+          </ol>
+
+          <p className="text-center text-xs font-semibold text-[#8C6B45]">
+            Bisa dimainkan offline. Progres hanya tersimpan di perangkat ini.
+          </p>
         </GameCard>
       </div>
 
       <FixedBottomActionArea>
         <GameButton variant="primary" size="xl" onClick={onStart} full leadingIcon="🚀" className="shadow-pop">
-          Mulai Bermain
-        </GameButton>
-        <GameButton variant="wood" size="md" onClick={onStart} full>
-          Hubungkan Google Nanti
+          Mulai Petualangan
         </GameButton>
       </FixedBottomActionArea>
     </GameScreen>

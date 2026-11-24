@@ -17,7 +17,7 @@ interface Props {
   onCreate: (name: string, avatar: string, difficulty: DifficultyId, gender: Gender) => void;
   onUpdate: (id: string, name: string, avatar: string, difficulty: DifficultyId, gender: Gender) => void;
   onDelete: (id: string) => void;
-  onContinue: () => void;
+  onContinue: (firstProfileCreated?: boolean) => void;
 }
 
 export function ProfileSelectScreen({ profiles, activeId, onSelect, onCreate, onUpdate, onDelete, onContinue }: Props) {
@@ -30,6 +30,7 @@ export function ProfileSelectScreen({ profiles, activeId, onSelect, onCreate, on
 
   const submit = () => {
     if (!name.trim()) return;
+    const isFirstProfile = profiles.length === 0 && !editingProfileId;
     if (editingProfileId) {
       onUpdate(editingProfileId, name.trim(), avatar, diff, gender);
     } else {
@@ -41,6 +42,7 @@ export function ProfileSelectScreen({ profiles, activeId, onSelect, onCreate, on
     setAvatar(AVATARS[0]);
     setGender("unspecified");
     setDiff("sd-bawah");
+    if (isFirstProfile) onContinue(true);
   };
 
   const startEdit = (profile: Profile) => {
@@ -68,10 +70,12 @@ export function ProfileSelectScreen({ profiles, activeId, onSelect, onCreate, on
         <header className="text-center mb-8">
           <div className="text-6xl animate-bob-sm">👨‍👩‍👧</div>
           <h1 className="font-display font-black text-4xl text-game-title mt-3 uppercase">
-            Pilih Profil
+            {profiles.length === 0 ? "Buat Profil Petualang" : "Pilih Profil"}
           </h1>
           <p className="text-base text-[#5A3515]/80 font-bold mt-2">
-            Banyak anak bisa main di satu perangkat.
+            {profiles.length === 0
+              ? "Pilih nama panggilan, avatar, dan tingkat tantanganmu. Jenis kelamin disetel ke Tidak ditentukan dan bisa diubah nanti."
+              : "Banyak anak bisa main di satu perangkat."}
           </p>
         </header>
 
@@ -111,18 +115,22 @@ export function ProfileSelectScreen({ profiles, activeId, onSelect, onCreate, on
           ) : (
             <GameCard tone="cream" padded className="space-y-5 shadow-card">
               <h3 className="font-display font-black text-lg text-[#5A3515] text-center">
-                {editingProfileId ? `✏️ Edit Profil` : `🆕 Profil Baru`}
+                {editingProfileId
+                  ? "✏️ Edit Profil"
+                  : profiles.length === 0
+                    ? "🆕 Profil Petualang Baru"
+                    : "🆕 Profil Baru"}
               </h3>
               <GameInput
-                label="Nama"
+                label="Nama panggilan"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Nama panggilan..."
+                placeholder="Contoh: Aisha"
               />
               
-              <div>
-                <label className="text-xs font-bold uppercase text-[#8C6B45]">Jenis Kelamin</label>
-                <div className="mt-2 flex gap-2">
+              {editingProfileId ? <div>
+                <span id="gender-label" className="text-xs font-bold uppercase text-[#8C6B45]">Jenis Kelamin</span>
+                <div role="group" aria-labelledby="gender-label" className="mt-2 flex gap-2">
                   {[
                     { id: "male" as Gender, label: "👦 Laki-laki" },
                     { id: "female" as Gender, label: "👧 Perempuan" },
@@ -137,16 +145,17 @@ export function ProfileSelectScreen({ profiles, activeId, onSelect, onCreate, on
                           ? "bg-gradient-meadow text-white border-[#2E8B12] shadow-candy-sm"
                           : "bg-[#FFF9E6] text-[#8C6B45] border-[#D4B483] hover:border-[#8C6B45]",
                       )}
+                      aria-pressed={gender === g.id}
                     >
                       {g.label}
                     </button>
                   ))}
                 </div>
-              </div>
+              </div> : null}
               
               <div>
-                <label className="text-xs font-bold uppercase text-[#8C6B45]">Pilih Avatar</label>
-                <div className="mt-2 flex flex-wrap gap-2 justify-start">
+                <span id="avatar-label" className="text-xs font-bold uppercase text-[#8C6B45]">Pilih Avatar</span>
+                <div role="group" aria-labelledby="avatar-label" className="mt-2 flex flex-wrap gap-2 justify-start">
                   {AVATARS.map((a) => (
                     <button
                       key={a}
@@ -157,6 +166,7 @@ export function ProfileSelectScreen({ profiles, activeId, onSelect, onCreate, on
                           ? "bg-gradient-meadow border-[#2E8B12] scale-110 shadow-candy-sm"
                           : "bg-[#FFF9E6] border-[#D4B483] hover:border-[#8C6B45]",
                       )}
+                      aria-pressed={avatar === a}
                     >
                       {a}
                     </button>
@@ -165,13 +175,14 @@ export function ProfileSelectScreen({ profiles, activeId, onSelect, onCreate, on
               </div>
               
               <div>
-                <label className="text-xs font-bold uppercase text-[#8C6B45]">Tingkat Kesulitan</label>
-                <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <span id="difficulty-label" className="text-xs font-bold uppercase text-[#8C6B45]">Tingkat Kesulitan</span>
+                <div role="group" aria-labelledby="difficulty-label" className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {DIFFICULTIES.map((d) => (
                     <DifficultyCard
                       key={d.id}
                       difficulty={d}
                       selected={diff === d.id}
+                      aria-pressed={diff === d.id}
                       onSelect={() => setDiff(d.id)}
                     />
                   ))}
@@ -185,7 +196,11 @@ export function ProfileSelectScreen({ profiles, activeId, onSelect, onCreate, on
                   </GameButton>
                 ) : null}
                 <GameButton variant="primary" size="md" full onClick={submit} disabled={!name.trim()}>
-                  {editingProfileId ? "Simpan Perubahan" : "Simpan Profil"}
+                  {editingProfileId
+                    ? "Simpan Perubahan"
+                    : profiles.length === 0
+                      ? "Simpan & Lihat Peta"
+                      : "Simpan Profil"}
                 </GameButton>
               </div>
             </GameCard>
@@ -196,7 +211,7 @@ export function ProfileSelectScreen({ profiles, activeId, onSelect, onCreate, on
       {/* Bottom "Main!" button — always visible */}
       {activeId && !creating ? (
         <FixedBottomActionArea>
-          <GameButton variant="primary" size="xl" full onClick={onContinue} trailingIcon="🚀" className="shadow-pop">
+          <GameButton variant="primary" size="xl" full onClick={() => onContinue()} trailingIcon="🚀" className="shadow-pop">
             MAIN SEKARANG!
           </GameButton>
         </FixedBottomActionArea>

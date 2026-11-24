@@ -779,7 +779,7 @@ export function GameAppStandalone() {
         onCreate={(name, avatar, diff, gender) => addProfile(createProfile(name, avatar, diff, gender))}
         onUpdate={(id, name, avatar, diff, gender) => updateProfile(id, { name, avatar, gender, difficulty: diff })}
         onDelete={deleteProfile}
-        onContinue={() => setScreen("home")}
+        onContinue={(firstProfileCreated) => setScreen(firstProfileCreated ? "map" : "home")}
       />
     );
   }

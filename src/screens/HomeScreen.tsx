@@ -125,7 +125,7 @@ export function HomeScreen({ profile, onNavigate, onSwitchProfile, onOpenPending
           onClick={() => onNavigate("map")}
           className="w-full py-4 rounded-[26px] bg-gradient-to-r from-[#2E8B12] to-[#4CAF50] border-b-4 border-[#1B5E20] text-white font-black text-lg shadow-pop active:translate-y-[2px] active:border-b-2 transition-all flex items-center justify-center gap-2"
         >
-          <span className="text-2xl">🗺️</span> Lanjutkan Misi
+          <span className="text-2xl">🗺️</span> {profile.totalMissionsCompleted === 0 ? "Mulai Misi Pertama" : "Lanjutkan Misi"}
         </button>
 
         {/* Main grid — colorful tiles */}
