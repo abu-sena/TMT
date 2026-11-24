@@ -5,6 +5,7 @@ import { GameCard } from "../game/GameCard";
 import { useGameStore } from "@/lib/storage";
 import type React from "react";
 import { AvatarPortrait } from "@/components/profile/AvatarPortrait";
+import { getMemoryObjectLabel, MEMORY_OBJECTS, MemoryObjectIcon } from "@/components/minigames/MemoryObjectIcon";
 
 // Fisher-Yates shuffle
 function shuffleArray<T>(array: T[]): T[] {
@@ -29,8 +30,7 @@ function getConfig(difficulty: string) {
 }
 
 const ALL_EMOJIS = [
-  "🍎","🍌","🍉","🍇","🍓","🍒",
-  "🐶","🐱","🐰","🦊","🐻","🐼",
+  ...MEMORY_OBJECTS.map(({ id }) => id),
   "🚗","🚕","🚙","🚌","🏎️","🚲",
   "🔴","🔵","🟡","🟢","🟣","🟠",
   "⭐","💎","🌈","🔥","❄️","🎵",
@@ -330,7 +330,7 @@ export function MiniGameIngatanScreen({ profile, onBack, backRef }: Props) {
             <div className="text-sm font-black text-[#185E9F] mb-4 uppercase">👀 Hafalkan Urutannya!</div>
             <div className="flex justify-center flex-wrap gap-2 sm:gap-3 text-4xl sm:text-5xl">
               {sequence.map((emoji, i) => (
-                <span key={i} className="drop-shadow-md">{emoji}</span>
+                <MemoryObjectIcon key={i} value={emoji} className="h-12 w-12 sm:h-14 sm:w-14 drop-shadow-md" />
               ))}
             </div>
             <div className="mt-4 text-xs font-bold text-[#8C6B45]">{memorizeTime.toFixed(1)} detik</div>
@@ -341,9 +341,9 @@ export function MiniGameIngatanScreen({ profile, onBack, backRef }: Props) {
               <div className="text-xs font-bold text-[#185E9F] mb-3 uppercase">👉 Pilih Sesuai Urutan</div>
               <div className="flex justify-center flex-wrap gap-1.5 text-3xl sm:text-4xl min-h-[50px] items-center">
                 {playerInput.map((emoji, i) => (
-                  <span key={i}>{emoji}</span>
+                  <MemoryObjectIcon key={i} value={emoji} className="h-10 w-10 sm:h-12 sm:w-12" />
                 ))}
-                {playerInput.length === 0 && <span className="text-[#8C6B45]/50 text-lg">Klik gambar...</span>}
+                {playerInput.length === 0 && <span className="text-[#8C6B45]/50 text-lg">Ketuk gambar...</span>}
               </div>
             </GameCard>
 
@@ -354,12 +354,13 @@ export function MiniGameIngatanScreen({ profile, onBack, backRef }: Props) {
                   <button
                     key={i}
                     onClick={() => handleSelect(opt)}
+                    aria-label={getMemoryObjectLabel(opt)}
                     disabled={isSelected || feedback !== null}
                     className={`h-16 w-16 sm:h-20 sm:w-20 rounded-2xl text-3xl sm:text-4xl border-4 shadow-pop active:translate-y-[4px] active:shadow-sm transition-all ${
                       isSelected ? "bg-black/10 border-black/20 opacity-40" : "bg-white border-[#CBB794] hover:border-[#185E9F]"
                     } disabled:cursor-not-allowed`}
                   >
-                    {opt}
+                    <MemoryObjectIcon value={opt} className="h-12 w-12 sm:h-14 sm:w-14" decorative />
                   </button>
                 );
               })}

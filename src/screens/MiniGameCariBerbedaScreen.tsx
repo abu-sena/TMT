@@ -236,7 +236,7 @@ export function CariBerbedaScreen({ profile, onBack, backRef }: Props) {
   return (
     <div className="h-[100dvh] bg-gradient-sky flex flex-col p-3 sm:p-4">
       <header className="pt-safe flex items-center gap-2 mb-3 shrink-0">
-        <button onClick={() => setShowExit(true)} className="h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shadow-sm shrink-0 active:scale-95">✕</button>
+        <button onClick={() => setShowExit(true)} aria-label="Keluar dari mini-game" className="h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shadow-sm shrink-0 active:scale-95">✕</button>
         <div className="bg-white/50 px-3 py-1.5 rounded-full font-black text-[#5A3515] text-sm border-2 border-[#CBB794]">⭐ {score}</div>
         <div className="bg-white/50 px-3 py-1.5 rounded-full font-black text-[#5A3515] text-sm border-2 border-[#CBB794]">✅ {correctCount}</div>
         <div className="bg-white/50 px-3 py-1.5 rounded-full font-black text-[#5A3515] text-xs border-2 border-[#CBB794] ml-auto">Stage {stage}</div>
@@ -256,6 +256,7 @@ export function CariBerbedaScreen({ profile, onBack, backRef }: Props) {
                   key={item.id}
                   onClick={() => handleSelect(i)}
                   disabled={feedback !== null}
+                  aria-label={`Bentuk ${i + 1}${isOdd ? ", berbeda" : ""}`}
                   className={`p-2 rounded-xl border-3 transition-all flex items-center justify-center aspect-square ${
                     isSelected 
                       ? (isOdd ? "border-[#2E8B12] bg-green-100 scale-105" : "border-[#A02020] bg-red-100 scale-105")

@@ -55,9 +55,9 @@ export function MiniGameResultScreen({
           </div>
 
           {/* Title */}
-          <h2 className="font-display font-black text-xl sm:text-2xl text-[#5A3515] mb-1">
+          <h1 className="font-display font-black text-xl sm:text-2xl text-[#5A3515] mb-1">
             {isNewBest ? "Rekor Baru!" : "Permainan Selesai!"}
-          </h2>
+          </h1>
           <p className="text-xs sm:text-sm font-bold text-[#8C6B45] mb-4">
             {gameTitle} · {diff.label}
           </p>

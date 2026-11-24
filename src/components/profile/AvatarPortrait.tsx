@@ -6,7 +6,7 @@ interface Props {
   className?: string;
 }
 
-const AVATAR_SHEET = "/assets/2d/concepts/tmt-avatar-icons-v2.webp";
+const AVATAR_SHEET = "./assets/2d/concepts/tmt-avatar-icons-v2.webp";
 
 /** Renders a new shinobi sprite ID, while continuing to display saved emoji avatars. */
 export function AvatarPortrait({ avatar, className }: Props) {

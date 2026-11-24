@@ -141,7 +141,13 @@ export function MapScreen({ profile, onBack, onOpenMission, onChangeDifficulty, 
           <span className="text-xs">{showDifficultySelector ? "▲" : "▼"}</span>
         </button>
         
-        <div className="flex-1 min-w-0 bg-white/80 backdrop-blur-md px-4 py-2 rounded-2xl border-2 border-white/50 shadow-sm">
+        <div
+          className="flex-1 min-w-0 bg-white/80 bg-cover bg-center backdrop-blur-md px-4 py-2 rounded-2xl border-2 border-white/50 shadow-sm"
+          style={{
+            backgroundImage: `linear-gradient(90deg, rgba(255,255,255,.96), rgba(255,255,255,.86) 58%, rgba(255,255,255,.6)), url("./assets/2d/worlds/tmt-world-${activeWorld.backgroundTheme.replace(/_/g, "-")}-v1.webp")`,
+            backgroundPosition: "center, center top",
+          }}
+        >
           <h1 className="font-display font-black text-xl text-[#5A3515] truncate">
             {activeWorld.name}
           </h1>
@@ -224,7 +230,7 @@ export function MapScreen({ profile, onBack, onOpenMission, onChangeDifficulty, 
             <div className="flex-1">
               <p className="text-xs font-bold text-[#E65100]">{lockedMessage}</p>
             </div>
-            <button onClick={() => setLockedMessage(null)} className="text-sm text-[#8C6B45] shrink-0">✕</button>
+            <button onClick={() => setLockedMessage(null)} aria-label="Tutup pesan level terkunci" className="text-sm text-[#8C6B45] shrink-0">✕</button>
           </div>
         </div>
       )}
@@ -566,6 +572,7 @@ function StageNode({ number, state, stars, isBoss, isReward, isFinalStage, onCli
         )}
         onClick={onClick}
         disabled={state === "locked"}
+        aria-label={`Stage ${number}, ${state === "locked" ? "terkunci" : state === "completed" ? "selesai" : state === "current" ? "tahap aktif" : state === "boss" ? "tantangan bos" : state === "reward" ? "tahap hadiah" : "tersedia"}${stars > 0 ? `, ${stars} bintang` : ""}${isFinalStage ? ", misi akhir" : ""}`}
       >
         {/* Inner highlight for 3D effect */}
         {isFinalStage && (

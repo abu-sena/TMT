@@ -51,7 +51,7 @@ export function GameButton({
     <button
       {...rest}
       className={cn(
-        "inline-flex items-center justify-center gap-2 font-display font-extrabold tracking-wide uppercase transition-all select-none disabled:opacity-50 disabled:cursor-not-allowed drop-shadow-sm max-w-full overflow-hidden box-border whitespace-normal break-words",
+        "inline-flex items-center justify-center gap-2 font-display font-extrabold tracking-wide uppercase transition-[filter,transform,box-shadow] duration-150 ease-out select-none disabled:opacity-50 disabled:cursor-not-allowed drop-shadow-sm max-w-full overflow-hidden box-border whitespace-normal break-words",
         variants[variant],
         sizes[size],
         full && "w-full",

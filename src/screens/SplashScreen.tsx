@@ -26,7 +26,10 @@ export function SplashScreen({ onDone }: Props) {
   return (
     <div className="h-[100dvh] w-full grid place-items-center relative overflow-hidden"
       style={{
-        background: "linear-gradient(180deg, #0A1628 0%, #0F2847 30%, #1B3A5C 60%, #1E4D7B 100%)",
+        backgroundColor: "#0A1628",
+        backgroundImage: "linear-gradient(180deg, rgba(10,22,40,.56) 0%, rgba(15,40,71,.68) 45%, rgba(10,22,40,.88) 100%), url('./assets/2d/worlds/tmt-world-forest-v1.webp')",
+        backgroundSize: "cover",
+        backgroundPosition: "center center",
       }}
     >
       {/* Animated background glow */}

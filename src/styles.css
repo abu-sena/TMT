@@ -159,6 +159,11 @@
     font-family: var(--font-display);
     letter-spacing: -0.01em;
   }
+  :where(button, a, input, select, textarea, [tabindex]):focus-visible:not([data-focus-reset]):not(:disabled) {
+    outline: 3px solid #1f3b64;
+    outline-offset: 3px;
+    box-shadow: 0 0 0 2px white;
+  }
 }
 
 @layer utilities {
@@ -366,6 +371,17 @@
 .animate-boss-intro-slide { animation: boss-intro-slide 0.6s ease-out both; }
 .animate-boss-pulse-ring { animation: boss-pulse-ring 2s infinite; }
 .animate-boss-spin-slow { animation: boss-spin-slow 12s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
 
 /* ── Scroll-safe screen container (use on every full-screen page) ── */
 .screen-container {
