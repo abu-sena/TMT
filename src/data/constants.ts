@@ -40,18 +40,18 @@ export const CATEGORY_MAP: Record<CategoryId, CategoryInfo> =
 
 
 export const AVATARS = [
-  { id: "shinobi-blue-boy", label: "Petualang bertopi dengan syal biru" },
-  { id: "shinobi-teal-hijabi-girl", label: "Petualang berhijab biru kehijauan" },
-  { id: "shinobi-green-boy", label: "Petualang berambut ikal dengan syal hijau" },
-  { id: "shinobi-rose-hijabi-girl", label: "Petualang berhijab merah muda" },
-  { id: "shinobi-orange-boy", label: "Petualang dengan syal kuning keemasan" },
-  { id: "shinobi-emerald-hijabi-girl", label: "Petualang berhijab hijau tua" },
-  { id: "scout-indigo-boy", label: "Petualang berkulit gelap dengan kompas dan syal nila" },
-  { id: "scout-sage-hijabi-girl", label: "Petualang berhijab hijau sage dengan rompi kuning" },
-  { id: "scout-coral-hat-boy", label: "Petualang bertopi lebar dengan syal koral" },
-  { id: "scout-lilac-hijabi-girl", label: "Petualang berhijab ungu muda dengan keranjang" },
-  { id: "scout-teal-boy", label: "Petualang berambut ikal dengan teropong" },
-  { id: "scout-navy-hijabi-girl", label: "Petualang berhijab biru tua dengan lencana bintang" },
+  { id: "shinobi-blue-boy", label: "Pemimpin penjelajah berjubah dan bertudung" },
+  { id: "shinobi-teal-hijabi-girl", label: "Koki penjelajah berambut kepang dan bertopi tinggi" },
+  { id: "shinobi-green-boy", label: "Penjaga gunung dengan tongkat kayu" },
+  { id: "shinobi-rose-hijabi-girl", label: "Kurir langit bertopi bulu dengan tas selempang" },
+  { id: "shinobi-orange-boy", label: "Tabib hutan berjubah dan membawa keranjang herba" },
+  { id: "shinobi-emerald-hijabi-girl", label: "Mekanik berambut tembaga dengan kacamata kerja" },
+  { id: "scout-indigo-boy", label: "Navigator berhijab ungu dengan kompas" },
+  { id: "scout-sage-hijabi-girl", label: "Penjaga berhijab merah muda dengan pelindung bahu" },
+  { id: "scout-coral-hat-boy", label: "Peramu berhijab hijau tua dengan kantong herba" },
+  { id: "scout-lilac-hijabi-girl", label: "Cendekia berhijab keemasan dengan gulungan peta" },
+  { id: "scout-teal-boy", label: "Pemanah berhijab biru dengan busur" },
+  { id: "scout-navy-hijabi-girl", label: "Ahli tanaman berhijab hijau sage dengan keranjang" },
 ] as const;
 
 /** UI-friendly label for SD */

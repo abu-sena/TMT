@@ -6,10 +6,7 @@ interface Props {
   className?: string;
 }
 
-const AVATAR_SHEETS = [
-  "./assets/field-guide/petualang.webp",
-  "./assets/field-guide/petualang-tambahan.webp",
-];
+const AVATAR_SHEET = "./assets/field-guide/petualang-12.webp";
 
 /** Existing portrait IDs retain their slot after the art update. */
 export function AvatarPortrait({ avatar, className }: Props) {
@@ -26,12 +23,9 @@ export function AvatarPortrait({ avatar, className }: Props) {
     );
   }
 
-  const sheetIndex = Math.floor(savedIndex / 6);
-  const index = savedIndex % 6;
-
-  const { label } = AVATARS[index];
-  const column = index % 3;
-  const row = Math.floor(index / 3);
+  const { label } = AVATARS[savedIndex];
+  const column = savedIndex % 4;
+  const row = Math.floor(savedIndex / 4);
 
   return (
     <span
@@ -39,9 +33,9 @@ export function AvatarPortrait({ avatar, className }: Props) {
       role="img"
       aria-label={label}
       style={{
-        backgroundImage: `url(${AVATAR_SHEETS[sheetIndex]})`,
-        backgroundSize: "300% 200%",
-        backgroundPosition: `${column * 50}% ${row * 100}%`,
+        backgroundImage: `url(${AVATAR_SHEET})`,
+        backgroundSize: "400% 300%",
+        backgroundPosition: `${column * 100 / 3}% ${row * 50}%`,
       }}
     />
   );
