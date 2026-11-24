@@ -1,3 +1,4 @@
+import { ArrowLeft as TmtBackGlyph } from "lucide-react";
 import { useMemo } from "react";
 import type { Profile, RewardMilestone, RewardStatus } from "@/types";
 import { useGameStore } from "@/lib/storage";
@@ -40,12 +41,12 @@ export function MyRewardsScreen({ profile, onBack }: Props) {
     <div className="h-[100dvh] bg-gradient-sky flex flex-col overflow-hidden">
       {/* Header */}
       <header className="shrink-0 content-wrapper pt-safe mt-2 pb-3 flex items-center gap-3">
-        <button
+        <button type="button"
           onClick={onBack}
-          className="h-12 w-12 rounded-[18px] bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-xl shadow-sm shrink-0 active:scale-95 transition-transform"
+          className="tmt-icon-button h-12 w-12 rounded-[18px] bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-xl shadow-sm shrink-0 active:scale-95 transition-transform"
           aria-label="Kembali"
         >
-          ←
+          <TmtBackGlyph aria-hidden="true" />
         </button>
         <div className="flex-1 min-w-0">
           <h1 className="font-display font-black text-xl sm:text-2xl text-[#5A3515] truncate">

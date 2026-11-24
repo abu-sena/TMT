@@ -11,7 +11,7 @@ export function MasteryCompleteModal({
 }: Props) {
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-gradient-to-b from-[#1a0533] via-[#2d1b4e] to-[#1a0533] rounded-[2rem] p-6 text-center shadow-2xl max-w-sm w-full border-4 border-[#FFD700] animate-pop-in">
+      <div className="tmt-dialog-surface tmt-dialog-night rounded-[2rem] p-6 text-center shadow-2xl max-w-sm w-full border-4 border-[#FFD700] animate-pop-in">
         {/* Cosmic background */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-[2rem]">
           {Array.from({ length: 12 }).map((_, i) => (
@@ -85,23 +85,23 @@ export function MasteryCompleteModal({
           </p>
 
           <div className="space-y-2">
-            <button
+            <button type="button" data-action="coin"
               onClick={onViewBadges}
-              className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#FFD700] to-[#FFA500] border-b-4 border-[#D48806] text-[#5A3515] font-black text-lg shadow-sm active:translate-y-1 active:border-b-0 transition-all"
+              className="tmt-action-button w-full py-3 rounded-2xl bg-gradient-to-r from-[#FFD700] to-[#FFA500] border-b-4 border-[#D48806] text-[#5A3515] font-black text-lg shadow-sm active:translate-y-1 active:border-b-0 transition-all"
             >
               🏅 Lihat Lencana
             </button>
-            <button
+            <button type="button" data-action="neutral"
               onClick={onBackToMap}
-              className="w-full py-3 rounded-2xl bg-white/15 border-2 border-white/30 text-white font-black text-base shadow-sm active:translate-y-1 transition-all"
+              className="tmt-action-button w-full py-3 rounded-2xl bg-white/15 border-2 border-white/30 text-white font-black text-base shadow-sm active:translate-y-1 transition-all"
             >
               🗺️ Kembali ke Peta
             </button>
           </div>
 
-          <button
+          <button type="button" data-action="neutral"
             onClick={onClose}
-            className="mt-3 text-xs font-bold text-[#C0A0E0] hover:text-white underline"
+            className="tmt-action-button mt-3 text-xs font-bold text-[#C0A0E0] hover:text-white underline"
           >
             Tutup
           </button>

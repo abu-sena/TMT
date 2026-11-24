@@ -5,7 +5,10 @@
  * User menekan bulatan pertama, lalu menggeser ke bulatan berikutnya.
  */
 
+import { X as TmtCloseGlyph } from "lucide-react";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { MiniGameIcon } from "@/components/minigames/MiniGameArt";
+import { VictoryDialog } from "@/components/rewards/VictoryDialog";
 import type { Profile, MiniGameSession } from "@/types";
 import { GameButton } from "../game/GameButton";
 import { GameCard } from "../game/GameCard";
@@ -81,6 +84,7 @@ export function MiniGameRantaiWarnaScreen({ profile, onBack, backRef }: Props) {
   const arenaRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const finishedRef = useRef(false);
 
   // Connected lines (correct steps so far)
   const connectedLines = useMemo(() => {
@@ -113,6 +117,7 @@ export function MiniGameRantaiWarnaScreen({ profile, onBack, backRef }: Props) {
 
   // Score result (for result screen)
   const [scoreResult, setScoreResult] = useState<ReturnType<typeof calculateColorSequenceScore> | null>(null);
+  const [isNewBest, setIsNewBest] = useState(false);
 
   // Personal best
   const mySessions = store.miniGameSessions.filter(
@@ -146,11 +151,16 @@ export function MiniGameRantaiWarnaScreen({ profile, onBack, backRef }: Props) {
   const startGame = useCallback(() => {
     const q = generateColorSequenceQuestion(difficulty);
     const s = createSession(q);
+    finishedRef.current = false;
     setQuestion(q);
     setSession(s);
     setTimerMs(0);
     setFeedback(null);
     setScoreResult(null);
+    setIsDragging(false);
+    setDragStartNode(null);
+    setDragLine(null);
+    setShakeNodeId(null);
     setScreen("playing");
     startTimer();
   }, [difficulty, startTimer]);
@@ -161,14 +171,17 @@ export function MiniGameRantaiWarnaScreen({ profile, onBack, backRef }: Props) {
     feedbackTimerRef.current = setTimeout(() => setFeedback(null), 2500);
   }, []);
 
-  const finishGame = useCallback(() => {
-    if (!question || !session) return;
+  const finishGame = useCallback((completedSession: ColorSequenceSession) => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
     stopTimer();
+    const completedAt = Date.now();
+    const elapsedTimeMs = Math.max(0, completedAt - completedSession.startedAt);
 
     const updatedSession: ColorSequenceSession = {
-      ...session,
-      completedAt: Date.now(),
-      elapsedTimeMs: timerMs,
+      ...completedSession,
+      completedAt,
+      elapsedTimeMs,
       isCompleted: true,
     };
 
@@ -180,6 +193,8 @@ export function MiniGameRantaiWarnaScreen({ profile, onBack, backRef }: Props) {
 
     setSession(updatedSession);
     setScoreResult(result);
+    setTimerMs(elapsedTimeMs);
+    setIsNewBest(result.totalScore > personalBest);
 
     // Save session
     const miniSession: MiniGameSession = {
@@ -191,7 +206,7 @@ export function MiniGameRantaiWarnaScreen({ profile, onBack, backRef }: Props) {
       wrongCount: updatedSession.mistakes,
       totalQuestions: updatedSession.totalSteps,
       averageAnswerTime: updatedSession.totalSteps > 0
-        ? Math.round((timerMs / updatedSession.totalSteps) * 10) / 10
+        ? Math.round(elapsedTimeMs / updatedSession.totalSteps / 100) / 10
         : 0,
       fastestAnswerTime: 0,
       slowestAnswerTime: 0,
@@ -204,7 +219,7 @@ export function MiniGameRantaiWarnaScreen({ profile, onBack, backRef }: Props) {
     };
     addMiniGameSession(miniSession);
     setScreen("result");
-  }, [question, session, stopTimer, timerMs, difficulty, profile, addMiniGameSession]);
+  }, [stopTimer, difficulty, profile.id, personalBest, addMiniGameSession]);
 
   const handleUndo = useCallback(() => {
     if (!session || session.selectedNodeIds.length === 0) return;
@@ -216,6 +231,7 @@ export function MiniGameRantaiWarnaScreen({ profile, onBack, backRef }: Props) {
   const handleReset = useCallback(() => {
     if (!question) return;
     const s = createSession(question);
+    finishedRef.current = false;
     setSession(s);
     setTimerMs(0);
     setFeedback(null);
@@ -240,13 +256,10 @@ export function MiniGameRantaiWarnaScreen({ profile, onBack, backRef }: Props) {
     if (result.isCorrect) {
       const newSelected = [...session.selectedNodeIds, node.id];
       const newSession = { ...session, selectedNodeIds: newSelected };
-      setSession(newSession);
-
       if (result.isSequenceComplete) {
-        setSession({ ...newSession, isCompleted: true });
-        showFeedback("Hebat! Kamu berhasil menyusun Rantai Warna. 🎉");
-        setTimeout(() => finishGame(), 600);
+        finishGame(newSession);
       } else {
+        setSession(newSession);
         showFeedback(result.feedback);
       }
     } else {
@@ -395,7 +408,7 @@ export function MiniGameRantaiWarnaScreen({ profile, onBack, backRef }: Props) {
     return (
       <div className="h-[100dvh] bg-gradient-to-b from-[#E3F2FD] to-[#BBDEFB] flex flex-col items-center justify-center p-4">
         <GameCard tone="blue" className="text-center w-full max-w-sm p-6 sm:p-8 text-white">
-          <div className="text-6xl mb-4">🎨</div>
+          <MiniGameIcon gameId="rantai-warna" className="size-20 mb-3" />
           <h1 className="font-display font-black text-2xl sm:text-3xl mb-1">Rantai Warna</h1>
           <p className="text-sm font-bold opacity-80 mb-4">
             Hubungkan warna sesuai urutan angka.
@@ -457,87 +470,7 @@ export function MiniGameRantaiWarnaScreen({ profile, onBack, backRef }: Props) {
   }
 
   // ═══════════════════════════════════════════
-  // Render: Result Screen
-  // ═══════════════════════════════════════════
-
-  if (screen === "result" && scoreResult && session && question) {
-    const isNewBest = scoreResult.totalScore > personalBest;
-
-    return (
-      <div className="h-[100dvh] bg-gradient-to-b from-[#E3F2FD] to-[#BBDEFB] flex flex-col items-center justify-center p-4 overflow-y-auto">
-        <div className="w-full max-w-sm">
-          <GameCard tone="cream" className="text-center p-6 sm:p-8 border-4 border-[#CBB794]">
-            <div className="text-5xl sm:text-6xl mb-3">
-              {isNewBest ? "👑" : "🎉"}
-            </div>
-            <h2 className="font-display font-black text-xl sm:text-2xl text-[#5A3515] mb-1">
-              {isNewBest ? "Rekor Baru!" : "Permainan Selesai!"}
-            </h2>
-            <p className="text-sm font-bold text-[#8C6B45] mb-4">
-              Hebat! Kamu berhasil menyusun Rantai Warna.
-            </p>
-
-            {/* Score */}
-            <div className="bg-gradient-to-br from-[#FFF8E1] to-[#FFECB3] rounded-2xl p-4 mb-4 border-2 border-[#FFD54F]">
-              <div className="font-display font-black text-3xl sm:text-4xl text-[#5A3515]">
-                {scoreResult.totalScore}
-              </div>
-              <div className="text-[10px] uppercase font-bold text-[#8C6B45]">Total Poin</div>
-            </div>
-
-            {/* Stats */}
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              <div className="bg-[#E8F5E9] rounded-xl p-3">
-                <div className="font-black text-lg text-[#2E7D32]">{session.selectedNodeIds.length}/{session.totalSteps}</div>
-                <div className="text-[10px] font-bold text-[#8C6B45]">Langkah Benar</div>
-              </div>
-              <div className="bg-[#FFEBEE] rounded-xl p-3">
-                <div className="font-black text-lg text-[#E53935]">{session.mistakes}</div>
-                <div className="text-[10px] font-bold text-[#8C6B45]">Kesalahan</div>
-              </div>
-              <div className="bg-[#E3F2FD] rounded-xl p-3">
-                <div className="font-black text-lg text-[#185E9F]">{formatTime(timerMs)}</div>
-                <div className="text-[10px] font-bold text-[#8C6B45]">Waktu</div>
-              </div>
-              <div className="bg-[#FFF3E0] rounded-xl p-3">
-                <div className="font-black text-lg text-[#FF9800]">{scoreResult.accuracy}%</div>
-                <div className="text-[10px] font-bold text-[#8C6B45]">Akurasi</div>
-              </div>
-            </div>
-
-            {/* Breakdown */}
-            <div className="text-left text-xs font-bold text-[#8C6B45] space-y-1 mb-4 bg-white/50 rounded-xl p-3">
-              <div className="flex justify-between">
-                <span>Skor Dasar</span><span>+{scoreResult.baseScore}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Bonus Akurasi</span><span>+{scoreResult.accuracyBonus}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Bonus Cepat ({scoreResult.speedLabel})</span><span>+{scoreResult.speedBonus}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Bonus Difficulty</span><span>+{scoreResult.difficultyBonus}</span>
-              </div>
-              {scoreResult.mistakePenalty > 0 && (
-                <div className="flex justify-between text-[#E53935]">
-                  <span>Penalti Kesalahan</span><span>-{scoreResult.mistakePenalty}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <GameButton variant="ghost" full onClick={onBack}>🏠 Home</GameButton>
-              <GameButton variant="primary" full onClick={startGame}>🔄 Main Lagi</GameButton>
-            </div>
-          </GameCard>
-        </div>
-      </div>
-    );
-  }
-
-  // ═══════════════════════════════════════════
-  // Render: Playing Screen
+  // Render: Arena and result overlay
   // ═══════════════════════════════════════════
 
   if (!question || !session) {
@@ -557,11 +490,11 @@ export function MiniGameRantaiWarnaScreen({ profile, onBack, backRef }: Props) {
     >
       {/* ═══ Header ═══ */}
       <header className="shrink-0 pt-safe mt-1 px-3 pb-1 flex items-center gap-2">
-        <button
+        <button type="button" aria-label="Tutup"
           onClick={() => setShowExit(true)}
-          className="h-10 w-10 rounded-xl bg-white/60 border-2 border-[#185E9F]/20 text-[#185E9F] grid place-items-center text-lg shadow-sm shrink-0 active:scale-95"
+          className="tmt-icon-button h-10 w-10 rounded-xl bg-white/60 border-2 border-[#185E9F]/20 text-[#185E9F] grid place-items-center text-lg shadow-sm shrink-0 active:scale-95"
         >
-          ✕
+          <TmtCloseGlyph aria-hidden="true" />
         </button>
         <div className="flex-1 min-w-0">
           <h1 className="font-display font-black text-base text-[#5A3515] truncate">Rantai Warna</h1>
@@ -615,8 +548,8 @@ export function MiniGameRantaiWarnaScreen({ profile, onBack, backRef }: Props) {
           ref={arenaRef}
           className="relative rounded-full bg-white/70 border-4 border-[#185E9F]/30 shadow-lg shrink-0"
           style={{
-            width: arenaSize,
-            height: arenaSize,
+            width: `min(${arenaSize}px, 92vw)`,
+            height: `min(${arenaSize}px, 92vw)`,
             touchAction: "none",
             userSelect: "none",
           }}
@@ -762,26 +695,55 @@ export function MiniGameRantaiWarnaScreen({ profile, onBack, backRef }: Props) {
 
       {/* ═══ Bottom Buttons ═══ */}
       <footer className="shrink-0 px-3 pb-safe pb-2 pt-1 flex gap-2">
-        <button
+        <button type="button" data-action="neutral"
           onClick={handleUndo}
           disabled={session.selectedNodeIds.length === 0}
-          className="flex-1 py-2.5 rounded-xl bg-white/70 border-2 border-[#CBB794] text-[#5A3515] font-bold text-sm active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
+          className="tmt-action-button flex-1 py-2.5 rounded-xl bg-white/70 border-2 border-[#CBB794] text-[#5A3515] font-bold text-sm active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
         >
           ↩️ Undo
         </button>
-        <button
+        <button type="button" data-action="danger-outline"
           onClick={handleReset}
-          className="flex-1 py-2.5 rounded-xl bg-white/70 border-2 border-[#E53935]/30 text-[#E53935] font-bold text-sm active:scale-95 transition-transform"
+          className="tmt-action-button flex-1 py-2.5 rounded-xl bg-white/70 border-2 border-[#E53935]/30 text-[#E53935] font-bold text-sm active:scale-95 transition-transform"
         >
           🔄 Ulangi
         </button>
-        <button
+        <button type="button" data-action="neutral"
           onClick={onBack}
-          className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#185E9F] to-[#1565C0] border-b-3 border-[#0D47A1] text-white font-bold text-sm active:translate-y-0.5 active:border-b-0 transition-all"
+          className="tmt-action-button flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#185E9F] to-[#1565C0] border-b-3 border-[#0D47A1] text-white font-bold text-sm active:translate-y-0.5 active:border-b-0 transition-all"
         >
           🏠 Kembali
         </button>
       </footer>
+
+      {screen === "result" && scoreResult && (
+        <VictoryDialog
+          title={isNewBest ? "Rekor baru!" : "Rantai lengkap!"}
+          context="Rantai Warna"
+          stars={scoreResult.accuracy === 100 ? 3 : scoreResult.accuracy >= 75 ? 2 : scoreResult.accuracy >= 50 ? 1 : 0}
+          rewards={[{ label: "Total poin", value: String(scoreResult.totalScore), icon: "points" }]}
+          onClose={() => setScreen("start")}
+          onPrimary={startGame}
+          primaryLabel="Main lagi"
+          onSecondary={onBack}
+          secondaryLabel="Ruang Bermain"
+        >
+          <details className="tmt-victory-details">
+            <summary>Rincian permainan</summary>
+            <dl>
+              <div><dt>Langkah benar</dt><dd>{session.selectedNodeIds.length}/{session.totalSteps}</dd></div>
+              <div><dt>Kesalahan</dt><dd>{session.mistakes}</dd></div>
+              <div><dt>Waktu</dt><dd>{formatTime(session.elapsedTimeMs)}</dd></div>
+              <div><dt>Akurasi</dt><dd>{scoreResult.accuracy}%</dd></div>
+              <div><dt>Skor dasar</dt><dd>+{scoreResult.baseScore}</dd></div>
+              <div><dt>Bonus akurasi</dt><dd>+{scoreResult.accuracyBonus}</dd></div>
+              <div><dt>Bonus kecepatan</dt><dd>+{scoreResult.speedBonus}</dd></div>
+              <div><dt>Bonus kesulitan</dt><dd>+{scoreResult.difficultyBonus}</dd></div>
+              {scoreResult.mistakePenalty > 0 && <div><dt>Penalti kesalahan</dt><dd>−{scoreResult.mistakePenalty}</dd></div>}
+            </dl>
+          </details>
+        </VictoryDialog>
+      )}
     </div>
   );
 }

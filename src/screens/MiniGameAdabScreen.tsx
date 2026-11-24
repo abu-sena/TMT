@@ -1,3 +1,4 @@
+import { ArrowLeft as TmtBackGlyph, X as TmtCloseGlyph } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { Profile, MiniGameSession } from "@/types";
 import { GameButton } from "../game/GameButton";
@@ -329,7 +330,7 @@ export function MiniGameAdabScreen({ profile, onBack, backRef }: Props) {
             <GameButton variant="ghost" full onClick={onBack}>Kembali</GameButton>
             <GameButton variant="primary" full onClick={startGame}>Mulai!</GameButton>
           </div>
-          <button onClick={() => setScreen("leaderboard")} className="mt-3 text-xs font-bold text-white/70 underline">Lihat Leaderboard</button>
+          <button type="button" onClick={() => setScreen("leaderboard")} className="tmt-text-button mt-3 text-xs font-bold text-white/70 underline">Lihat Leaderboard</button>
         </GameCard>
       </div>
     );
@@ -340,7 +341,7 @@ export function MiniGameAdabScreen({ profile, onBack, backRef }: Props) {
     return (
       <div className="h-[100dvh] bg-gradient-sky flex flex-col overflow-hidden">
         <header className="shrink-0 content-wrapper pt-safe mt-2 pb-3 flex items-center gap-3">
-          <button onClick={() => setScreen("start")} className="h-12 w-12 rounded-2xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-xl shadow-sm shrink-0 active:scale-95">←</button>
+          <button type="button" aria-label="Kembali" onClick={() => setScreen("start")} className="tmt-icon-button h-12 w-12 rounded-2xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-xl shadow-sm shrink-0 active:scale-95"><TmtBackGlyph aria-hidden="true" /></button>
           <div className="flex-1"><h1 className="font-display font-black text-xl text-[#5A3515]">Leaderboard</h1><p className="text-xs text-[#5A3515]/70">{cfg.label}</p></div>
           <div className="text-2xl">🏆</div>
         </header>
@@ -378,7 +379,7 @@ export function MiniGameAdabScreen({ profile, onBack, backRef }: Props) {
             <div className="bg-black/20 rounded-2xl p-3"><div className="text-3xl font-black">{avgTime}s</div><div className="text-[10px] uppercase font-bold opacity-70">Rata² Waktu</div></div>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 mb-3"><GameButton variant="ghost" full onClick={onBack}>Home</GameButton><GameButton variant="primary" full onClick={startGame}>Main Lagi</GameButton></div>
-          <button onClick={() => setScreen("leaderboard")} className="text-xs font-bold text-white/70 underline">Lihat Leaderboard</button>
+          <button type="button" onClick={() => setScreen("leaderboard")} className="tmt-text-button text-xs font-bold text-white/70 underline">Lihat Leaderboard</button>
         </GameCard>
       </div>
     );
@@ -405,7 +406,7 @@ export function MiniGameAdabScreen({ profile, onBack, backRef }: Props) {
   return (
     <div className="h-[100dvh] bg-gradient-sky flex flex-col p-3 sm:p-4">
       <header className="pt-safe flex items-center gap-2 mb-3 shrink-0">
-        <button onClick={() => setShowExit(true)} className="h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shadow-sm shrink-0 active:scale-95">✕</button>
+        <button type="button" aria-label="Tutup" onClick={() => setShowExit(true)} className="tmt-icon-button h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shadow-sm shrink-0 active:scale-95"><TmtCloseGlyph aria-hidden="true" /></button>
         <div className="bg-white/50 px-3 py-1.5 rounded-full font-black text-[#5A3515] text-sm sm:text-lg border-2 border-[#CBB794]">⭐ {score}</div>
         <div className="bg-white/50 px-3 py-1.5 rounded-full font-black text-[#5A3515] text-sm sm:text-lg border-2 border-[#CBB794]">✅ {correctCount}</div>
         {timerPaused && (
@@ -466,10 +467,10 @@ export function MiniGameAdabScreen({ profile, onBack, backRef }: Props) {
         {feedback === null && (
           <div className="grid grid-cols-1 gap-2 w-full max-w-sm">
             {shuffledOptions.map((opt) => (
-              <button
+              <button type="button"
                 key={opt.idx}
                 onClick={() => handleAnswer(opt.idx)}
-                className="w-full text-left p-3 sm:p-4 rounded-2xl bg-white border-3 border-[#CBB794] text-[#5A3515] font-bold text-sm sm:text-base shadow-pop active:translate-y-[4px] active:shadow-sm transition-all hover:border-[#A02020] hover:bg-[#FFF0F0] min-h-[3.5rem] flex items-center gap-2 max-w-full overflow-hidden box-border"
+                className="tmt-choice-button w-full text-left p-3 sm:p-4 rounded-2xl bg-white border-3 border-[#CBB794] text-[#5A3515] font-bold text-sm sm:text-base shadow-pop active:translate-y-[4px] active:shadow-sm transition-all hover:border-[#A02020] hover:bg-[#FFF0F0] min-h-[3.5rem] flex items-center gap-2 max-w-full overflow-hidden box-border"
               >
                 <span className="text-lg shrink-0">{["💬","🔷","📌","🔹","💠","🔸"][opt.idx % 6]}</span>
                 <span className="leading-tight break-words">{opt.text}</span>

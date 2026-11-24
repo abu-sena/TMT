@@ -346,7 +346,6 @@ export interface BadgeDef {
 
 export interface ProfileSettings {
   sound: boolean;
-  music: boolean;
   language: "id";
   googleConnected: boolean;
   screenTimeReminder: boolean;

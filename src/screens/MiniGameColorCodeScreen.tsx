@@ -1,4 +1,6 @@
+import { X as TmtCloseGlyph } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
+import { MiniGameIcon } from "@/components/minigames/MiniGameArt";
 import { GameCard } from "@/components/ui/GameCard";
 import { GameButton } from "@/components/ui/GameButton";
 import { MiniGameResultScreen } from "./MiniGameResultScreen";
@@ -124,7 +126,7 @@ export function ColorCodeGame({ profile, onBack, backRef }: { profile: Profile; 
   if (phase === "start") return (
     <div className="h-[100dvh] bg-gradient-sky flex flex-col items-center justify-center p-4">
       <GameCard tone="meadow" className="text-center w-full max-w-sm p-6 sm:p-8 text-white">
-        <div className="text-6xl mb-4">🧩</div>
+        <MiniGameIcon gameId="kode-warna" className="size-20 mb-3" />
         <h1 className="font-display font-black text-3xl mb-1">Kode Warna</h1>
         <p className="text-sm font-bold opacity-80 mb-4">Pahami kode bentuk dan hitung hasilnya.</p>
         <div className="flex gap-3">
@@ -182,7 +184,7 @@ export function ColorCodeGame({ profile, onBack, backRef }: { profile: Profile; 
   return (
     <div className="h-[100dvh] bg-gradient-sky flex flex-col p-3 sm:p-4 overflow-hidden">
       <header className="pt-safe flex items-center gap-2 mb-3 shrink-0">
-        <button onClick={onBack} className="h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shrink-0 active:scale-95">✕</button>
+        <button type="button" aria-label="Tutup" onClick={onBack} className="tmt-icon-button h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shrink-0 active:scale-95"><TmtCloseGlyph aria-hidden="true" /></button>
         <div className="flex-1 text-center">
           <h2 className="font-display font-black text-[#5A3515] text-lg">Kode Warna</h2>
         </div>
@@ -230,10 +232,10 @@ export function ColorCodeGame({ profile, onBack, backRef }: { profile: Profile; 
               {phase === "playing" ? (
                 <div className={`grid gap-3 w-full max-w-sm mx-auto ${question.shuffledChoices.length <= 4 ? "grid-cols-2" : "grid-cols-3"}`}>
                   {question.shuffledChoices.map((choice, i) => (
-                    <button 
+                    <button type="button"
                       key={i} 
                       onClick={() => handleSelectChoice(choice)}
-                      className="bg-white border-4 border-[#CBB794] text-[#5A3515] font-black text-2xl h-16 rounded-[20px] shadow-pop active:translate-y-1 hover:border-[#185E9F] transition-all"
+                      className="tmt-choice-button bg-white border-4 border-[#CBB794] text-[#5A3515] font-black text-2xl h-16 rounded-[20px] shadow-pop active:translate-y-1 hover:border-[#185E9F] transition-all"
                     >
                       {choice}
                     </button>

@@ -1,4 +1,6 @@
+import { ArrowLeft as TmtBackGlyph, X as TmtCloseGlyph } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { MiniGameIcon } from "@/components/minigames/MiniGameArt";
 import type { Profile, MiniGameSession, LeaderboardEntry } from "@/types";
 import { GameButton } from "../game/GameButton";
 import { GameCard } from "../game/GameCard";
@@ -282,7 +284,7 @@ export function MiniGameHitungScreen({ profile, onBack, backRef }: Props) {
     return (
       <div className="h-[100dvh] bg-gradient-sky flex flex-col items-center justify-center p-4">
         <GameCard tone="blue" className="text-center w-full max-w-sm p-6 sm:p-8 text-white">
-          <div className="text-6xl mb-4">⚡</div>
+          <MiniGameIcon gameId="hitung-kilat" className="size-20 mb-3" />
           <h1 className="font-display font-black text-3xl mb-1">{cfg.label}</h1>
           <p className="text-sm font-bold opacity-80 mb-4">
             Jawab soal matematika sebelum waktu habis! Salah = Game Over.
@@ -313,7 +315,7 @@ export function MiniGameHitungScreen({ profile, onBack, backRef }: Props) {
             <GameButton variant="ghost" full onClick={onBack}>Kembali</GameButton>
             <GameButton variant="primary" full onClick={startGame}>Mulai!</GameButton>
           </div>
-          <button onClick={() => setScreen("leaderboard")} className="mt-3 text-xs font-bold text-white/70 underline">
+          <button type="button" onClick={() => setScreen("leaderboard")} className="tmt-text-button mt-3 text-xs font-bold text-white/70 underline">
             Lihat Leaderboard
           </button>
         </GameCard>
@@ -326,7 +328,7 @@ export function MiniGameHitungScreen({ profile, onBack, backRef }: Props) {
     return (
       <div className="h-[100dvh] bg-gradient-sky flex flex-col overflow-hidden">
         <header className="shrink-0 content-wrapper pt-safe mt-2 pb-3 flex items-center gap-3">
-          <button onClick={() => setScreen("start")} className="h-12 w-12 rounded-2xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-xl shadow-sm shrink-0 active:scale-95">←</button>
+          <button type="button" aria-label="Kembali" onClick={() => setScreen("start")} className="tmt-icon-button h-12 w-12 rounded-2xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-xl shadow-sm shrink-0 active:scale-95"><TmtBackGlyph aria-hidden="true" /></button>
           <div className="flex-1">
             <h1 className="font-display font-black text-xl text-[#5A3515]">Leaderboard</h1>
             <p className="text-xs text-[#5A3515]/70">{cfg.label}</p>
@@ -400,7 +402,7 @@ export function MiniGameHitungScreen({ profile, onBack, backRef }: Props) {
             <GameButton variant="ghost" full onClick={onBack}>Home</GameButton>
             <GameButton variant="primary" full onClick={startGame}>Main Lagi</GameButton>
           </div>
-          <button onClick={() => setScreen("leaderboard")} className="text-xs font-bold text-white/70 underline">
+          <button type="button" onClick={() => setScreen("leaderboard")} className="tmt-text-button text-xs font-bold text-white/70 underline">
             Lihat Leaderboard
           </button>
         </GameCard>
@@ -434,7 +436,7 @@ export function MiniGameHitungScreen({ profile, onBack, backRef }: Props) {
     <div className="h-[100dvh] bg-gradient-sky flex flex-col p-3 sm:p-4">
       {/* Header */}
       <header className="pt-safe flex items-center gap-2 mb-3 shrink-0">
-        <button onClick={() => setShowExit(true)} className="h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shadow-sm shrink-0 active:scale-95">✕</button>
+        <button type="button" aria-label="Tutup" onClick={() => setShowExit(true)} className="tmt-icon-button h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shadow-sm shrink-0 active:scale-95"><TmtCloseGlyph aria-hidden="true" /></button>
         <div className="bg-white/50 px-3 py-1.5 rounded-full font-black text-[#5A3515] text-sm sm:text-lg border-2 border-[#CBB794] flex items-center gap-1">
           ⭐ {score}
         </div>
@@ -466,11 +468,11 @@ export function MiniGameHitungScreen({ profile, onBack, backRef }: Props) {
         {/* Options grid */}
         <div className={`grid ${colsClass} gap-2 sm:gap-3 w-full max-w-sm`}>
           {question.options.map((opt, i) => (
-            <button
+            <button type="button"
               key={i}
               onClick={() => feedback === null && handleAnswer(opt)}
               disabled={feedback !== null}
-              className="h-16 sm:h-20 rounded-2xl bg-white border-4 border-[#CBB794] text-[#5A3515] font-display font-black text-2xl sm:text-3xl shadow-pop active:translate-y-[4px] active:shadow-sm transition-all hover:border-[#185E9F] disabled:opacity-50"
+              className="tmt-choice-button h-16 sm:h-20 rounded-2xl bg-white border-4 border-[#CBB794] text-[#5A3515] font-display font-black text-2xl sm:text-3xl shadow-pop active:translate-y-[4px] active:shadow-sm transition-all hover:border-[#185E9F] disabled:opacity-50"
             >
               {opt}
             </button>

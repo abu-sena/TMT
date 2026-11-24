@@ -1,9 +1,12 @@
 /**
  * Cari yang Berbeda — Spot the difference mini-game
  * Fokus Cepat package
- * Uses flat color shapes (not emoji) — diferen based on shape, not color
+ * Uses familiar illustrated objects with six rounds of progressive challenge.
  */
+import { X as TmtCloseGlyph } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { MiniGameIcon, PuzzleObjectArt } from "@/components/minigames/MiniGameArt";
+import { PUZZLE_OBJECTS, getPuzzleObject, type PuzzleObjectId } from "@/lib/puzzle-objects";
 import type { Profile, MiniGameSession } from "@/types";
 import { shuffleArray } from "@/lib/utils";
 import { createMiniGameSession } from "@/lib/minigame-engine";
@@ -15,113 +18,60 @@ import type React from "react";
 
 interface Props { profile: Profile; onBack: () => void; backRef: React.MutableRefObject<(() => boolean) | null>; }
 
-// ── Flat Color Shape Generator ──
-// Each shape has a shapeId (determines which one is "different") and a color (decorative only)
-
-type ShapeType = "circle" | "square" | "triangle-up" | "diamond" | "hexagon" | "star";
-
-const SHAPE_COLORS = [
-  "#FF6B6B", // coral red
-  "#4ECDC4", // teal
-  "#FFE66D", // sunny yellow
-  "#A78BFA", // purple
-  "#FB923C", // orange
-  "#38BDF8", // sky blue
-  "#F472B6", // pink
-  "#34D399", // emerald
-  "#FBBF24", // amber
-  "#818CF8", // indigo
-];
-
-const SHAPES: ShapeType[] = ["circle", "square", "triangle-up", "diamond", "hexagon", "star"];
-
-interface ShapeItem {
+interface PuzzleItem {
   id: string;
-  shapeType: ShapeType;
-  color: string;
+  objectId: PuzzleObjectId;
+  rotation: number;
+  mirrored: boolean;
   isOdd: boolean;
 }
 
-function generateQuestion(difficulty: string, correctCount: number): { items: ShapeItem[]; oddIndex: number; stage: number; oddShapeId: string; normalShapeId: string } {
-  const stage = Math.min(6, Math.floor(correctCount / 3) + 1);
-  
-  // Object count per difficulty
-  const countMap: Record<string, number> = {
-    tk: 12,
-    "sd-bawah": 16,
-    "sd-atas": 18,
-    smp: 20,
-    sma: 20,
-    universitas: 20,
-  };
-  const count = countMap[difficulty] || 16;
-  
-  // Pick normal shape and odd shape (must be different)
-  const normalIdx = Math.floor(Math.random() * SHAPES.length);
-  let oddIdx = Math.floor(Math.random() * SHAPES.length);
-  while (oddIdx === normalIdx) {
-    oddIdx = Math.floor(Math.random() * SHAPES.length);
-  }
-  
-  const normalShape: ShapeType = SHAPES[normalIdx];
-  const oddShape: ShapeType = SHAPES[oddIdx];
-  
-  // Assign random colors to each item (colors are decorative, not clues)
-  const shuffledColors = shuffleArray(SHAPE_COLORS);
-  
-  // Pick odd position
-  const oddPosition = Math.floor(Math.random() * count);
-  
-  const items: ShapeItem[] = [];
-  for (let i = 0; i < count; i++) {
-    const isOdd = i === oddPosition;
-    items.push({
-      id: `shape-${i}`,
-      shapeType: isOdd ? oddShape : normalShape,
-      color: shuffledColors[i % shuffledColors.length],
-      isOdd,
-    });
-  }
-  
-  return { items, oddIndex: oddPosition, stage, oddShapeId: oddShape, normalShapeId: normalShape };
+const BASE_ITEM_COUNTS: Record<string, number> = {
+  tk: 12,
+  "sd-bawah": 16,
+  "sd-atas": 18,
+  smp: 20,
+  sma: 20,
+  universitas: 20,
+};
+
+const MAX_ITEM_COUNTS: Record<string, number> = {
+  tk: 18,
+  "sd-bawah": 20,
+  "sd-atas": 22,
+  smp: 24,
+  sma: 24,
+  universitas: 24,
+};
+
+function getRoundTimeLimit(difficulty: string, stage: number) {
+  const base = difficulty === "tk" ? 12 : difficulty === "sd-bawah" ? 10 : 8;
+  return Math.max(difficulty === "tk" ? 8 : 5, base - Math.ceil((stage - 1) / 1.5));
 }
 
-// ── Shape Renderer Component ──
-function ShapeSvg({ shapeType, color, size = 32 }: { shapeType: ShapeType; color: string; size?: number }) {
-  const half = size / 2;
-  
-  switch (shapeType) {
-    case "circle":
-      return <svg width={size} height={size}><circle cx={half} cy={half} r={half - 2} fill={color} /></svg>;
-    case "square":
-      return <svg width={size} height={size}><rect x={2} y={2} width={size - 4} height={size - 4} rx={3} fill={color} /></svg>;
-    case "triangle-up":
-      return <svg width={size} height={size}><polygon points={`${half},2 ${size - 2},${size - 2} 2,${size - 2}`} fill={color} /></svg>;
-    case "diamond":
-      return <svg width={size} height={size}><polygon points={`${half},2 ${size - 2},${half} ${half},${size - 2} 2,${half}`} fill={color} /></svg>;
-    case "hexagon":
-      const hx = size / 2;
-      const hy = size / 2;
-      const r = half - 2;
-      const hexPoints = Array.from({ length: 6 }, (_, i) => {
-        const angle = (Math.PI / 3) * i - Math.PI / 6;
-        return `${hx + r * Math.cos(angle)},${hy + r * Math.sin(angle)}`;
-      }).join(" ");
-      return <svg width={size} height={size}><polygon points={hexPoints} fill={color} /></svg>;
-    case "star":
-      const cx = size / 2;
-      const cy = size / 2;
-      const outerR = half - 2;
-      const innerR = outerR * 0.4;
-      const starPoints = Array.from({ length: 10 }, (_, i) => {
-        const angle = (Math.PI / 5) * i - Math.PI / 2;
-        const radius = i % 2 === 0 ? outerR : innerR;
-        return `${cx + radius * Math.cos(angle)},${cy + radius * Math.sin(angle)}`;
-      }).join(" ");
-      return <svg width={size} height={size}><polygon points={starPoints} fill={color} /></svg>;
-    default:
-      return <svg width={size} height={size}><circle cx={half} cy={half} r={half - 2} fill={color} /></svg>;
-  }
+function generateQuestion(difficulty: string, correctCount: number): { items: PuzzleItem[]; oddIndex: number; stage: number } {
+  const stage = Math.min(6, Math.floor(correctCount / 2) + 1);
+  const baseCount = BASE_ITEM_COUNTS[difficulty] ?? 16;
+  const maximum = MAX_ITEM_COUNTS[difficulty] ?? 24;
+  const count = Math.min(maximum, baseCount + (stage - 1) * 2);
+  const normalObject = shuffleArray([...PUZZLE_OBJECTS])[0];
+  const sameFamily = shuffleArray(PUZZLE_OBJECTS.filter((object) => object.family === normalObject.family && object.id !== normalObject.id));
+  const otherFamilies = shuffleArray(PUZZLE_OBJECTS.filter((object) => object.family !== normalObject.family));
+  const oddObject = stage <= 2 ? otherFamilies[0] : sameFamily[0];
+  const oddPosition = Math.floor(Math.random() * count);
+
+  const items = Array.from({ length: count }, (_, index) => {
+    const isOdd = index === oddPosition;
+    return {
+      id: `icon-${index}`,
+      objectId: isOdd && stage <= 4 ? oddObject.id : normalObject.id,
+      rotation: isOdd && stage === 5 ? 180 : 0,
+      mirrored: isOdd && stage >= 6,
+      isOdd,
+    };
+  });
+
+  return { items, oddIndex: oddPosition, stage };
 }
 
 export function CariBerbedaScreen({ profile, onBack, backRef }: Props) {
@@ -131,6 +81,7 @@ export function CariBerbedaScreen({ profile, onBack, backRef }: Props) {
   const [correctCount, setCorrectCount] = useState(0);
   const [stage, setStage] = useState(1);
   const [timeLeft, setTimeLeft] = useState(10);
+  const [timeLimit, setTimeLimit] = useState(10);
   const [question, setQuestion] = useState(() => generateQuestion(profile.difficulty, 0));
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
@@ -165,7 +116,8 @@ export function CariBerbedaScreen({ profile, onBack, backRef }: Props) {
     setStage(q.stage);
     setSelectedIdx(null);
     setFeedback(null);
-    const tl = profile.difficulty === "tk" ? 12 : profile.difficulty === "sd-bawah" ? 10 : 8;
+    const tl = getRoundTimeLimit(profile.difficulty, q.stage);
+    setTimeLimit(tl);
     setTimeLeft(tl);
     qStartRef.current = Date.now();
     clearTimers();
@@ -182,7 +134,7 @@ export function CariBerbedaScreen({ profile, onBack, backRef }: Props) {
 
     // Validate based on shape (item.isOdd), not color
     if (idx === question.oddIndex) {
-      const speedBonus = Math.round((timeLeft / 8) * 50);
+      const speedBonus = Math.round((timeLeft / timeLimit) * 50);
       const qScore = 100 + speedBonus + question.stage * 10;
       setScore(s => s + qScore);
       setCorrectCount(c => c + 1);
@@ -204,9 +156,9 @@ export function CariBerbedaScreen({ profile, onBack, backRef }: Props) {
   if (screen === "start") return (
     <div className="h-[100dvh] bg-gradient-sky flex flex-col items-center justify-center p-4">
       <GameCard tone="blue" className="text-center w-full max-w-sm p-6 sm:p-8 text-white">
-        <div className="text-6xl mb-4">🔍</div>
+        <MiniGameIcon gameId="cari-berbeda" className="size-20 mb-3" />
         <h1 className="font-display font-black text-3xl mb-1">Cari yang Berbeda</h1>
-        <p className="text-sm font-bold opacity-80 mb-4">Temukan bentuk yang berbeda dari yang lain! Salah = Game Over.</p>
+        <p className="text-sm font-bold opacity-80 mb-4">Temukan satu ikon yang berbeda. Semakin jauh, pilihannya makin mirip!</p>
         {personalBest > 0 && (<div className="mb-4 p-3 rounded-2xl bg-black/20"><div className="text-xs uppercase opacity-70">Rekor Terbaik</div><div className="font-display font-black text-2xl text-yellow-300">{personalBest}</div></div>)}
         <div className="flex gap-3"><GameButton variant="ghost" full onClick={onBack}>Kembali</GameButton><GameButton variant="primary" full onClick={startGame}>Mulai!</GameButton></div>
       </GameCard>
@@ -227,16 +179,24 @@ export function CariBerbedaScreen({ profile, onBack, backRef }: Props) {
     </div>
   );
 
-  const timerPercent = (timeLeft / 8) * 100;
+  const timerPercent = (timeLeft / timeLimit) * 100;
   const timerColor = timeLeft <= 2 ? "#A02020" : timeLeft <= 4 ? "#D48806" : "#2E8B12";
 
   // Determine grid columns based on object count
-  const gridCols = question.items.length <= 12 ? 4 : question.items.length <= 16 ? 4 : 5;
+  const gridCols = question.items.length <= 16 ? 4 : question.items.length <= 20 ? 5 : 6;
+  const iconSize = stage >= 5 ? "size-7 sm:size-8" : stage >= 3 ? "size-8 sm:size-9" : "size-9 sm:size-10";
+  const instruction = stage >= 6
+    ? "Periksa arah ikon dengan teliti."
+    : stage === 5
+      ? "Ada satu ikon yang arahnya berubah."
+      : stage >= 3
+        ? "Perhatikan bentuk ikon yang satu keluarga."
+        : "Cari satu ikon yang berbeda dari kelompoknya.";
 
   return (
     <div className="h-[100dvh] bg-gradient-sky flex flex-col p-3 sm:p-4">
       <header className="pt-safe flex items-center gap-2 mb-3 shrink-0">
-        <button onClick={() => setShowExit(true)} aria-label="Keluar dari mini-game" className="h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shadow-sm shrink-0 active:scale-95">✕</button>
+        <button type="button" onClick={() => setShowExit(true)} aria-label="Keluar dari mini-game" className="tmt-icon-button h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shadow-sm shrink-0 active:scale-95"><TmtCloseGlyph aria-hidden="true" /></button>
         <div className="bg-white/50 px-3 py-1.5 rounded-full font-black text-[#5A3515] text-sm border-2 border-[#CBB794]">⭐ {score}</div>
         <div className="bg-white/50 px-3 py-1.5 rounded-full font-black text-[#5A3515] text-sm border-2 border-[#CBB794]">✅ {correctCount}</div>
         <div className="bg-white/50 px-3 py-1.5 rounded-full font-black text-[#5A3515] text-xs border-2 border-[#CBB794] ml-auto">Stage {stage}</div>
@@ -246,31 +206,32 @@ export function CariBerbedaScreen({ profile, onBack, backRef }: Props) {
       </div>
       <main className="flex-1 flex flex-col items-center justify-center min-h-0 overflow-y-auto">
         <GameCard tone="cream" className={`w-full max-w-lg text-center py-6 mb-4 border-4 shrink-0 ${feedback === "correct" ? "border-[#2E8B12] bg-[#E8F5E9]" : feedback === "wrong" ? "border-[#A02020] bg-[#FFEBEE]" : "border-[#CBB794]"}`}>
-          <p className="text-xs font-bold text-[#8C6B45] mb-3">Cari bentuk yang berbeda!</p>
+          <p className="text-xs font-bold text-[#8C6B45] mb-3">{instruction}</p>
           <div className={`grid gap-2 justify-center px-2`} style={{ gridTemplateColumns: `repeat(${gridCols}, 1fr)` }}>
             {question.items.map((item, i) => {
               const isSelected = selectedIdx === i;
               const isOdd = i === question.oddIndex;
               return (
-                <button
+                <button type="button"
                   key={item.id}
                   onClick={() => handleSelect(i)}
                   disabled={feedback !== null}
-                  aria-label={`Bentuk ${i + 1}${isOdd ? ", berbeda" : ""}`}
-                  className={`p-2 rounded-xl border-3 transition-all flex items-center justify-center aspect-square ${
+                  aria-label={`Pilihan ${i + 1}: ${getPuzzleObject(item.objectId)?.name ?? "ikon"}`}
+                  aria-pressed={isSelected}
+                  className={`tmt-grid-button p-2 rounded-xl border-3 transition-all flex items-center justify-center aspect-square ${
                     isSelected 
                       ? (isOdd ? "border-[#2E8B12] bg-green-100 scale-105" : "border-[#A02020] bg-red-100 scale-105")
                       : "border-transparent hover:border-[#185E9F] hover:bg-white/50"
                   } disabled:cursor-default`}
                 >
-                  <ShapeSvg shapeType={item.shapeType} color={item.color} size={30} />
+                  <PuzzleObjectArt objectId={item.objectId} className={iconSize} rotation={item.rotation} mirrored={item.mirrored} />
                 </button>
               );
             })}
           </div>
         </GameCard>
       </main>
-      <div className="text-center text-xs font-bold text-[#8C6B45]/70 pt-2 shrink-0">⏱ {timeLeft} detik · Temukan bentuk yang berbeda</div>
+      <div className="text-center text-xs font-bold text-[#8C6B45]/70 pt-2 shrink-0">⏱ {timeLeft} detik · Temukan ikon yang berbeda</div>
     </div>
   );
 }

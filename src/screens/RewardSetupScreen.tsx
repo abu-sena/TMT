@@ -1,3 +1,4 @@
+import { ArrowLeft as TmtBackGlyph } from "lucide-react";
 import { useState, useMemo } from "react";
 import type { Profile, RewardMilestone, RewardStatus, ScreenId } from "@/types";
 import { REWARD_ICONS } from "@/types";
@@ -184,12 +185,12 @@ export function RewardSetupScreen({ profiles, onBack }: Props) {
       {/* Header */}
       <header className="shrink-0 px-4 pt-safe mt-2 pb-3">
         <div className="max-w-lg mx-auto flex items-center gap-3">
-          <button
+          <button type="button"
             onClick={onBack}
-            className="h-12 w-12 rounded-[18px] bg-white border-2 border-[#D4B483] text-[#5A3515] grid place-items-center text-xl shadow-sm hover:bg-[#F5E6B3] active:translate-y-[2px] transition-all"
+            className="tmt-icon-button h-12 w-12 rounded-[18px] bg-white border-2 border-[#D4B483] text-[#5A3515] grid place-items-center text-xl shadow-sm hover:bg-[#F5E6B3] active:translate-y-[2px] transition-all"
             aria-label="Kembali"
           >
-            ←
+            <TmtBackGlyph aria-hidden="true" />
           </button>
           <div className="flex-1 min-w-0">
             <h1 className="font-display font-black text-xl text-[#5A3515] leading-tight truncate">
@@ -209,10 +210,10 @@ export function RewardSetupScreen({ profiles, onBack }: Props) {
           </label>
           <div className="flex flex-wrap gap-2">
             {profiles.map((p) => (
-              <button
+              <button type="button"
                 key={p.id}
                 onClick={() => setSelectedProfileId(p.id)}
-                className={`px-3 py-1.5 rounded-[18px] text-sm font-bold border-2 transition-all ${
+                className={`tmt-choice-button px-3 py-1.5 rounded-[18px] text-sm font-bold border-2 transition-all ${
                   p.id === selectedProfileId
                     ? "bg-gradient-meadow border-[#2E8B12] text-white shadow-sm"
                     : "bg-white border-[#CBB794] text-[#5A3515]"
@@ -249,13 +250,13 @@ export function RewardSetupScreen({ profiles, onBack }: Props) {
                 </span>
               </div>
             )}
-            <button
+            <button type="button" data-action="primary"
               onClick={() => {
                 resetForm();
                 setFormProfileId(selectedProfileId);
                 setShowForm(true);
               }}
-              className="mt-3 w-full py-2.5 rounded-[18px] bg-gradient-meadow border-2 border-[#2E8B12] text-white font-black text-sm shadow-candy-sm active:translate-y-[2px] transition-all"
+              className="tmt-action-button mt-3 w-full py-2.5 rounded-[18px] bg-gradient-meadow border-2 border-[#2E8B12] text-white font-black text-sm shadow-candy-sm active:translate-y-[2px] transition-all"
             >
               ＋ Tambah Hadiah Baru
             </button>
@@ -329,10 +330,10 @@ export function RewardSetupScreen({ profiles, onBack }: Props) {
               <label className="text-xs font-bold text-[#8C6B45] block mb-1">Icon Hadiah</label>
               <div className="flex flex-wrap gap-2">
                 {REWARD_ICONS.map((icon) => (
-                  <button
+                  <button type="button"
                     key={icon.emoji}
                     onClick={() => setFormIcon(icon.emoji)}
-                    className={`h-10 w-10 rounded-[18px] border-2 grid place-items-center text-xl transition-all ${
+                    className={`tmt-choice-button h-10 w-10 rounded-[18px] border-2 grid place-items-center text-xl transition-all ${
                       formIcon === icon.emoji
                         ? "border-[#2E8B12] bg-[#2E8B12]/10 shadow-sm scale-110"
                         : "border-[#CBB794] bg-white"
@@ -350,10 +351,10 @@ export function RewardSetupScreen({ profiles, onBack }: Props) {
               <label className="text-xs font-bold text-[#8C6B45] block mb-1">Warna Tema</label>
               <div className="flex flex-wrap gap-2">
                 {REWARD_COLORS.map((color) => (
-                  <button
+                  <button type="button"
                     key={color}
                     onClick={() => setFormColor(color)}
-                    className="h-8 w-8 rounded-full border-2 transition-all"
+                    className="tmt-choice-button h-8 w-8 rounded-full border-2 transition-all"
                     style={{
                       backgroundColor: color,
                       borderColor: formColor === color ? "#5A3515" : "transparent",
@@ -367,9 +368,9 @@ export function RewardSetupScreen({ profiles, onBack }: Props) {
             {/* Active toggle */}
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-[#8C6B45]">Hadiah Aktif</span>
-              <button
+              <button type="button"
                 onClick={() => setFormActive(!formActive)}
-                className={`relative inline-flex h-7 w-12 rounded-full border-2 transition-colors ${
+                className={`tmt-choice-button relative inline-flex h-7 w-12 rounded-full border-2 transition-colors ${
                   formActive ? "bg-gradient-meadow border-[#2E8B12]" : "bg-stone-300 border-stone-400"
                 }`}
               >
@@ -462,22 +463,22 @@ export function RewardSetupScreen({ profiles, onBack }: Props) {
                       {/* Action buttons */}
                       <div className="flex gap-1.5 mt-2 flex-wrap">
                         {!reward.isClaimed && reward.isUnlocked && (
-                          <button
+                          <button type="button" data-action="primary"
                             onClick={() => setConfirmClaim(reward.id)}
-                            className="px-2 py-1 rounded-[14px] bg-gradient-meadow border border-[#2E8B12] text-white text-[10px] font-bold active:translate-y-px transition-all"
+                            className="tmt-action-button px-2 py-1 rounded-[14px] bg-gradient-meadow border border-[#2E8B12] text-white text-[10px] font-bold active:translate-y-px transition-all"
                           >
                             ✅ Sudah Diberikan
                           </button>
                         )}
-                        <button
+                        <button type="button" data-action="secondary"
                           onClick={() => handleEdit(reward)}
-                          className="px-2 py-1 rounded-[14px] bg-white border border-[#CBB794] text-[#5A3515] text-[10px] font-bold active:translate-y-px transition-all"
+                          className="tmt-action-button px-2 py-1 rounded-[14px] bg-white border border-[#CBB794] text-[#5A3515] text-[10px] font-bold active:translate-y-px transition-all"
                         >
                           ✏️ Edit
                         </button>
-                        <button
+                        <button type="button"
                           onClick={() => handleToggleActive(reward)}
-                          className={`px-2 py-1 rounded-[14px] border text-[10px] font-bold active:translate-y-px transition-all ${
+                          className={`tmt-choice-button px-2 py-1 rounded-[14px] border text-[10px] font-bold active:translate-y-px transition-all ${
                             reward.isActive
                               ? "bg-[#FFF3CD] border-[#FFC107] text-[#856404]"
                               : "bg-[#D4EDDA] border-[#28A745] text-[#155724]"
@@ -485,9 +486,9 @@ export function RewardSetupScreen({ profiles, onBack }: Props) {
                         >
                           {reward.isActive ? "Nonaktifkan" : "Aktifkan"}
                         </button>
-                        <button
+                        <button type="button" data-action="danger-outline"
                           onClick={() => setConfirmDelete(reward.id)}
-                          className="px-2 py-1 rounded-[14px] bg-[#FCE4EC] border border-[#A02020]/30 text-[#A02020] text-[10px] font-bold active:translate-y-px transition-all"
+                          className="tmt-action-button px-2 py-1 rounded-[14px] bg-[#FCE4EC] border border-[#A02020]/30 text-[#A02020] text-[10px] font-bold active:translate-y-px transition-all"
                         >
                           🗑️ Hapus
                         </button>
@@ -497,15 +498,15 @@ export function RewardSetupScreen({ profiles, onBack }: Props) {
                       {confirmClaim === reward.id && (
                         <div className="mt-2 p-2 rounded-[18px] bg-[#D4EDDA] border border-[#28A745] text-xs font-bold text-[#155724] flex items-center gap-2">
                           <span>Tandai sudah diberikan?</span>
-                          <button
+                          <button type="button"
                             onClick={() => handleClaim(reward)}
-                            className="px-2 py-0.5 rounded-[14px] bg-[#28A745] text-white text-[10px]"
+                            className="tmt-choice-button px-2 py-0.5 rounded-[14px] bg-[#28A745] text-white text-[10px]"
                           >
                             Ya
                           </button>
-                          <button
+                          <button type="button" data-action="neutral"
                             onClick={() => setConfirmClaim(null)}
-                            className="px-2 py-0.5 rounded-[14px] bg-white border border-[#155724] text-[#155724] text-[10px]"
+                            className="tmt-action-button px-2 py-0.5 rounded-[14px] bg-white border border-[#155724] text-[#155724] text-[10px]"
                           >
                             Batal
                           </button>
@@ -516,15 +517,15 @@ export function RewardSetupScreen({ profiles, onBack }: Props) {
                       {confirmDelete === reward.id && (
                         <div className="mt-2 p-2 rounded-[18px] bg-[#FCE4EC] border border-[#A02020] text-xs font-bold text-[#A02020] flex items-center gap-2">
                           <span>Hapus hadiah ini?</span>
-                          <button
+                          <button type="button" data-action="danger-outline"
                             onClick={() => handleDelete(reward.id)}
-                            className="px-2 py-0.5 rounded-[14px] bg-[#A02020] text-white text-[10px]"
+                            className="tmt-action-button px-2 py-0.5 rounded-[14px] bg-[#A02020] text-white text-[10px]"
                           >
                             Hapus
                           </button>
-                          <button
+                          <button type="button" data-action="neutral"
                             onClick={() => setConfirmDelete(null)}
-                            className="px-2 py-0.5 rounded-[14px] bg-white border border-[#A02020] text-[#A02020] text-[10px]"
+                            className="tmt-action-button px-2 py-0.5 rounded-[14px] bg-white border border-[#A02020] text-[#A02020] text-[10px]"
                           >
                             Batal
                           </button>

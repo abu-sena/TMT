@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { MiniGameSprite } from "./MiniGameArt";
 
 export const MEMORY_OBJECTS = [
   { id: "fruit-apple", label: "Apel" },
@@ -15,7 +16,33 @@ export const MEMORY_OBJECTS = [
   { id: "animal-panda", label: "Panda" },
 ] as const;
 
-const MEMORY_SPRITE_SHEET = "./assets/2d/minigames/tmt-memory-objects-v2.webp";
+const baseEmoji = ["🍎", "🍌", "🍉", "🍇", "🍓", "🍒", "🐶", "🐱", "🐰", "🦊", "🐻", "🐼"];
+const props = [
+  ["🚗", "Mobil merah"], ["🚕", "Taksi"], ["🚙", "Mobil hijau kebiruan"], ["🚌", "Bus"],
+  ["🏎️", "Mobil balap"], ["🚲", "Sepeda"], ["⭐", "Bintang"], ["💎", "Permata"],
+  ["🌈", "Pelangi"], ["🔥", "Api"], ["❄️", "Keping salju"], ["🎵", "Not musik"],
+] as const;
+const nature = [
+  ["🌙", "Bulan sabit"], ["☀️", "Matahari"], ["🌸", "Bunga"],
+  ["🍀", "Semanggi"], ["🎈", "Balon"], ["🎁", "Hadiah"],
+] as const;
+const colors: Record<string, { label: string; fill: string }> = {
+  "🔴": { label: "Lingkaran merah", fill: "#c65049" },
+  "🔵": { label: "Lingkaran biru", fill: "#467ed0" },
+  "🟡": { label: "Lingkaran kuning", fill: "#edc044" },
+  "🟢": { label: "Lingkaran hijau", fill: "#4a9a63" },
+  "🟣": { label: "Lingkaran ungu", fill: "#9368bd" },
+  "🟠": { label: "Lingkaran jingga", fill: "#e68a44" },
+};
+
+function getSprite(value: string) {
+  const memory = MEMORY_OBJECTS.findIndex((object, index) => object.id === value || baseEmoji[index] === value);
+  if (memory !== -1) return { atlas: "memory" as const, index: memory, label: MEMORY_OBJECTS[memory].label };
+  const prop = props.findIndex(([emoji]) => emoji === value);
+  if (prop !== -1) return { atlas: "props" as const, index: prop, label: props[prop][1] };
+  const symbol = nature.findIndex(([emoji]) => emoji === value);
+  if (symbol !== -1) return { atlas: "nature" as const, index: symbol, label: nature[symbol][1] };
+}
 
 interface Props {
   value: string;
@@ -23,42 +50,23 @@ interface Props {
   decorative?: boolean;
 }
 
-/** Shows a custom memory-game sprite, while keeping the remaining emoji pool intact. */
 export function MemoryObjectIcon({ value, className, decorative = false }: Props) {
-  const index = MEMORY_OBJECTS.findIndex((object) => object.id === value);
-  const object = index >= 0 ? MEMORY_OBJECTS[index] : null;
+  const sprite = getSprite(value);
+  if (sprite) return <MiniGameSprite atlas={sprite.atlas} index={sprite.index} label={decorative ? undefined : sprite.label} className={className} />;
 
-  if (!object) {
-    return (
-      <span
-        className={cn("inline-flex items-center justify-center", className)}
-        role={decorative ? undefined : "img"}
-        aria-label={decorative ? undefined : value}
-        aria-hidden={decorative || undefined}
-      >
-        {value}
-      </span>
-    );
-  }
-
-  const column = index % 4;
-  const row = Math.floor(index / 4);
-
+  const color = colors[value];
   return (
     <span
-      className={cn("inline-block shrink-0 bg-center bg-no-repeat", className)}
-      role={decorative ? undefined : "img"}
-      aria-label={decorative ? undefined : object.label}
+      className={cn("inline-flex items-center justify-center", className)}
+      role={!decorative && color ? "img" : undefined}
+      aria-label={decorative ? undefined : color?.label}
       aria-hidden={decorative || undefined}
-      style={{
-        backgroundImage: `url(${MEMORY_SPRITE_SHEET})`,
-        backgroundSize: "400% 300%",
-        backgroundPosition: `${column * (100 / 3)}% ${row * 50}%`,
-      }}
-    />
+    >
+      {color ? <span aria-hidden="true" className="mini-game-color-chip" style={{ backgroundColor: color.fill }} /> : value}
+    </span>
   );
 }
 
 export function getMemoryObjectLabel(value: string) {
-  return MEMORY_OBJECTS.find((object) => object.id === value)?.label ?? value;
+  return getSprite(value)?.label ?? colors[value]?.label ?? value;
 }

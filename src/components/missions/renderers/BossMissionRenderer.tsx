@@ -149,9 +149,9 @@ export function BossMissionRenderer({ mission, revealed, selectedId, wrongIds, o
         </div>
 
         {/* Start button */}
-        <button
+        <button type="button"
           onClick={handleIntroContinue}
-          className="w-full py-4 rounded-2xl font-display font-black text-xl text-white border-b-4 shadow-lg active:translate-y-1 active:border-b-0 transition-all animate-bob"
+          className="tmt-choice-button w-full py-4 rounded-2xl font-display font-black text-xl text-white border-b-4 shadow-lg active:translate-y-1 active:border-b-0 transition-all animate-bob"
           style={{
             background: `linear-gradient(135deg, ${mission.bossThemeColor}, ${mission.bossThemeColor}cc)`,
             borderColor: mission.bossThemeColor,
@@ -243,11 +243,11 @@ export function BossMissionRenderer({ mission, revealed, selectedId, wrongIds, o
             const isWrongPick = stepRevealed && isSel && o.id !== currentStep.correctAnswer;
 
             return (
-              <button
+              <button type="button"
                 key={o.id}
                 disabled={stepRevealed || wasWrong}
                 onClick={() => handleStepSelect(o.id)}
-                className={cn(
+                className={cn("tmt-choice-button",
                   "w-full rounded-2xl border-4 p-3 text-left flex items-center gap-3 transition-all",
                   isRight ? "bg-gradient-meadow border-[#2E8B12] text-white shadow-candy-sm" :
                   isWrongPick ? "bg-gradient-heart border-[#A02020] text-white shadow-candy-sm" :
@@ -292,17 +292,17 @@ export function BossMissionRenderer({ mission, revealed, selectedId, wrongIds, o
         {/* Action buttons */}
         {!stepRevealed && (
           <div className="flex gap-3 pt-2">
-            <button
+            <button type="button" data-action="coin"
               onClick={handleShowHint}
               disabled={showHint}
-              className="px-4 py-3 rounded-2xl bg-gradient-sun border-2 border-[#D48806] text-[#5A3515] font-black text-sm shadow-sm disabled:opacity-50 flex items-center gap-2"
+              className="tmt-action-button px-4 py-3 rounded-2xl bg-gradient-sun border-2 border-[#D48806] text-[#5A3515] font-black text-sm shadow-sm disabled:opacity-50 flex items-center gap-2"
             >
               💡 Petunjuk
             </button>
-            <button
+            <button type="button"
               onClick={handleStepSubmit}
               disabled={!stepSelected}
-              className="flex-1 py-3 rounded-2xl font-black text-white border-b-4 shadow-sm active:translate-y-1 active:border-b-0 transition-all disabled:opacity-50 disabled:translate-y-0"
+              className="tmt-choice-button flex-1 py-3 rounded-2xl font-black text-white border-b-4 shadow-sm active:translate-y-1 active:border-b-0 transition-all disabled:opacity-50 disabled:translate-y-0"
               style={{
                 background: `linear-gradient(135deg, ${mission.bossThemeColor}, ${mission.bossThemeColor}cc)`,
                 borderColor: mission.bossThemeColor,

@@ -1,3 +1,4 @@
+import { ArrowLeft as TmtBackGlyph } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { Profile, Mission, DailyMissionCategory, DailyMissionDifficultyWeight, DailyMissionAssignment } from "@/types";
 import { CATEGORIES, CATEGORY_MAP, DIFFICULTY_MAP } from "@/data/constants";
@@ -140,12 +141,12 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
       {/* ── Header ── */}
       <header className="shrink-0 px-4 pt-safe mt-2 pb-4">
         <div className="max-w-lg mx-auto flex items-center gap-3">
-          <button
+          <button type="button"
             onClick={onBack}
-            className="h-12 w-12 rounded-[18px] bg-white border-2 border-[#D4B483] text-[#5A3515] grid place-items-center text-xl shadow-sm hover:bg-[#F5E6B3] active:translate-y-[2px] transition-all"
+            className="tmt-icon-button h-12 w-12 rounded-[18px] bg-white border-2 border-[#D4B483] text-[#5A3515] grid place-items-center text-xl shadow-sm hover:bg-[#F5E6B3] active:translate-y-[2px] transition-all"
             aria-label="Kembali"
           >
-            ←
+            <TmtBackGlyph aria-hidden="true" />
           </button>
           <div className="flex-1 min-w-0">
             <h1 className="font-display font-black text-2xl text-[#5A3515] leading-tight">
@@ -411,7 +412,7 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
               <p className="text-xs font-bold text-[#5A3515] mb-3">
                 Belum ada Misi Harian. Buat misi pertama untuk anak.
               </p>
-              <button
+              <button type="button" data-action="primary"
                 onClick={() => {
                   setEditingMission(null);
                   setMissionForm({
@@ -422,7 +423,7 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
                   });
                   setShowManageMissions(true);
                 }}
-                className="py-3 px-6 rounded-xl bg-[#185E9F] text-white font-black text-sm active:scale-95 transition-transform"
+                className="tmt-action-button py-3 px-6 rounded-xl bg-[#185E9F] text-white font-black text-sm active:scale-95 transition-transform"
               >
                 ➕ Buat Misi Harian
               </button>
@@ -436,7 +437,7 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
                 <div className="text-[10px] font-bold text-[#8C6B45] uppercase">
                   Misi Aktif ({dailyMissions.filter(m => m.isActive).length})
                 </div>
-                <button
+                <button type="button" data-action="primary"
                   onClick={() => {
                     setEditingMission(null);
                     setMissionForm({
@@ -447,7 +448,7 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
                     });
                     setShowManageMissions(true);
                   }}
-                  className="py-1.5 px-3 rounded-lg bg-[#185E9F] text-white font-black text-[10px] active:scale-95 transition-transform"
+                  className="tmt-action-button py-1.5 px-3 rounded-lg bg-[#185E9F] text-white font-black text-[10px] active:scale-95 transition-transform"
                 >
                   ➕ Buat Misi
                 </button>
@@ -460,7 +461,7 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
                     Hapus misi ini? Reward yang sudah diberikan tetap aman.
                   </p>
                   <div className="flex gap-2 justify-center">
-                    <button
+                    <button type="button" data-action="danger"
                       onClick={() => {
                         const updated = dailyMissions.map(m =>
                           m.id === showDeleteConfirm ? { ...m, isActive: false, updatedAt: new Date().toISOString() } : m
@@ -470,13 +471,13 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
                         setTimeout(() => setDailyMissionFeedback(null), 3000);
                         setShowDeleteConfirm(null);
                       }}
-                      className="py-1.5 px-3 rounded-lg bg-[#E53935] text-white font-bold text-xs"
+                      className="tmt-action-button py-1.5 px-3 rounded-lg bg-[#E53935] text-white font-bold text-xs"
                     >
                       Ya, Nonaktifkan
                     </button>
-                    <button
+                    <button type="button" data-action="neutral"
                       onClick={() => setShowDeleteConfirm(null)}
-                      className="py-1.5 px-3 rounded-lg bg-gray-200 text-[#5A3515] font-bold text-xs"
+                      className="tmt-action-button py-1.5 px-3 rounded-lg bg-gray-200 text-[#5A3515] font-bold text-xs"
                     >
                       Batal
                     </button>
@@ -501,7 +502,7 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
                       {" · "}{assignedNames}
                     </div>
                     <div className="flex gap-1.5">
-                      <button
+                      <button type="button" data-action="secondary"
                         onClick={() => {
                           setEditingMission(m);
                           setMissionForm({
@@ -517,13 +518,13 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
                           });
                           setShowManageMissions(true);
                         }}
-                        className="flex-1 py-1.5 rounded-lg bg-white border border-[#185E9F]/30 text-[#185E9F] font-bold text-[10px]"
+                        className="tmt-action-button flex-1 py-1.5 rounded-lg bg-white border border-[#185E9F]/30 text-[#185E9F] font-bold text-[10px]"
                       >
                         ✏️ Edit
                       </button>
-                      <button
+                      <button type="button" data-action="danger-outline"
                         onClick={() => setShowDeleteConfirm(m.id)}
-                        className="flex-1 py-1.5 rounded-lg bg-white border border-[#E53935]/30 text-[#E53935] font-bold text-[10px]"
+                        className="tmt-action-button flex-1 py-1.5 rounded-lg bg-white border border-[#E53935]/30 text-[#E53935] font-bold text-[10px]"
                       >
                         🗑 Hapus
                       </button>
@@ -541,14 +542,14 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
                   {dailyMissions.filter(m => !m.isActive).map(m => (
                     <div key={m.id} className="flex items-center gap-2 py-1">
                       <span className="text-xs text-[#8C6B45] truncate flex-1 opacity-60">{m.title}</span>
-                      <button
+                      <button type="button" data-action="primary"
                         onClick={() => {
                           const updated = dailyMissions.map(dm => dm.id === m.id ? { ...dm, isActive: true, updatedAt: new Date().toISOString() } : dm);
                           updateGlobalState({ dailyMissions: updated });
                           setDailyMissionFeedback("✅ Misi diaktifkan kembali.");
                           setTimeout(() => setDailyMissionFeedback(null), 2000);
                         }}
-                        className="text-[9px] px-1.5 py-0.5 rounded bg-[#E8F5E9] text-[#2E8B12] font-bold"
+                        className="tmt-action-button text-[9px] px-1.5 py-0.5 rounded bg-[#E8F5E9] text-[#2E8B12] font-bold"
                       >
                         Aktifkan
                       </button>
@@ -567,7 +568,7 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
               <h4 className="font-display font-black text-sm text-[#5A3515]">
                 {editingMission ? "✏️ Edit Misi Harian" : "➕ Buat Misi Harian"}
               </h4>
-              <button onClick={() => { setShowManageMissions(false); setEditingMission(null); }} className="text-sm text-[#8C6B45] font-bold">✕ Tutup</button>
+              <button type="button" data-action="neutral" onClick={() => { setShowManageMissions(false); setEditingMission(null); }} className="tmt-action-button text-sm text-[#8C6B45] font-bold">✕ Tutup</button>
             </div>
 
             {/* Edit warning if mission has pending/rejected assignments */}
@@ -624,9 +625,9 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
                     </label>
                   ))}
                 </div>
-                <button
+                <button type="button"
                   onClick={() => setMissionForm({ ...missionForm, assignedProfileIds: profiles.map(p => p.id) })}
-                  className="text-[9px] font-bold text-[#185E9F] underline"
+                  className="tmt-text-button text-[9px] font-bold text-[#185E9F] underline"
                 >
                   ✅ Semua Anak
                 </button>
@@ -654,9 +655,9 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
                   4. Jadwal <span className="text-[#E53935]">*</span>
                 </label>
                 <div className="flex gap-2">
-                  <button
+                  <button type="button"
                     onClick={() => setMissionForm({ ...missionForm, scheduleType: "daily" })}
-                    className={cn(
+                    className={cn("tmt-choice-button",
                       "flex-1 py-2 rounded-xl text-xs font-bold transition-all",
                       missionForm.scheduleType === "daily"
                         ? "bg-[#185E9F] text-white"
@@ -665,9 +666,9 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
                   >
                     🔄 Ulang Setiap Hari
                   </button>
-                  <button
+                  <button type="button"
                     onClick={() => setMissionForm({ ...missionForm, scheduleType: "once" })}
-                    className={cn(
+                    className={cn("tmt-choice-button",
                       "flex-1 py-2 rounded-xl text-xs font-bold transition-all",
                       missionForm.scheduleType === "once"
                         ? "bg-[#185E9F] text-white"
@@ -734,13 +735,13 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
 
               {/* Action buttons */}
               <div className="flex gap-2 pt-1">
-                <button
+                <button type="button" data-action="neutral"
                   onClick={() => { setShowManageMissions(false); setEditingMission(null); }}
-                  className="flex-1 py-2.5 rounded-xl bg-gray-200 text-[#5A3515] font-bold text-sm active:scale-95 transition-transform"
+                  className="tmt-action-button flex-1 py-2.5 rounded-xl bg-gray-200 text-[#5A3515] font-bold text-sm active:scale-95 transition-transform"
                 >
                   Batal
                 </button>
-                <button
+                <button type="button" data-action="primary"
                   onClick={() => {
                     if (!missionForm.title.trim()) {
                       setDailyMissionFeedback("⚠️ Judul misi tidak boleh kosong.");
@@ -824,7 +825,7 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
                     missionForm.points < 5 ||
                     missionForm.points > 75
                   }
-                  className={cn(
+                  className={cn("tmt-action-button",
                     "flex-[2] py-2.5 rounded-xl font-black text-sm active:translate-y-0.5 transition-all",
                     (!missionForm.title.trim() || missionForm.assignedProfileIds.length === 0 || missionForm.points < 5 || missionForm.points > 75)
                       ? "bg-gray-300 text-gray-500 cursor-not-allowed"
@@ -1034,10 +1035,10 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
                     {/* Action buttons for pending */}
                     {isPending && (
                       <div className="flex gap-2">
-                        <button
+                        <button type="button"
                           onClick={handleApprove}
                           disabled={isProcessing}
-                          className={cn(
+                          className={cn("tmt-choice-button",
                             "flex-1 py-2.5 rounded-xl font-black text-xs transition-all duration-200",
                             isProcessing
                               ? "bg-gray-300 text-gray-500 cursor-wait"
@@ -1053,10 +1054,10 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
                             "✅ Setujui"
                           )}
                         </button>
-                        <button
+                        <button type="button"
                           onClick={handleReject}
                           disabled={isProcessing}
-                          className={cn(
+                          className={cn("tmt-choice-button",
                             "flex-1 py-2.5 rounded-xl font-black text-xs transition-all duration-200",
                             isProcessing
                               ? "bg-gray-300 text-gray-500 cursor-wait"
@@ -1470,9 +1471,9 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
                   🎯 Hadiah berikutnya: {nextReward.rewardIcon} {nextReward.rewardTitle} (Level {nextReward.targetLevel})
                 </div>
               )}
-              <button
+              <button type="button" data-action="primary"
                 onClick={onManageRewards}
-                className="w-full py-2.5 rounded-[18px] bg-gradient-meadow border-2 border-[#2E8B12] text-white font-black text-sm shadow-candy-sm active:translate-y-[2px] transition-all"
+                className="tmt-action-button w-full py-2.5 rounded-[18px] bg-gradient-meadow border-2 border-[#2E8B12] text-white font-black text-sm shadow-candy-sm active:translate-y-[2px] transition-all"
               >
                 🎁 Atur Hadiah
               </button>
@@ -1483,21 +1484,21 @@ export function ParentScreen({ profile: initialProfile, profiles: initialProfile
         {/* ═══ Export & Actions ═══ */}
         <div className="space-y-2">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <button
+            <button type="button" data-action="secondary"
               onClick={onExportProfile}
-              className="w-full py-3 rounded-[18px] bg-white border-2 border-[#D4B483] text-[#5A3515] font-black text-sm shadow-sm hover:bg-[#F5E6B3] active:translate-y-0.5 transition-all flex items-center justify-center gap-2"
+              className="tmt-action-button w-full py-3 rounded-[18px] bg-white border-2 border-[#D4B483] text-[#5A3515] font-black text-sm shadow-sm hover:bg-[#F5E6B3] active:translate-y-0.5 transition-all flex items-center justify-center gap-2"
             >
               <span>📋</span> Ekspor Profil
             </button>
-            <button
+            <button type="button" data-action="secondary"
               onClick={onExportAll}
-              className="w-full py-3 rounded-[18px] bg-white border-2 border-[#D4B483] text-[#5A3515] font-black text-sm shadow-sm hover:bg-[#F5E6B3] active:translate-y-0.5 transition-all flex items-center justify-center gap-2"
+              className="tmt-action-button w-full py-3 rounded-[18px] bg-white border-2 border-[#D4B483] text-[#5A3515] font-black text-sm shadow-sm hover:bg-[#F5E6B3] active:translate-y-0.5 transition-all flex items-center justify-center gap-2"
             >
               <span>💾</span> Ekspor Semua
             </button>
           </div>
-          <button
-            className="w-full py-3 rounded-[18px] bg-white border-2 border-dashed border-[#CBB794] text-[#8C6B45] font-black text-sm hover:bg-[#F5E6B3]/50 active:translate-y-0.5 transition-all flex items-center justify-center gap-2"
+          <button type="button"
+            className="tmt-choice-button w-full py-3 rounded-[18px] bg-white border-2 border-dashed border-[#CBB794] text-[#8C6B45] font-black text-sm hover:bg-[#F5E6B3]/50 active:translate-y-0.5 transition-all flex items-center justify-center gap-2"
             title="Fitur akan datang"
           >
             <span>📄</span> Unduh Laporan Lengkap (Segera)

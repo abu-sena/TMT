@@ -1,100 +1,83 @@
 /**
- * Generate Android launcher icons from source PNG.
- * Usage: node scripts/generate-icons.cjs
+ * Regenerates launcher and native launch-screen resources after Capacitor sync.
+ * The same transparent emblem is used by the React and initial HTML splash.
  */
+const sharp = require("sharp");
+const path = require("node:path");
+const fs = require("node:fs/promises");
 
-const sharp = require('sharp');
-const path = require('path');
-const fs = require('fs');
+const source = path.resolve(__dirname, "../public/assets/field-guide/tmt-mark.png");
+const resources = path.resolve(__dirname, "../android/app/src/main/res");
+const mint = "#D9EEE2";
+const cream = "#FCF7E9";
+const densities = [
+  ["mdpi", 48, 108],
+  ["hdpi", 72, 162],
+  ["xhdpi", 96, 216],
+  ["xxhdpi", 144, 324],
+  ["xxxhdpi", 192, 432],
+];
 
-const SOURCE = path.resolve(__dirname, '..', 'src', 'components', 'icon.png');
-const RES_DIR = path.resolve(__dirname, '..', 'android', 'app', 'src', 'main', 'res');
+const transparent = { r: 0, g: 0, b: 0, alpha: 0 };
 
-// Android launcher icon sizes
-const LAUNCHER_SIZES = {
-  'mipmap-mdpi': 48,
-  'mipmap-hdpi': 72,
-  'mipmap-xhdpi': 96,
-  'mipmap-xxhdpi': 144,
-  'mipmap-xxxhdpi': 192,
-};
-
-// Adaptive icon sizes (foreground = 108dp = 432px at xxxhdpi, scaled down)
-const ADAPTIVE_FOREGROUND = 432; // xxxhdpi foreground size
-const ADAPTIVE_BACKGROUND = 432;
-
-async function generate() {
-  console.log('🔧 Generating Android launcher icons...');
-  console.log(`   Source: ${SOURCE}`);
-
-  if (!fs.existsSync(SOURCE)) {
-    console.error('❌ Source icon not found!');
-    process.exit(1);
-  }
-
-  // 1. Generate PNG launcher icons (standard, not adaptive)
-  for (const [folder, size] of Object.entries(LAUNCHER_SIZES)) {
-    const outDir = path.join(RES_DIR, folder);
-    if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
-
-    const outPath = path.join(outDir, 'ic_launcher.png');
-    await sharp(SOURCE)
-      .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .png()
-      .toFile(outPath);
-    console.log(`   ✅ ${folder}/ic_launcher.png (${size}x${size})`);
-  }
-
-  // 2. Generate adaptive icon foreground (108dp safe zone centered)
-  // The adaptive icon foreground should be 108dp (= 432px at xxxhdpi) with content centered
-  // We create a 432x432 foreground with the icon centered
-  const fgSize = ADAPTIVE_FOREGROUND;
-  const fgInnerSize = Math.round(fgSize * 0.7); // 70% of foreground = ~302px
-
-  // Resize source to fit within the safe zone (inner 66% area)
-  const fgResized = await sharp(SOURCE)
-    .resize(fgInnerSize, fgInnerSize, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+async function composeIcon(size, scale, background) {
+  const innerSize = Math.round(size * scale);
+  const mark = await sharp(source).resize(innerSize, innerSize).png().toBuffer();
+  const margin = Math.floor((size - innerSize) / 2);
+  return sharp({ create: { width: size, height: size, channels: 4, background } })
+    .composite([{ input: mark, top: margin, left: margin }])
     .png()
     .toBuffer();
-
-  // Place on a transparent 432x432 canvas
-  const fgOffset = Math.round((fgSize - fgInnerSize) / 2);
-  const foreground = await sharp({
-    create: {
-      width: fgSize,
-      height: fgSize,
-      channels: 4,
-      background: { r: 0, g: 0, b: 0, alpha: 0 },
-    },
-  })
-    .composite([{ input: fgResized, top: fgOffset, left: fgOffset }])
-    .png()
-    .toBuffer();
-
-  const drawableDir = path.join(RES_DIR, 'drawable');
-  if (!fs.existsSync(drawableDir)) fs.mkdirSync(drawableDir, { recursive: true });
-
-  await sharp(foreground).toFile(path.join(drawableDir, 'ic_launcher_foreground.png'));
-  console.log('   ✅ drawable/ic_launcher_foreground.png (432x432)');
-
-  // 3. Generate background (solid color matching app theme)
-  const bgColor = { r: 42, g: 141, b: 232 }; // TMT blue (#2A8DE8)
-  const background = await sharp({
-    create: {
-      width: ADAPTIVE_BACKGROUND,
-      height: ADAPTIVE_BACKGROUND,
-      channels: 4,
-      background: bgColor,
-    },
-  })
-    .png()
-    .toFile(path.join(drawableDir, 'ic_launcher_background.png'));
-  console.log('   ✅ drawable/ic_launcher_background.png (432x432)');
-
-  console.log('\n🎉 All icons generated successfully!');
 }
 
-generate().catch((err) => {
-  console.error('❌ Error:', err);
-  process.exit(1);
+async function writeDensity([density, launcherSize, adaptiveSize]) {
+  const folder = path.join(resources, "mipmap-" + density);
+  await fs.mkdir(folder, { recursive: true });
+
+  const square = await composeIcon(launcherSize, 0.84, mint);
+  const round = await composeIcon(launcherSize, 0.75, mint);
+  const radius = launcherSize / 2;
+  const circle = Buffer.from(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="' + launcherSize + '" height="' + launcherSize +
+    '"><circle cx="' + radius + '" cy="' + radius + '" r="' + radius + '"/></svg>',
+  );
+
+  await Promise.all([
+    fs.writeFile(path.join(folder, "ic_launcher.png"), square),
+    sharp(round).composite([{ input: circle, blend: "dest-in" }]).png()
+      .toFile(path.join(folder, "ic_launcher_round.png")),
+    // Keep the wing tips inside Android's circular 66dp safe zone.
+    composeIcon(adaptiveSize, 0.47, transparent)
+      .then(image => fs.writeFile(path.join(folder, "ic_launcher_foreground.png"), image)),
+  ]);
+}
+
+async function generate() {
+  const stylesFile = path.join(resources, "values", "styles.xml");
+  const styles = await fs.readFile(stylesFile, "utf8");
+  const launchTheme = /<style name="AppTheme\.NoActionBarLaunch"[^>]*>[\s\S]*?<\/style>/;
+  if (!launchTheme.test(styles)) throw new Error("Theme AppTheme.NoActionBarLaunch tidak ditemukan.");
+
+  await Promise.all(densities.map(writeDensity));
+  await fs.writeFile(path.join(resources, "values", "ic_launcher_background.xml"), [
+    '<?xml version="1.0" encoding="utf-8"?>',
+    "<resources>",
+    '    <color name="ic_launcher_background">' + mint + "</color>",
+    '    <color name="tmt_launch_background">' + cream + "</color>",
+    "</resources>",
+    "",
+  ].join("\n"));
+  await fs.writeFile(stylesFile, styles.replace(launchTheme, [
+    '<style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">',
+    '        <item name="windowSplashScreenBackground">@color/tmt_launch_background</item>',
+    '        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>',
+    '        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>',
+    "    </style>",
+  ].join("\n")));
+  console.log("Logo TMT diterapkan ke launcher biasa, bulat, adaptif, dan splash Android.");
+}
+
+generate().catch(error => {
+  console.error(error);
+  process.exitCode = 1;
 });

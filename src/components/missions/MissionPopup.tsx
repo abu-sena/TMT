@@ -1,8 +1,10 @@
+import { X as TmtCloseGlyph } from "lucide-react";
 import type { Mission } from "@/types";
 import { CATEGORY_MAP, DIFFICULTY_MAP } from "@/data/constants";
 import { GameButton } from "@/components/ui/GameButton";
 import { RewardStars } from "@/components/rewards/RewardStars";
 import { COMPANIONS } from "@/data/adventure-story";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 interface Props {
   mission: Mission;
@@ -27,13 +29,14 @@ export function MissionPopup({ mission, stars, onClose, onPlay }: Props) {
   const isFinalStage = mission.number === 500;
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 animate-pop-in">
-      <div className={`w-full max-w-md max-h-[88dvh] flex flex-col overflow-hidden p-0 ${isBoss ? "rounded-[28px] border-4 shadow-2xl" : "surface-panel shadow-2xl"}`}
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent hideCloseButton className={`block w-[calc(100%-2rem)] max-w-md max-h-[88dvh] overflow-y-auto p-0 animate-pop-in ${isBoss ? "rounded-[28px] border-4 shadow-2xl" : "surface-panel tmt-dialog-surface shadow-2xl"}`}
         style={isBoss ? {
           background: `linear-gradient(180deg, #1a1a2e 0%, #2d1f3d 100%)`,
           borderColor: bossColor,
         } : {}}
       >
+        <DialogDescription className="sr-only">Rincian misi dan pilihan untuk memulai petualangan.</DialogDescription>
         {/* Header */}
         <div className={isBoss
           ? "px-4 py-4 flex items-center gap-3 text-white border-b-4"
@@ -58,16 +61,16 @@ export function MissionPopup({ mission, stars, onClose, onPlay }: Props) {
               </div>
             )}
             <div className="text-[11px] uppercase tracking-wider opacity-80">Stage #{mission.number} · {diff.label}</div>
-            <h2 className="font-display font-bold text-lg leading-tight truncate">
+            <DialogTitle className="font-display font-bold text-lg leading-tight truncate">
               {(mission as any).storyTitle || mission.title}
-            </h2>
+            </DialogTitle>
           </div>
-          <button
+          <button type="button"
             onClick={onClose}
             aria-label="Tutup"
-            className="h-9 w-9 rounded-full bg-white/20 hover:bg-white/30 border-2 border-white/40 grid place-items-center text-white font-bold shrink-0"
+            className="tmt-icon-button h-9 w-9 rounded-full bg-white/20 hover:bg-white/30 border-2 border-white/40 grid place-items-center text-white font-bold shrink-0"
           >
-            ✕
+            <TmtCloseGlyph aria-hidden="true" />
           </button>
         </div>
 
@@ -181,7 +184,7 @@ export function MissionPopup({ mission, stars, onClose, onPlay }: Props) {
             </GameButton>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

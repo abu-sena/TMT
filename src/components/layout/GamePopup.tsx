@@ -11,7 +11,7 @@ export function GamePopup({ children, isOpen, className = "" }: GamePopupProps) 
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 backdrop-blur-sm p-4 sm:p-6 animate-pop-in">
-      <div className={`w-full max-w-md max-h-[85dvh] flex flex-col overflow-hidden surface-panel p-0 ${className}`}>
+      <div className={`w-full max-w-md max-h-[85dvh] flex flex-col overflow-hidden surface-panel tmt-dialog-surface p-0 ${className}`}>
         {children}
       </div>
     </div>

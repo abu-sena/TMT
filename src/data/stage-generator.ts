@@ -7,7 +7,7 @@
  * Total: 3000 stages (500 × 6 difficulties)
  */
 
-import type { Stage, MissionOption, CategoryId, DifficultyId, MissionType, StageType } from "@/types";
+import { DIFFICULTY_ORDER, type Stage, type MissionOption, type CategoryId, type DifficultyId, type MissionType, type StageType } from "@/types";
 import { STAGE_DISTRIBUTIONS, WORLDS_BY_DIFFICULTY } from "./worlds";
 
 // ════════════════════════════════════════════════════════
@@ -746,6 +746,29 @@ export function generateMixedAdventureStages(difficulty: DifficultyId, totalStag
 export function stageToMission(stage: Stage): import("@/types").Mission {
   // Generate story from inline mini-generator (avoid circular deps)
   const storyData = generateInlineStory(stage);
+  const world = WORLDS_BY_DIFFICULTY[stage.difficulty]?.find((item) => item.id === stage.mapSegmentId);
+  const bossFields = stage.isBossStage
+    ? {
+        bossIntro: `Tantangan puncak di ${world?.name ?? "wilayah ini"} sudah menanti. Selesaikan langkah berikut dengan cermat!`,
+        bossIntroNarration: storyData.introText,
+        steps: [{
+          id: `${stage.id}-boss-step`,
+          stepNumber: 1,
+          title: stage.title,
+          category: stage.category,
+          story: stage.story,
+          instruction: stage.instruction,
+          options: stage.choices,
+          correctAnswer: stage.correctAnswer,
+          explanation: stage.explanation,
+          hintLevels: stage.hintLevels,
+        }],
+        finalEvaluation: `${stage.explanation} ${storyData.successText}`,
+        bossRewardMultiplier: 2,
+        bossThemeColor: world?.themeColor ?? "#185E9F",
+        bossEmoji: world?.icon ?? "🏆",
+      }
+    : {};
   
   const mission: any = {
     id: stage.id,
@@ -755,7 +778,7 @@ export function stageToMission(stage: Stage): import("@/types").Mission {
     gradeRange: getGradeRange(stage.difficulty),
     category: stage.category,
     secondaryCategory: stage.secondaryCategory,
-    missionType: stage.missionType,
+    missionType: stage.isBossStage ? "boss_mission" : stage.missionType,
     worldArea: stage.mapSegmentId,
     mapSegmentId: stage.mapSegmentId,
     backgroundTheme: stage.backgroundTheme,
@@ -782,6 +805,7 @@ export function stageToMission(stage: Stage): import("@/types").Mission {
     companionHint: storyData.companionHint,
     ...(stage.adabFeedback ? { adabFeedback: stage.adabFeedback } : {}),
     ...(stage.adabBonus ? { adabBonus: stage.adabBonus } : {}),
+    ...bossFields,
   };
   return mission as import("@/types").Mission;
 }
@@ -793,6 +817,12 @@ function generateInlineStory(stage: Stage): any {
   const isBoss = s.isBossStage;
   const isFinal = n === 500;
   const ct = (s.challengeType || s.missionType || "").toLowerCase();
+  const world = WORLDS_BY_DIFFICULTY[s.difficulty]?.find((item) => item.id === s.mapSegmentId);
+  const worldName = world?.name ?? "Negeri Cahaya Ilmu";
+  const nextDifficulty = DIFFICULTY_ORDER[DIFFICULTY_ORDER.indexOf(s.difficulty) + 1];
+  const nextDifficultyLabel = nextDifficulty
+    ? ({ tk: "TK", "sd-bawah": "SD Bawah", "sd-atas": "SD Atas", smp: "SMP", sma: "SMA", universitas: "Universitas" } as const)[nextDifficulty]
+    : null;
   
   // Companion mapping
   let companionId: string | null = null;
@@ -821,10 +851,10 @@ function generateInlineStory(stage: Stage): any {
   
   // Intro
   const intros = [
-    "Di perjalananmu, kamu menemukan tantangan baru yang menarik.",
-    "Petualanganmu sampai di titik yang membutuhkan perhatian.",
-    "Sebuah kejutan menanti di depan! Apa yang akan kamu lakukan?",
-    "Udara terasa berbeda. Ada sesuatu yang perlu kamu selesaikan.",
+    `Di ${worldName}, kamu menemukan tantangan baru yang menarik.`,
+    `Saat menjelajahi ${worldName}, sebuah kejutan menantimu.`,
+    `Petualangan di ${worldName} sampai pada titik yang membutuhkan perhatian.`,
+    `Di ${worldName}, ada hal yang perlu kamu selesaikan.`,
   ];
   const introIdx = (n * 7 + s.difficulty.charCodeAt(0)) % intros.length;
   
@@ -853,9 +883,17 @@ function generateInlineStory(stage: Stage): any {
     introText: intros[introIdx],
     userRoleText: `Sebagai ${userTitle}, ${[`kamu bertekad menyelesaikan tantangan ini!`,`waktunya menunjukkan kemampuanmu!`,`langkahmu semakin dekat ke tujuan!`,`ilmu dan adabmu akan diuji di sini!`][n % 4]}`,
     challengeContext: `${s.instruction || `Selesaikan tantangan pada stage ${n}!`}`,
-    successText: isFinal ? `Kamu berhasil melewati Gerbang Kenaikan! Seluruh ${userTitle} di Negeri Cahaya Ilmu merayakan keberhasilanmu.` : successTexts[succIdx],
+    successText: isFinal
+      ? nextDifficultyLabel
+        ? `Kamu menuntaskan tingkat ${userTitle} dan membuka gerbang menuju ${nextDifficultyLabel}!`
+        : "Kamu mencapai Puncak Mastermind dan menjadi Grand Mastermind Negeri Cahaya Ilmu!"
+      : successTexts[succIdx],
     failureText: failTexts[failIdx],
-    worldImpactText: isFinal ? `Cahaya keemasan menyelimuti seluruh Negeri Cahaya Ilmu. Perjalananmu di tingkat ini membawa perubahan besar!` : impacts[impactIdx],
+    worldImpactText: isFinal
+      ? nextDifficultyLabel
+        ? `${worldName} bersinar terang. Gerbang menuju tingkat ${nextDifficultyLabel} kini terbuka untukmu.`
+        : `${worldName} bersinar terang. Negeri Cahaya Ilmu merayakan lahirnya seorang Grand Mastermind.`
+      : impacts[impactIdx],
     companionId,
     companionHint,
   };

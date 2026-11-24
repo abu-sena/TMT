@@ -4,6 +4,7 @@
  * Battle categories: Fokus Cepat, Logika, Spasial, Campuran, Family Challenge.
  * Adab games excluded from Battle.
  */
+import { ArrowLeft as TmtBackGlyph } from "lucide-react";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import type { Profile, BattlePlayer, BattleSession, BattleRound, BattleTurn, BattleAward, BattleDifficultyMode, DifficultyId } from "@/types";
 import { GameButton } from "../game/GameButton";
@@ -17,6 +18,9 @@ import {
 } from "@/lib/battle-game-pool";
 import type React from "react";
 import { AvatarPortrait } from "@/components/profile/AvatarPortrait";
+import { CelebrationArt } from "@/components/rewards/GameCelebrationDialog";
+import { MemoryObjectIcon, getMemoryObjectLabel } from "@/components/minigames/MemoryObjectIcon";
+import { MiniGameSprite, PathTileArt, getPathTileLabel, preloadMiniGameSprites } from "@/components/minigames/MiniGameArt";
 
 interface Props {
   profiles: Profile[];
@@ -53,6 +57,7 @@ const DIFFICULTY_OPTIONS: { id: DifficultyId; label: string; emoji: string }[] =
 ];
 
 export function BattleScreen({ profiles, onBack, backRef }: Props) {
+  preloadMiniGameSprites("memory", "props", "nature", "path");
   const { saveBattleHistory } = useGameStore();
 
   const [phase, setPhase] = useState<Phase>("select-players");
@@ -471,7 +476,7 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
   const darkBg = "h-[100dvh] bg-gradient-to-b from-[#0A1628] via-[#1B3A5C] to-[#0F2847]";
   const header = (title: string, subtitle?: string, extra?: React.ReactNode) => (
     <header className="shrink-0 px-4 pt-safe mt-2 pb-3 flex items-center gap-3">
-      <button onClick={() => backRef.current?.()} className="h-12 w-12 rounded-2xl bg-white/10 border-2 border-white/20 text-white grid place-items-center text-xl shrink-0 active:scale-95">←</button>
+      <button type="button" aria-label="Kembali" onClick={() => backRef.current?.()} className="tmt-icon-button h-12 w-12 rounded-2xl bg-white/10 border-2 border-white/20 text-white grid place-items-center text-xl shrink-0 active:scale-95"><TmtBackGlyph aria-hidden="true" /></button>
       <div className="flex-1"><h1 className="font-display font-black text-xl sm:text-2xl text-white">{title}</h1>{subtitle && <p className="text-xs text-white/60">{subtitle}</p>}</div>
       {extra}
     </header>
@@ -486,8 +491,8 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
         {profiles.map(p => {
           const sel = selectedPlayerIds.has(p.id);
           return (
-            <button key={p.id} onClick={() => togglePlayer(p.id)}
-              className={`w-full rounded-2xl p-4 flex items-center gap-4 border-4 transition-all active:scale-[0.98] ${sel ? "bg-gradient-meadow/30 border-[#2E8B12]" : "bg-white/10 border-white/10"}`}>
+            <button type="button" key={p.id} onClick={() => togglePlayer(p.id)} aria-pressed={sel}
+              className={`tmt-choice-button w-full rounded-2xl p-4 flex items-center gap-4 border-4 transition-all active:scale-[0.98] ${sel ? "bg-gradient-meadow/30 border-[#2E8B12]" : "bg-white/10 border-white/10"}`}>
               <AvatarPortrait avatar={p.avatar} className="h-14 w-14 rounded-2xl shrink-0" />
               <div className="flex-1 text-left min-w-0"><div className="font-display font-black text-lg text-white truncate">{p.name}</div><div className="text-xs text-white/60">Level {p.level} · {p.difficulty.toUpperCase()}</div></div>
               <div className={`h-8 w-8 rounded-full grid place-items-center text-lg shrink-0 ${sel ? "bg-[#2E8B12] text-white" : "bg-white/20 text-white/50"}`}>{sel ? "✓" : "+"}</div>
@@ -512,13 +517,13 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
         {header("Pilih Game Battle", `${selectedPlayers.length} pemain`, <div className="text-2xl">🎮</div>)}
         <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-2 pb-4">
           {/* Battle Campuran — always first */}
-          <button onClick={() => {
+          <button type="button" onClick={() => {
             setBattleCategory("campuran");
             // Default: semua game dicentang
             setSelectedMixedGameIds(new Set(allBattleGames.map(g => g.gameId)));
             setPhase("select-campuran-games");
           }}
-            className="w-full rounded-2xl p-4 text-left border-4 transition-all active:scale-[0.98] bg-gradient-to-r from-[#7B1FA2] to-[#E040FB] border-[#4A148C]">
+            className="tmt-choice-button w-full rounded-2xl p-4 text-left border-4 transition-all active:scale-[0.98] bg-gradient-to-r from-[#7B1FA2] to-[#E040FB] border-[#4A148C]">
             <div className="flex items-center gap-3">
               <span className="text-3xl">🎲</span>
               <div className="flex-1 min-w-0"><div className="font-display font-black text-lg text-white">Battle Campuran</div><div className="text-xs text-white/80">Pilih game mana saja, sistem akan mengacak di setiap ronde.</div></div>
@@ -527,8 +532,8 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
           </button>
           {/* Individual game cards */}
           {allBattleGames.map(g => (
-            <button key={g.gameId} onClick={() => { setSelectedGameId(g.gameId); setBattleCategory(g.battleCategory || "fokus-cepat"); setPhase("select-rounds"); }}
-              className="w-full rounded-2xl p-3 text-left border-2 transition-all active:scale-[0.98] bg-white/5 border-white/10 hover:border-[#185E9F]/50">
+            <button type="button" key={g.gameId} onClick={() => { setSelectedGameId(g.gameId); setBattleCategory(g.battleCategory || "fokus-cepat"); setPhase("select-rounds"); }}
+              className="tmt-choice-button w-full rounded-2xl p-3 text-left border-2 transition-all active:scale-[0.98] bg-white/5 border-white/10 hover:border-[#185E9F]/50">
               <div className="flex items-center gap-3">
                 <span className="text-2xl">{g.emoji}</span>
                 <div className="flex-1 min-w-0"><div className="font-display font-black text-base text-white">{g.title}</div><div className="text-[10px] text-white/50">{g.packageId}</div></div>
@@ -548,8 +553,8 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
       {header("Jumlah Ronde", undefined, <div className="text-2xl">🔢</div>)}
       <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-3 pb-4">
         {ROUND_OPTIONS.map(opt => (
-          <button key={opt.count} onClick={() => { setRoundCount(opt.count); setPhase("select-difficulty"); }}
-            className={`w-full rounded-2xl p-4 text-left border-4 transition-all active:scale-[0.98] ${roundCount === opt.count ? "bg-gradient-coin/30 border-[#D48806]" : "bg-white/10 border-white/10"}`}>
+          <button type="button" key={opt.count} onClick={() => { setRoundCount(opt.count); setPhase("select-difficulty"); }}
+            className={`tmt-choice-button w-full rounded-2xl p-4 text-left border-4 transition-all active:scale-[0.98] ${roundCount === opt.count ? "bg-gradient-coin/30 border-[#D48806]" : "bg-white/10 border-white/10"}`}>
             <div className="font-display font-black text-lg text-white">{opt.label}</div><div className="text-xs text-white/60">{opt.desc}</div>
           </button>
         ))}
@@ -563,12 +568,12 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
     <div className={`${darkBg} flex flex-col overflow-hidden`}>
       {header("Sistem Difficulty", undefined, <div className="text-2xl">⚖️</div>)}
       <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-3 pb-4">
-        <button onClick={() => { setDifficultyMode("seimbang"); startBattle(); }}
-          className={`w-full rounded-2xl p-4 text-left border-4 transition-all active:scale-[0.98] ${difficultyMode === "seimbang" ? "bg-gradient-meadow/30 border-[#2E8B12]" : "bg-white/10 border-white/10"}`}>
+        <button type="button" onClick={() => { setDifficultyMode("seimbang"); startBattle(); }}
+          className={`tmt-choice-button w-full rounded-2xl p-4 text-left border-4 transition-all active:scale-[0.98] ${difficultyMode === "seimbang" ? "bg-gradient-meadow/30 border-[#2E8B12]" : "bg-white/10 border-white/10"}`}>
           <div className="flex items-center gap-3"><span className="text-3xl">🎯</span><div><div className="font-display font-black text-lg text-white">Mode Seimbang</div><div className="text-xs text-white/60">Soal menyesuaikan difficulty masing-masing.</div></div></div>
         </button>
-        <button onClick={() => setPhase("set-difficulty")}
-          className={`w-full rounded-2xl p-4 text-left border-4 transition-all active:scale-[0.98] ${difficultyMode === "setara" ? "bg-gradient-blue/30 border-[#185E9F]" : "bg-white/10 border-white/10"}`}>
+        <button type="button" onClick={() => setPhase("set-difficulty")}
+          className={`tmt-choice-button w-full rounded-2xl p-4 text-left border-4 transition-all active:scale-[0.98] ${difficultyMode === "setara" ? "bg-gradient-blue/30 border-[#185E9F]" : "bg-white/10 border-white/10"}`}>
           <div className="flex items-center gap-3"><span className="text-3xl">⚖️</span><div><div className="font-display font-black text-lg text-white">Mode Setara</div><div className="text-xs text-white/60">Semua pemain dapat soal level sama.</div></div></div>
         </button>
       </main>
@@ -582,8 +587,8 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
       {header("Pilih Tingkat")}
       <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-3 pb-4">
         {DIFFICULTY_OPTIONS.map(d => (
-          <button key={d.id} onClick={() => { setSetDifficulty(d.id); startBattle(); }}
-            className={`w-full rounded-2xl p-4 flex items-center gap-4 border-4 transition-all active:scale-[0.98] ${setDifficulty === d.id ? "bg-gradient-coin/30 border-[#D48806]" : "bg-white/10 border-white/10"}`}>
+          <button type="button" key={d.id} onClick={() => { setSetDifficulty(d.id); startBattle(); }}
+            className={`tmt-choice-button w-full rounded-2xl p-4 flex items-center gap-4 border-4 transition-all active:scale-[0.98] ${setDifficulty === d.id ? "bg-gradient-coin/30 border-[#D48806]" : "bg-white/10 border-white/10"}`}>
             <span className="text-3xl">{d.emoji}</span><span className="font-display font-black text-lg text-white">{d.label}</span>
           </button>
         ))}
@@ -609,16 +614,16 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
         {header("Pilih Game Campuran", `${selectedMixedGameIds.size} game dipilih`, <div className="text-2xl">🎲</div>)}
         <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-3 pb-4">
           <div className="flex gap-1.5 flex-wrap">
-            <button onClick={() => selectPreset(allBattleGames.map(g => g.gameId))} className="px-3 py-1.5 rounded-full bg-white/10 text-white text-[10px] font-bold active:scale-95">✅ Pilih Semua</button>
-            <button onClick={() => setSelectedMixedGameIds(new Set())} className="px-3 py-1.5 rounded-full bg-white/10 text-white text-[10px] font-bold active:scale-95">🗑 Hapus Semua</button>
-            <button onClick={() => selectPreset(cepatGames.map(g => g.gameId))} className="px-3 py-1.5 rounded-full bg-[#2196F3]/30 text-white text-[10px] font-bold active:scale-95">⚡ Cepat</button>
-            <button onClick={() => selectPreset(spasialGames.map(g => g.gameId))} className="px-3 py-1.5 rounded-full bg-[#4CAF50]/30 text-white text-[10px] font-bold active:scale-95">🔷 Visual</button>
-            <button onClick={() => selectPreset(logikaGames.map(g => g.gameId))} className="px-3 py-1.5 rounded-full bg-[#9C27B0]/30 text-white text-[10px] font-bold active:scale-95">🧠 Logika</button>
-            <button onClick={() => selectPreset(numerasiGames.map(g => g.gameId))} className="px-3 py-1.5 rounded-full bg-[#FF9800]/30 text-white text-[10px] font-bold active:scale-95">🔢 Numerasi</button>
+            <button type="button" data-action="secondary" onClick={() => selectPreset(allBattleGames.map(g => g.gameId))} className="tmt-action-button px-3 py-1.5 rounded-full bg-white/10 text-white text-[10px] font-bold active:scale-95">✅ Pilih Semua</button>
+            <button type="button" data-action="danger-outline" onClick={() => setSelectedMixedGameIds(new Set())} className="tmt-action-button px-3 py-1.5 rounded-full bg-white/10 text-white text-[10px] font-bold active:scale-95">🗑 Hapus Semua</button>
+            <button type="button" onClick={() => selectPreset(cepatGames.map(g => g.gameId))} className="tmt-choice-button px-3 py-1.5 rounded-full bg-[#2196F3]/30 text-white text-[10px] font-bold active:scale-95">⚡ Cepat</button>
+            <button type="button" onClick={() => selectPreset(spasialGames.map(g => g.gameId))} className="tmt-choice-button px-3 py-1.5 rounded-full bg-[#4CAF50]/30 text-white text-[10px] font-bold active:scale-95">🔷 Visual</button>
+            <button type="button" onClick={() => selectPreset(logikaGames.map(g => g.gameId))} className="tmt-choice-button px-3 py-1.5 rounded-full bg-[#9C27B0]/30 text-white text-[10px] font-bold active:scale-95">🧠 Logika</button>
+            <button type="button" onClick={() => selectPreset(numerasiGames.map(g => g.gameId))} className="tmt-choice-button px-3 py-1.5 rounded-full bg-[#FF9800]/30 text-white text-[10px] font-bold active:scale-95">🔢 Numerasi</button>
           </div>
           {allBattleGames.map(g => (
-            <button key={g.gameId} onClick={() => toggleGame(g.gameId)}
-              className={`w-full rounded-2xl p-3 text-left border-2 transition-all active:scale-[0.98] flex items-center gap-3 ${selectedMixedGameIds.has(g.gameId) ? "bg-white/15 border-[#185E9F]" : "bg-white/5 border-white/10 opacity-60"}`}>
+            <button type="button" key={g.gameId} onClick={() => toggleGame(g.gameId)}
+              className={`tmt-choice-button w-full rounded-2xl p-3 text-left border-2 transition-all active:scale-[0.98] flex items-center gap-3 ${selectedMixedGameIds.has(g.gameId) ? "bg-white/15 border-[#185E9F]" : "bg-white/5 border-white/10 opacity-60"}`}>
               <div className={`w-6 h-6 rounded-lg grid place-items-center border-2 text-sm ${selectedMixedGameIds.has(g.gameId) ? "bg-[#2E8B12] border-[#2E8B12] text-white" : "border-white/30"}`}>
                 {selectedMixedGameIds.has(g.gameId) ? "✓" : ""}
               </div>
@@ -680,7 +685,7 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
       <GameCard tone="blue" className="text-center w-full max-w-sm p-6 text-white">
         <div className="text-6xl mb-4">👀</div>
         <h2 className="font-display font-black text-2xl mb-2">Hafalkan!</h2>
-        <div className="flex justify-center flex-wrap gap-3 text-5xl mb-6">{questionData?.data?.items?.map((item: string, i: number) => <span key={i} className="drop-shadow-lg">{item}</span>)}</div>
+        <div className="flex justify-center flex-wrap gap-3 text-5xl mb-6">{questionData?.data?.items?.map((item: string, i: number) => <MemoryObjectIcon key={i} value={item} className="size-12" />)}</div>
         <GameButton variant="primary" size="md" full onClick={startIngatanRecall}>🧠 Aku Siap!</GameButton>
       </GameCard>
     </div>
@@ -699,7 +704,9 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
         <main className="flex-1 flex flex-col items-center justify-center min-h-0">
           <div className="grid grid-cols-3 gap-2 sm:gap-3 w-full max-w-sm">
             {choices.map((c, i) => (
-              <button key={i} onClick={() => handleAnswer(c)} className="h-16 sm:h-20 rounded-2xl bg-white border-4 border-[#CBB794] grid place-items-center text-3xl shadow-pop active:translate-y-[4px]">{c.label}</button>
+              <button type="button" key={i} onClick={() => handleAnswer(c)} aria-label={getMemoryObjectLabel(c.label)} className="tmt-choice-button h-16 sm:h-20 rounded-2xl bg-white border-4 border-[#CBB794] grid place-items-center text-3xl shadow-pop active:translate-y-[4px]">
+                <MemoryObjectIcon value={c.label} className="size-11" decorative />
+              </button>
             ))}
           </div>
         </main>
@@ -725,7 +732,7 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
         <main className="flex-1 flex flex-col items-center justify-center min-h-0">
           <GameCard tone="cream" className="w-full max-w-sm text-center py-6 mb-4 border-4 shrink-0">
             {gameType === "hitung-kilat" && <div className="font-display font-black text-5xl sm:text-6xl text-[#5A3515]">{questionData?.data?.display}</div>}
-            {gameType === "pola-kilat" && <><div className="text-xs font-bold text-[#8C6B45] mb-3 uppercase">Apa selanjutnya?</div><div className="flex justify-center items-center gap-1 sm:gap-2 text-3xl flex-wrap">{questionData?.data?.seq?.map((e: string, i: number) => <span key={i}>{e}</span>)}<span className="text-[#A02020] font-black text-4xl ml-1">?</span></div></>}
+            {gameType === "pola-kilat" && <><div className="text-xs font-bold text-[#8C6B45] mb-3 uppercase">Apa selanjutnya?</div><div className="flex justify-center items-center gap-1 sm:gap-2 text-3xl flex-wrap">{questionData?.data?.seq?.map((e: string, i: number) => <MemoryObjectIcon key={i} value={e} className="size-9 sm:size-11" />)}<span className="text-[#A02020] font-black text-4xl ml-1">?</span></div></>}
             {(gameType === "detektif-petunjuk" || gameType === "tebak-aturan" || gameType === "pilih-kesimpulan") && <><div className="text-xs font-bold uppercase text-[#8C6B45] mb-2">{gameType === "detektif-petunjuk" ? "🕵️ Detektif" : gameType === "tebak-aturan" ? "📐 Tebak Aturan" : "💡 Kesimpulan"}</div><p className="font-bold text-base sm:text-lg text-[#5A3515] leading-snug px-2">{questionData?.data?.prompt}</p></>}
             {gameType === "benar-atau-salah" && <><div className="text-xs font-bold uppercase text-[#8C6B45] mb-2">✅ Benar atau Salah?</div><p className="font-bold text-base sm:text-lg text-[#5A3515] leading-snug px-2">{questionData?.data?.text}</p></>}
             {gameType === "kode-warna" && <><div className="text-xs font-bold uppercase text-[#8C6B45] mb-2">🎨 Kode Warna</div><p className="text-sm text-[#5A3515]">Temukan pola yang benar!</p></>}
@@ -734,9 +741,10 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
           </GameCard>
           <div className={`grid ${gridCols} gap-2 sm:gap-3 w-full max-w-sm`}>
             {choices.map((c, i) => (
-              <button key={i} onClick={() => handleAnswer(c)}
-                className={`h-16 sm:h-20 rounded-2xl bg-white border-4 border-[#CBB794] text-[#5A3515] font-display font-black text-lg sm:text-xl shadow-pop active:translate-y-[4px] transition-all ${gameType === "benar-atau-salah" ? "text-2xl" : ""}`}>
-                {c.label}
+              <button type="button" key={i} onClick={() => handleAnswer(c)}
+                aria-label={gameType === "pola-kilat" ? getMemoryObjectLabel(c.label) : undefined}
+                className={`tmt-choice-button h-16 sm:h-20 rounded-2xl bg-white border-4 border-[#CBB794] text-[#5A3515] font-display font-black text-lg sm:text-xl shadow-pop active:translate-y-[4px] transition-all ${gameType === "benar-atau-salah" ? "text-2xl" : ""}`}>
+                {gameType === "pola-kilat" ? <MemoryObjectIcon value={c.label} className="size-11" decorative /> : c.label}
               </button>
             ))}
           </div>
@@ -776,9 +784,10 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
                   if (isPath && !isStart && !isGoal) bg = "bg-[#A5D6A7]";
                   if (isCurrent && !isStart && !isGoal) bg = "bg-[#81C784]";
                   return (
-                    <button key={`${ri}-${ci}`} onClick={() => fpClickCell(ri, ci)} disabled={fpReachedGoal}
-                      className={`rounded-[3px] grid place-items-center text-sm sm:text-lg select-none ${bg} ${!fpReachedGoal && !isBlocked ? "active:scale-90" : ""} ${isBlocked ? "cursor-not-allowed" : "cursor-pointer"}`}>
-                      <span className="leading-none">{cell}</span>
+                    <button type="button" key={`${ri}-${ci}`} onClick={() => fpClickCell(ri, ci)} disabled={fpReachedGoal}
+                      aria-label={`${getPathTileLabel(cell)}, baris ${ri + 1}, kolom ${ci + 1}`}
+                      className={`tmt-grid-button rounded-[3px] grid place-items-center text-sm sm:text-lg select-none ${bg} ${!fpReachedGoal && !isBlocked ? "active:scale-90" : ""} ${isBlocked ? "cursor-not-allowed" : "cursor-pointer"}`}>
+                      <PathTileArt value={cell} className="mini-game-tile-art" />
                     </button>
                   );
                 })
@@ -822,9 +831,10 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
               if (isUser) bg = upIsCorrect ? "bg-green-400" : "bg-red-400/60";
               if (isCorrectEnd && upIsCorrect !== null) bg = "bg-green-400 ring-2 ring-yellow-400";
               return (
-                <button key={i} onClick={() => upClickCell(r, c)} disabled={upIsCorrect !== null}
-                  className={`rounded-[2px] text-[8px] sm:text-xs select-none ${bg} ${upIsCorrect === null ? "active:scale-90" : ""}`}>
-                  {isStart ? "🍎" : isUser ? "📍" : ""}
+                <button type="button" key={i} onClick={() => upClickCell(r, c)} disabled={upIsCorrect !== null}
+                  aria-label={`${isStart ? "Titik awal, " : ""}baris ${r + 1}, kolom ${c + 1}`}
+                  className={`tmt-grid-button rounded-[2px] text-[8px] sm:text-xs select-none ${bg} ${upIsCorrect === null ? "active:scale-90" : ""}`}>
+                  {isStart ? <MemoryObjectIcon value="fruit-apple" className="mini-game-tile-art" decorative /> : isUser ? <MiniGameSprite atlas="path" index={5} className="mini-game-tile-art" /> : null}
                 </button>
               );
             })}
@@ -853,7 +863,7 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
           <p className="text-white/60 text-xs">Tersedia:</p>
           <div className="flex gap-2 flex-wrap justify-center">
             {dist.map((c: any, i: number) => (
-              <button key={i} onClick={() => {
+              <button type="button" key={i} aria-label={`Warna ${c.name}`} onClick={() => {
                 clearTimers();
                 const elapsed = Date.now() - turnStartRef.current;
                 const correct = c.name === seq[0]?.name;
@@ -863,7 +873,7 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
                 const turn: BattleTurn = { id: crypto.randomUUID(), roundNumber: session!.currentRound, profileId: currentPlayer!.profileId, gameType: "rantai-warna" as any, questionData: data, shuffledChoices: [], selectedAnswer: { value: c, label: c.emoji }, correctAnswer: seq[0], isCorrect: correct, responseTimeMs: elapsed, baseScore: diffScore.baseScore, speedBonus: diffScore.speedBonus, difficultyBonus: diffScore.difficultyBonus, finalScore: diffScore.finalScore, feedback: fb, createdAt: Date.now() };
                 setCurrentTurn(turn);
                 setTimeout(() => setPhase("feedback"), 700);
-              }} className="bg-white/10 rounded-2xl px-5 py-4 text-3xl active:scale-90 transition-transform">{c.emoji}</button>
+              }} className="tmt-choice-button bg-white/10 rounded-2xl px-5 py-4 text-3xl active:scale-90 transition-transform">{c.emoji}</button>
             ))}
           </div>
         </main>
@@ -906,8 +916,8 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
           <p className="text-white/60 text-xs">Masukkan hasil akhir:</p>
           <input type="number" inputMode="numeric" value={userAnswer} onChange={e => setUserAnswer(e.target.value)} disabled={submitted}
             className="w-32 text-center py-3 rounded-xl bg-white/20 border-2 border-white/30 text-white font-black text-2xl outline-none" />
-          <button onClick={handleSubmit} disabled={submitted || userAnswer.trim() === ""}
-            className="px-8 py-3 rounded-xl bg-gradient-meadow border-b-3 border-[#2E8B12] text-white font-black text-base active:translate-y-0.5 transition-all disabled:opacity-40">
+          <button type="button" onClick={handleSubmit} disabled={submitted || userAnswer.trim() === ""}
+            className="tmt-choice-button px-8 py-3 rounded-xl bg-gradient-meadow border-b-3 border-[#2E8B12] text-white font-black text-base active:translate-y-0.5 transition-all disabled:opacity-40">
             {submitted ? "Diproses..." : "✓ Periksa"}
           </button>
           {submitted && <div className="text-sm font-black px-4 py-2 rounded-xl bg-white/10">{feedbackText}</div>}
@@ -981,7 +991,7 @@ export function BattleScreen({ profiles, onBack, backRef }: Props) {
     const winner = session?.players.find(p => p.profileId === session?.winnerProfileId);
     return (
       <div className={`${darkBg} flex flex-col overflow-hidden`}>
-        <header className="shrink-0 px-4 pt-safe mt-2 pb-3 text-center"><div className="text-5xl mb-2">👑</div><h1 className="font-display font-black text-2xl sm:text-3xl text-yellow-300">Pemenang Battle!</h1></header>
+        <header className="shrink-0 px-4 pt-safe mt-2 pb-3 text-center"><CelebrationArt kind="victory" /><h1 className="font-display font-black text-2xl sm:text-3xl text-yellow-300">Pemenang Battle!</h1></header>
         <main className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 space-y-3 pb-4">
           {winner && <div className="rounded-2xl bg-gradient-to-br from-yellow-400/30 to-yellow-600/20 border-2 border-yellow-400/50 p-5 text-center"><AvatarPortrait avatar={winner.avatar} className="w-20 h-20 rounded-full mx-auto mb-2" /><div className="font-display font-black text-2xl text-yellow-300">{winner.profileName}</div><div className="text-3xl font-black text-white mt-1">{session?.scores[winner.profileId]} poin</div></div>}
           {sorted.map((p, i) => (

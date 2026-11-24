@@ -2,119 +2,33 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#0A1628" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#fbf8f0" />
   <meta name="description" content="Petualangan Ilmu & Akhlak untuk anak Indonesia" />
   <title>TMT</title>
+  <link rel="icon" type="image/png" href="/assets/field-guide/tmt-mark.png" />
   <style>
-    /* Prevent FOUC — show TMT splash background immediately */
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      min-height: 100%;
-      overflow-x: hidden;
-    }
-    body {
-      background: linear-gradient(180deg, #0A1628 0%, #0F2847 30%, #1B3A5C 60%, #1E4D7B 100%);
-      font-family: 'Nunito', system-ui, sans-serif;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-    #root {
-      width: 100%;
-      min-height: 100dvh;
-      overflow-x: hidden;
-    }
-    .tmt-native-splash {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100dvh;
-      width: 100%;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
-    .tmt-native-splash .splash-glow {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 130%;
-      height: 130%;
-      opacity: 0.2;
-      background: radial-gradient(ellipse at center, #FFD700 0%, #1E90FF 40%, transparent 70%);
-      animation: pulse-glow 3s ease-in-out infinite;
-    }
-    .tmt-native-splash .splash-logo {
-      position: relative;
-      z-index: 10;
-      width: min(82vw, 520px);
-      max-height: 40vh;
-      object-fit: contain;
-      filter: drop-shadow(0 4px 20px rgba(30,144,255,0.4));
-      animation: bob 2.5s ease-in-out infinite;
-    }
-    .tmt-native-splash .splash-subtitle {
-      font-weight: 800;
-      color: #87CEEB;
-      text-transform: uppercase;
-      letter-spacing: 0.25em;
-      font-size: 0.75rem;
-      margin-top: 1rem;
-      text-shadow: 0 0 10px rgba(135,206,235,0.5);
-      position: relative;
-      z-index: 10;
-    }
-    .tmt-native-splash .splash-loading-text {
-      color: rgba(135,206,235,0.7);
-      font-weight: 700;
-      font-size: 0.75rem;
-      margin-top: 1.5rem;
-      position: relative;
-      z-index: 10;
-    }
-    .tmt-native-splash .splash-dots {
-      display: flex;
-      justify-content: center;
-      gap: 0.5rem;
-      margin-top: 0.75rem;
-      position: relative;
-      z-index: 10;
-    }
-    .tmt-native-splash .splash-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      animation: bob 2.5s ease-in-out infinite;
-    }
-    .tmt-native-splash .splash-dot:nth-child(1) { background: #FFD700; box-shadow: 0 0 6px #FFD700; animation-delay: 0s; }
-    .tmt-native-splash .splash-dot:nth-child(2) { background: #1E90FF; box-shadow: 0 0 6px #1E90FF; animation-delay: 150ms; }
-    .tmt-native-splash .splash-dot:nth-child(3) { background: #87CEEB; box-shadow: 0 0 6px #87CEEB; animation-delay: 300ms; }
-    @keyframes pulse-glow {
-      0%, 100% { opacity: 0.15; transform: translate(-50%, -50%) scale(1); }
-      50% { opacity: 0.3; transform: translate(-50%, -50%) scale(1.1); }
-    }
-    @keyframes bob {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-6px); }
-    }
+    @font-face { font-family: Nunito; font-weight: 400 900; font-display: swap; src: url("/assets/fonts/nunito-latin.woff2") format("woff2"); }
+    html, body { margin: 0; min-height: 100%; background: #fcf7e9; }
+    .tmt-native-splash { position: relative; isolation: isolate; min-height: 100dvh; display: grid; place-items: center; text-align: center; color: #173c3a; font: 800 1rem Nunito, system-ui, sans-serif; }
+    .tmt-native-splash::before { content: ""; position: absolute; inset: 55% 0 0; z-index: -1; background: linear-gradient(#fcf7e9, transparent 24%), url("/assets/field-guide/kota-ilmu.webp") center 70% / cover; }
+    .tmt-native-splash > div { margin-bottom: 15vh; padding: 1.25rem; }
+    .tmt-native-splash p { margin-block: .5rem 0; }
+    .splash-mark { display: block; width: clamp(10rem, 55vw, 15rem); height: auto; margin-inline: auto; }
+    .splash-dots { display: flex; justify-content: center; gap: .42rem; margin-top: 2rem; }
+    .splash-dots span { width: .45rem; height: .45rem; border-radius: 50%; background: #6fac9a; }
+    .splash-dots span:nth-child(2) { background: #d9b76d; }
+    .splash-dots span:nth-child(3) { background: #9fcfc3; }
   </style>
   <script type="module" src="/src/capacitor-main.tsx"></script>
 </head>
 <body>
   <div id="root">
     <div class="tmt-native-splash">
-      <div class="splash-glow"></div>
-      <img src="./assets/logo.png" alt="TMT Logo" class="splash-logo" />
-      <p class="splash-subtitle">Petualangan Ilmu &amp; Akhlak</p>
-      <p class="splash-loading-text">Memuat Petualangan...</p>
-      <div class="splash-dots">
-        <span class="splash-dot"></span>
-        <span class="splash-dot"></span>
-        <span class="splash-dot"></span>
+      <div>
+        <img class="splash-mark" src="/assets/field-guide/tmt-mark.png" alt="TMT — The Mastermind Trials" width="720" height="720" />
+        <p>Petualangan sang Mastermind</p>
+        <div class="splash-dots" role="status" aria-label="Memuat petualangan"><span></span><span></span><span></span></div>
       </div>
     </div>
   </div>

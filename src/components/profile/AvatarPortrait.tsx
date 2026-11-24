@@ -6,18 +6,24 @@ interface Props {
   className?: string;
 }
 
-const AVATAR_SHEET = "./assets/2d/concepts/tmt-avatar-icons-v2.webp";
+const AVATAR_SHEET = "./assets/field-guide/petualang.webp";
 
-/** Renders a new shinobi sprite ID, while continuing to display saved emoji avatars. */
+/** Existing portrait IDs retain their slot after the art update. */
 export function AvatarPortrait({ avatar, className }: Props) {
-  const index = AVATARS.findIndex(({ id }) => id === avatar);
-  if (index < 0) {
+  const savedIndex = AVATARS.findIndex(({ id }) => id === avatar);
+  if (savedIndex < 0) {
     return (
-      <span className={cn("inline-flex items-center justify-center text-2xl", className)} role="img" aria-label={`Avatar ${avatar}`}>
+      <span
+        className={cn("inline-flex items-center justify-center text-2xl", className)}
+        role="img"
+        aria-label={`Avatar ${avatar || "petualang"}`}
+      >
         {avatar || "🧒"}
       </span>
     );
   }
+
+  const index = savedIndex;
 
   const { label } = AVATARS[index];
   const column = index % 3;

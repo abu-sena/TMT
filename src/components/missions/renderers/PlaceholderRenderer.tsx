@@ -33,17 +33,17 @@ export function PlaceholderRenderer({ mission, revealed, selectedId, wrongIds, o
         </p>
 
         <div className="flex gap-3 justify-center mt-4">
-          <button 
+          <button type="button" data-action="primary"
             disabled={revealed}
             onClick={() => onSelect("WIN_SIMULATION")}
-            className="flex-1 px-4 py-3 rounded-2xl bg-gradient-meadow text-white border-b-4 border-[#2E8B12] font-black shadow-sm active:translate-y-1 active:border-b-0 disabled:opacity-50"
+            className="tmt-action-button flex-1 px-4 py-3 rounded-2xl bg-gradient-meadow text-white border-b-4 border-[#2E8B12] font-black shadow-sm active:translate-y-1 active:border-b-0 disabled:opacity-50"
           >
             Simulasi Menang
           </button>
-          <button 
+          <button type="button" data-action="danger"
             disabled={revealed}
             onClick={() => onSelect("LOSE_SIMULATION")}
-            className="flex-1 px-4 py-3 rounded-2xl bg-gradient-heart text-white border-b-4 border-[#A02020] font-black shadow-sm active:translate-y-1 active:border-b-0 disabled:opacity-50"
+            className="tmt-action-button flex-1 px-4 py-3 rounded-2xl bg-gradient-heart text-white border-b-4 border-[#A02020] font-black shadow-sm active:translate-y-1 active:border-b-0 disabled:opacity-50"
           >
             Simulasi Kalah
           </button>

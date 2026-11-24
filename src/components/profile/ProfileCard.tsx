@@ -15,10 +15,11 @@ export function ProfileCard({ profile, onClick, selected }: Props) {
     <button
       type="button"
       onClick={onClick}
-      className={cn(
+      aria-pressed={selected ?? false}
+      className={cn("tmt-choice-button",
         "w-full rounded-3xl border-2 p-3 flex items-center gap-3 text-left transition-all shadow-card",
         selected
-          ? "bg-gradient-meadow border-leaf-dark text-primary-foreground -translate-y-0.5"
+          ? "bg-[#116764] border-[#116764] text-white"
           : "bg-gradient-cream border-[#8C6B45]/40 hover:-translate-y-0.5",
       )}
     >

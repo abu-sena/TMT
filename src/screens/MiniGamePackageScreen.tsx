@@ -1,6 +1,7 @@
 /**
  * MiniGame Package Screen — lists all mini-games in a package
  */
+import { ArrowLeft as TmtBackGlyph } from "lucide-react";
 import type { Profile, ScreenId, MiniGamePackageId } from "@/types";
 import { getMiniGamesByPackage, getPackageById } from "@/data/minigame-definitions";
 import { GameButton } from "../game/GameButton";
@@ -25,7 +26,7 @@ export function MiniGamePackageScreen({ profile, packageId, onBack, onPlayGame }
         <div className="text-center">
           <div className="text-6xl mb-4">🔍</div>
           <p className="font-bold text-[#5A3515]">Paket tidak ditemukan.</p>
-          <button onClick={onBack} className="mt-4 px-6 py-2 rounded-2xl bg-gradient-meadow text-white font-bold">Kembali</button>
+          <button type="button" data-action="neutral" onClick={onBack} className="tmt-action-button mt-4 px-6 py-2 rounded-2xl bg-gradient-meadow text-white font-bold">Kembali</button>
         </div>
       </div>
     );
@@ -39,12 +40,12 @@ export function MiniGamePackageScreen({ profile, packageId, onBack, onPlayGame }
     <div className="h-[100dvh] bg-gradient-sky flex flex-col overflow-hidden">
       {/* Header */}
       <header className="shrink-0 content-wrapper pt-safe mt-2 pb-3 flex items-center gap-3">
-        <button
+        <button type="button"
           onClick={onBack}
-          className="h-12 w-12 rounded-[18px] bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-xl shadow-sm shrink-0 active:scale-95 transition-transform"
+          className="tmt-icon-button h-12 w-12 rounded-[18px] bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-xl shadow-sm shrink-0 active:scale-95 transition-transform"
           aria-label="Kembali"
         >
-          ←
+          <TmtBackGlyph aria-hidden="true" />
         </button>
         <div className="flex-1 min-w-0">
           <h1 className="font-display font-black text-xl sm:text-2xl text-[#5A3515] truncate">
@@ -127,10 +128,10 @@ export function MiniGamePackageScreen({ profile, packageId, onBack, onPlayGame }
           }
 
           return (
-            <button
+            <button type="button"
               key={game.id}
               onClick={() => game.screenId && onPlayGame(game.screenId)}
-              className="w-full rounded-[24px] p-4 text-left border-4 shadow-pop active:translate-y-1 transition-all bg-white/90 border-[#CBB794] hover:border-[#185E9F]"
+              className="tmt-choice-button w-full rounded-[24px] p-4 text-left border-4 shadow-pop active:translate-y-1 transition-all bg-white/90 border-[#CBB794] hover:border-[#185E9F]"
             >
               <div className="flex items-center gap-3">
                 {/* Game icon */}

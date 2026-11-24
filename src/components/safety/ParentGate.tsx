@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { GameButton } from "@/components/ui/GameButton";
 import { useGameStore } from "@/lib/storage";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 interface Props {
   open: boolean;
@@ -40,7 +41,9 @@ export function ParentGate({ open, onPass, onCancel, title = "Area Orang Tua" }:
     }
   }, [open, hasPassword]);
 
-  if (!open) return null;
+  const inputLabel = mode === "confirm"
+    ? "Konfirmasi password baru"
+    : mode === "recovery" ? "Kode reset" : "Password orang tua";
 
   const triggerError = (msg: string) => {
     setError(msg);
@@ -98,27 +101,25 @@ export function ParentGate({ open, onPass, onCancel, title = "Area Orang Tua" }:
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div
-        className={`surface-panel rounded-[2rem] p-6 max-w-sm w-full shadow-2xl border-4 border-[#D4B483] text-center ${
-          shake ? "animate-boss-shake" : ""
-        }`}
-      >
+    <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onCancel(); }}>
+      <DialogContent hideCloseButton className="z-[100] w-[calc(100%_-_2rem)] max-w-sm gap-0 rounded-[1.5rem] p-5 sm:p-6 text-center shadow-xl">
+      <div className={shake ? "animate-boss-shake" : undefined}>
         <div className="text-5xl mb-3">🔐</div>
-        <h2 className="font-display font-black text-2xl text-[#5A3515] mb-1">
+        <DialogTitle className="font-display font-black text-xl sm:text-2xl text-[#173c3a] mb-2 leading-snug">
           {title}
-        </h2>
+        </DialogTitle>
         
-        <p className="text-sm font-bold text-[#8C6B45] mb-4">
+        <DialogDescription className="text-sm font-bold text-[#8C6B45] mb-4">
           {mode === "create" && "Buat password baru (minimal 4 karakter)."}
           {mode === "confirm" && "Konfirmasi password baru."}
           {mode === "enter" && "Masukkan password orang tua."}
           {mode === "recovery" && "Masukkan kode reset."}
-        </p>
+        </DialogDescription>
 
         <div className="mb-4">
           {mode === "confirm" ? (
             <input
+              id="parent-gate-password"
               type="password"
               inputMode="numeric"
               value={confirmPassword}
@@ -127,14 +128,15 @@ export function ParentGate({ open, onPass, onCancel, title = "Area Orang Tua" }:
                 setError("");
               }}
               onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-              placeholder="Konfirmasi..."
+              placeholder="Ulangi kata sandi"
               autoFocus
-              className={`w-full text-center rounded-[18px] border-4 px-4 py-3 text-2xl font-display font-black tracking-[0.3em] ${
+              className={`w-full text-center rounded-xl border-2 px-3 py-3 text-xl font-display font-black tracking-[0.2em] placeholder:text-sm placeholder:tracking-normal ${
                 error ? "border-[#A02020] bg-[#A02020]/10 text-[#A02020]" : "border-[#CBB794] bg-white text-[#5A3515]"
               } outline-none focus:border-[#2E8B12] transition-colors`}
             />
           ) : (
             <input
+              id="parent-gate-password"
               type={mode === "recovery" ? "text" : "password"}
               inputMode={mode === "recovery" ? "text" : "numeric"}
               value={password}
@@ -143,21 +145,22 @@ export function ParentGate({ open, onPass, onCancel, title = "Area Orang Tua" }:
                 setError("");
               }}
               onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-              placeholder={mode === "recovery" ? "Kode..." : "Password..."}
+              placeholder={mode === "recovery" ? "Kode reset" : "Kata sandi"}
               autoFocus
-              className={`w-full text-center rounded-[18px] border-4 px-4 py-3 text-2xl font-display font-black tracking-[0.3em] ${
+              className={`w-full text-center rounded-xl border-2 px-3 py-3 text-xl font-display font-black tracking-[0.2em] placeholder:text-sm placeholder:tracking-normal ${
                 error ? "border-[#A02020] bg-[#A02020]/10 text-[#A02020]" : "border-[#CBB794] bg-white text-[#5A3515]"
               } outline-none focus:border-[#2E8B12] transition-colors`}
             />
           )}
+          <label htmlFor="parent-gate-password" className="sr-only">{inputLabel}</label>
           {error && (
-            <p className="text-xs font-bold text-[#A02020] mt-2">
+            <p role="alert" aria-live="assertive" className="text-xs font-bold text-[#A02020] mt-2">
               {error}
             </p>
           )}
         </div>
 
-        <div className="flex gap-3 mb-2">
+        <div className="grid grid-cols-2 gap-2">
           <GameButton variant="ghost" size="md" onClick={onCancel} full>
             Batal
           </GameButton>
@@ -173,11 +176,12 @@ export function ParentGate({ open, onPass, onCancel, title = "Area Orang Tua" }:
         </div>
         
         {mode === "enter" && (
-          <button onClick={() => { setMode("recovery"); setPassword(""); setError(""); }} className="text-xs text-[#8C6B45] underline mt-2">
+          <button type="button" onClick={() => { setMode("recovery"); setPassword(""); setError(""); }} className="tmt-text-button text-xs text-[#8C6B45] underline mt-2">
             Lupa Password?
           </button>
         )}
       </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

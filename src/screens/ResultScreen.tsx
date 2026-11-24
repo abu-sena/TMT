@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState, useRef } from "react";
+import { Sprout, Star } from "lucide-react";
 import type { BadgeDef, Mission } from "@/types";
 import { GameButton } from "../game/GameButton";
 import { RewardStars } from "../game/RewardStars";
+import { GameCelebrationDialog } from "@/components/rewards/GameCelebrationDialog";
+import { VictoryDialog } from "@/components/rewards/VictoryDialog";
 
 interface BossStepResult {
   stepId: string;
@@ -29,6 +32,7 @@ interface Props {
   nextDifficulty?: string | null;
   isUniversitas?: boolean;
   onOpenRewardBox?: () => void;
+  onCelebrationsComplete?: () => void;
   onNextMission: () => void;
   onBackToMap: () => void;
 }
@@ -51,10 +55,22 @@ export function ResultScreen({
   nextDifficulty,
   isUniversitas,
   onOpenRewardBox,
+  onCelebrationsComplete,
   onNextMission,
   onBackToMap,
 }: Props) {
   const [showConfetti, setShowConfetti] = useState(isCorrect);
+  const [celebrationIndex, setCelebrationIndex] = useState(0);
+  const celebrations = [
+    ...(isCorrect ? ["victory" as const] : []),
+    ...(leveledUp ? ["level" as const] : []),
+    ...(newBadges.length > 0 ? ["medal" as const] : []),
+  ];
+  const celebration = celebrations[celebrationIndex];
+  const nextCelebration = () => {
+    setCelebrationIndex(celebrationIndex + 1);
+    if (celebrationIndex + 1 === celebrations.length) onCelebrationsComplete?.();
+  };
 
   // ── Gift Box State ──
   // Show gift box only on first-time completion with 3 stars (not boss)
@@ -68,11 +84,11 @@ export function ResultScreen({
   const [showContinueAnyway, setShowContinueAnyway] = useState(false);
 
   useEffect(() => {
-    if (showGiftBox && !isGiftOpened) {
+    if (showGiftBox && !isGiftOpened && !celebration) {
       const t = setTimeout(() => setShowContinueAnyway(true), 8000);
       return () => clearTimeout(t);
     }
-  }, [showGiftBox, isGiftOpened]);
+  }, [showGiftBox, isGiftOpened, celebration]);
 
   useEffect(() => {
     if (showConfetti) {
@@ -172,17 +188,14 @@ export function ResultScreen({
             </h1>
           </>
         ) : (
-          <>
-            <div className="text-6xl animate-pop-in">{isCorrect ? "🎉" : "💪"}</div>
-            <h1 className="mt-2 font-display font-black text-4xl text-[#5A3515] text-center drop-shadow-sm">
-              {isCorrect ? "Misi Berhasil!" : "Coba Lagi Yuk!"}
-            </h1>
-          </>
+          <section className="field-result-hero field-landscape" aria-labelledby="result-heading">
+            <span aria-hidden="true">{isCorrect ? <Star size={24} /> : <Sprout size={24} />}</span>
+            <h1 id="result-heading">{isCorrect ? "Misi berhasil!" : "Ayo coba lagi"}</h1>
+            <p>{mission.title}</p>
+          </section>
         )}
 
-        <p className={`text-center text-base font-bold mt-1 ${isBoss ? "text-white/60" : "text-[#8C6B45]"}`}>
-          {mission.title}
-        </p>
+        {isBoss && <p className="text-center text-base font-bold mt-1 text-white/70">{mission.title}</p>}
 
         <div className="mt-4">
           <RewardStars count={stars} size="xl" animated />
@@ -270,39 +283,34 @@ export function ResultScreen({
           </div>
         )}
 
-        {/* Level Up Overlay Modal */}
-        {leveledUp && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={(e) => (e.currentTarget.style.display = 'none')}>
-            <div className="bg-gradient-sun rounded-[2rem] p-6 text-center shadow-2xl max-w-sm w-full max-h-[90vh] overflow-y-auto overscroll-contain border-4 border-[#D48806] animate-pop-in" onClick={e => e.stopPropagation()}>
-              <div className="text-6xl mb-4 animate-bounce">🎊</div>
-              <h2 className="font-display font-black text-3xl text-[#5A3515] leading-tight">Naik Level!</h2>
-              <p className="mt-2 text-[#5A3515] font-bold text-lg">Luar biasa! Pengetahuan dan adabmu semakin tinggi.</p>
-              <button className="mt-6 w-full py-3 bg-[#5A3515] text-white rounded-[18px] font-black text-lg shadow-sm active:translate-y-1 transition-transform" onClick={(e) => { e.currentTarget.parentElement?.parentElement?.style.setProperty('display', 'none'); }}>Lanjut</button>
-            </div>
-          </div>
+        {celebration === "victory" && (
+          <VictoryDialog
+            title={isBoss ? "Bos ditaklukkan!" : "Misi berhasil!"}
+            context={`Misi ${mission.number} · ${mission.title}`}
+            stars={stars}
+            rewards={[
+              { label: "Poin misi", value: `+${finalPoint}`, icon: "points" },
+              { label: "XP", value: `+${xpGain}`, icon: "xp" },
+            ]}
+            primaryLabel="Lanjut"
+            onPrimary={nextCelebration}
+            onClose={nextCelebration}
+          />
         )}
-
-        {/* Lencana Unlock Overlay Modal */}
-        {newBadges.length > 0 && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={(e) => (e.currentTarget.style.display = 'none')}>
-            <div className="surface-panel rounded-[2rem] p-6 text-center shadow-2xl max-w-sm w-full max-h-[90vh] overflow-y-auto overscroll-contain border-4 border-[#D4B483] animate-pop-in" onClick={e => e.stopPropagation()}>
-              <div className="text-6xl mb-4 animate-float">🏅</div>
-              <h2 className="font-display font-black text-3xl text-[#5A3515] leading-tight">Lencana Baru!</h2>
-              <p className="mt-2 text-[#8C6B45] font-bold text-base mb-4">Pencapaian hebat, kamu mendapatkan gelar baru:</p>
-              <div className="space-y-3">
-                {newBadges.map(b => (
-                  <div key={b.id} className="flex items-center gap-4 bg-[#E8DCC2] p-3 rounded-[18px] border-2 border-[#CBB794] text-left">
-                    <div className="text-4xl bg-white/50 w-12 h-12 rounded-xl flex items-center justify-center border-2 border-white/60 shrink-0">{b.emoji}</div>
-                    <div>
-                      <div className="font-display font-black text-[#5A3515]">{b.name}</div>
-                      <div className="text-xs font-bold text-[#8C6B45] leading-tight">{b.description}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <button className="mt-6 w-full py-3 bg-gradient-meadow border-b-4 border-[#2E8B12] text-white rounded-[18px] font-black text-lg active:translate-y-1 active:border-b-0 transition-all" onClick={(e) => { e.currentTarget.parentElement?.parentElement?.style.setProperty('display', 'none'); }}>Hebat!</button>
-            </div>
-          </div>
+        {celebration === "level" && (
+          <GameCelebrationDialog key="level" kind="level" title="Naik level!" description="Usahamu membuahkan hasil. Level petualangmu naik." onContinue={nextCelebration} />
+        )}
+        {celebration === "medal" && (
+          <GameCelebrationDialog key="medal" kind="medal" title="Lencana baru!" description="Pencapaian ini sudah masuk ke koleksi lencanamu." onContinue={nextCelebration}>
+            <ul className="mt-4 space-y-2 text-left">
+              {newBadges.map(badge => (
+                <li key={badge.id} className="flex items-center gap-3 rounded-xl bg-white/65 p-2.5">
+                  <span aria-hidden="true" className="text-2xl">{badge.emoji}</span>
+                  <div><strong>{badge.name}</strong><p className="text-sm">{badge.description}</p></div>
+                </li>
+              ))}
+            </ul>
+          </GameCelebrationDialog>
         )}
 
         {/* Story Feedback */}
@@ -337,10 +345,10 @@ export function ResultScreen({
           <div className="w-full mt-2 mb-4">
             {/* Closed gift box */}
             {!isGiftOpened && (
-              <button
+              <button type="button"
                 onClick={handleGiftTap}
                 disabled={isGiftAnimating}
-                className={`w-full rounded-[28px] p-6 text-center border-4 shadow-2xl cursor-pointer transition-all active:scale-95 select-none ${
+                className={`tmt-choice-button w-full rounded-[28px] p-6 text-center border-4 shadow-2xl cursor-pointer transition-all active:scale-95 select-none ${
                   isGiftAnimating
                     ? "animate-float border-[#FFD700] bg-gradient-to-b from-[#FFF9E6] to-[#FFE0A3]"
                     : "border-[#D48806] bg-gradient-to-b from-[#FFF9E6] to-[#FFE0A3] hover:border-[#FFD700] hover:shadow-[0_0_30px_rgba(255,215,0,0.5)]"
@@ -423,9 +431,9 @@ export function ResultScreen({
                 <p className="text-xs font-bold text-[#2E8B12] mb-3">
                   Hadiah akhir level sudah menunggu. Buka sekarang!
                 </p>
-                <button
+                <button type="button" data-action="coin"
                   onClick={onOpenRewardBox}
-                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#FFD700] to-[#FFA500] border-b-4 border-[#D48806] text-[#5A3515] font-black text-lg shadow-sm active:translate-y-1 active:border-b-0 transition-all"
+                  className="tmt-action-button w-full py-3 rounded-2xl bg-gradient-to-r from-[#FFD700] to-[#FFA500] border-b-4 border-[#D48806] text-[#5A3515] font-black text-lg shadow-sm active:translate-y-1 active:border-b-0 transition-all"
                 >
                   🎁 Buka Reward
                 </button>

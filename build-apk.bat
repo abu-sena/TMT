@@ -60,7 +60,7 @@ echo [OK] Web build complete
 
 echo.
 echo [STEP 2/3] Syncing with Capacitor...
-call npx cap sync
+call npm run cap:sync
 if %ERRORLEVEL% neq 0 (
     echo [ERROR] Capacitor sync failed
     pause

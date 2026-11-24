@@ -1,4 +1,5 @@
-import { useMemo, useState, useEffect, useRef } from "react";
+import { X as TmtCloseGlyph, ArrowLeft, ChevronDown, ChevronUp, Lock } from "lucide-react";
+import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import type { Mission, Profile, DifficultyId } from "@/types";
 import { DIFFICULTY_MAP, DIFFICULTY_UI_LABELS } from "@/data/constants";
 import { DIFFICULTY_ORDER } from "@/types";
@@ -6,11 +7,12 @@ import { missionsForDifficulty, getDifficultyStatus, getStageCompletionStatus } 
 import { WORLDS_BY_DIFFICULTY } from "@/data/worlds";
 import type { WorldDefinition } from "@/types";
 import { GameScreen } from "@/components/layout/GameScreen";
-import { FixedBottomActionArea } from "@/components/layout/FixedBottomActionArea";
 import { GameButton } from "../game/GameButton";
 import { cn } from "@/lib/utils";
 import { CATEGORY_MAP } from "@/data/constants";
 import { AvatarPortrait } from "@/components/profile/AvatarPortrait";
+import { GameNotice } from "@/components/layout/GameNotice";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 // ══════════════════════════════════════════
 // Map Configuration
@@ -20,6 +22,36 @@ const X_PATTERN = [
   50, 70, 85, 65, 35, 15, 30, 50, 75, 80,
   60, 40, 20, 30, 55, 80, 70, 50, 30, 20
 ]; // X coordinate percentages for nodes to create a winding path
+const TERRAIN_BLEND_STAGES = 3;
+const TERRAIN_ASSET_ROOT = `${import.meta.env.BASE_URL}assets/field-guide/`;
+const TERRAIN_BY_THEME: Record<string, string> = {
+  forest: "hutan",
+  grassland: "padang-rumput",
+  city: "kota",
+  river_bridge: "sungai-jembatan",
+  beach: "pantai",
+  cave: "gua",
+  valley: "lembah",
+  mountain: "pegunungan",
+};
+const TERRAIN_BY_WORLD: Record<string, string> = {
+  "tk-rumah-misteri": "rumah-teka-teki",
+  "sdk-rumah-tekateki": "rumah-teka-teki",
+  "sma-kota-modern": "kota-modern",
+  "sma-sistem-kota": "kota-modern",
+  "sma-gerbang-utama": "gerbang-utama",
+  "univ-puncak-mastermind": "puncak-mastermind",
+};
+
+function getTerrainSource(world: WorldDefinition) {
+  const name = TERRAIN_BY_WORLD[world.id] ?? TERRAIN_BY_THEME[world.backgroundTheme];
+  return name ? `${TERRAIN_ASSET_ROOT}wilayah/${name}.webp` : `${TERRAIN_ASSET_ROOT}jalur-kota-ilmu.webp`;
+}
+
+function blendAtBoundary(stage: number, boundary: number) {
+  const progress = Math.max(0, Math.min(1, (stage - boundary + TERRAIN_BLEND_STAGES) / (2 * TERRAIN_BLEND_STAGES)));
+  return progress * progress * (3 - 2 * progress);
+}
 
 interface MapProps {
   profile: Profile;
@@ -37,6 +69,7 @@ export function MapScreen({ profile, onBack, onOpenMission, onChangeDifficulty, 
   const diff = DIFFICULTY_MAP[profile.difficulty];
   const worlds = useMemo(() => WORLDS_BY_DIFFICULTY[profile.difficulty] || [], [profile.difficulty]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const terrainRef = useRef<HTMLDivElement>(null);
 
   // Difficulty selector state
   const [showDifficultySelector, setShowDifficultySelector] = useState(false);
@@ -55,7 +88,10 @@ export function MapScreen({ profile, onBack, onOpenMission, onChangeDifficulty, 
   // Find which world the player is currently in
   const currentWorldIndex = useMemo(() => {
     const currentMission = missions.find(m => m.number === currentStageNum);
-    if (!currentMission) return 0;
+    if (!currentMission) {
+      const lastMissionNumber = missions[missions.length - 1]?.number ?? 0;
+      return currentStageNum > lastMissionNumber ? Math.max(0, worlds.length - 1) : 0;
+    }
     const idx = worlds.findIndex(w =>
       currentMission.worldArea === w.id ||
       (currentMission.number >= w.stageRange[0] && currentMission.number <= w.stageRange[1])
@@ -66,93 +102,117 @@ export function MapScreen({ profile, onBack, onOpenMission, onChangeDifficulty, 
   const [activeSegmentIndex, setActiveSegmentIndex] = useState(currentWorldIndex);
   const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
 
+  useEffect(() => {
+    setActiveSegmentIndex(currentWorldIndex);
+  }, [profile.difficulty, currentWorldIndex]);
+
   // Pending upgrade
   const hasPendingUpgrade = profile.difficultyUpgradeAvailable && profile.pendingDifficultyUpgrade;
 
-  // Auto scroll to current segment when changing segments
-  useEffect(() => {
-    if (scrollContainerRef.current) {
-      // Scroll to bottom (since start of path is at bottom)
-      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+  const segments = useMemo(() => {
+    let unlocked = true;
+    const visible = [];
+    for (const [index, world] of worlds.entries()) {
+      const stages = missions.filter(m =>
+        m.worldArea === world.id || (m.number >= world.stageRange[0] && m.number <= world.stageRange[1])
+      );
+      visible.push({ index, world, stages, unlocked });
+      if (!unlocked) break;
+      unlocked = stages.length > 0 && stages.every(m => (profile.missionProgress[m.id]?.stars ?? 0) > 0);
     }
-  }, [activeSegmentIndex]);
+    return visible;
+  }, [missions, profile.missionProgress, worlds]);
 
-  // Initial scroll to current stage inside the active segment on mount
-  useEffect(() => {
-    if (scrollContainerRef.current && activeSegmentIndex === currentWorldIndex) {
-      // We want to scroll so the current stage is visible.
-      // Since it's from bottom to top, we can calculate roughly.
-      // For now, let the user scroll up naturally from the bottom of the segment.
-      setTimeout(() => {
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+  const selectedSegment = Math.min(activeSegmentIndex, segments.length - 1);
+  const activeWorld = worlds[selectedSegment];
+  const finalStage = worlds[worlds.length - 1]?.stageRange[1] ?? 0;
+
+  const syncMapViewport = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const center = container.scrollTop + container.clientHeight / 2;
+    for (const section of Array.from(container.querySelectorAll<HTMLElement>("[data-map-section]"))) {
+      const top = section.offsetTop;
+      if (center < top || center >= top + section.offsetHeight) continue;
+      const index = Number(section.dataset.mapSection);
+      const world = worlds[index];
+      if (!world) return;
+      const fraction = 1 - (center - top) / section.offsetHeight;
+      const [first, last] = world.stageRange;
+      const stage = first - 1 + fraction * (last - first + 1);
+      const journey = stage / finalStage;
+      const terrain = terrainRef.current;
+      if (terrain) {
+        terrain.style.setProperty("--terrain-offset", `${-34 * (1 - journey)}%`);
+        const previous = index > 0 && stage < first - 1 + TERRAIN_BLEND_STAGES;
+        const backLayer = previous ? index - 1 : index;
+        const frontLayer = backLayer + 1;
+        const boundary = worlds[backLayer].stageRange[1];
+        const blend = blendAtBoundary(stage, boundary);
+        for (const layer of Array.from(terrain.children)) {
+          if (!(layer instanceof HTMLElement)) continue;
+          const layerIndex = Number(layer.dataset.terrainLayer);
+          const opacity = layerIndex === backLayer ? 1 : layerIndex === frontLayer ? blend : 0;
+          layer.style.setProperty("--terrain-opacity", String(opacity));
         }
-      }, 100);
+      }
+      setActiveSegmentIndex(index);
+      return;
     }
-  }, [activeSegmentIndex, currentWorldIndex]);
+  }, [finalStage, worlds]);
 
-  const activeWorld = worlds[activeSegmentIndex];
-  
-  // Missions for current segment
-  const segmentMissions = useMemo(() => {
-    if (!activeWorld) return [];
-    return missions.filter(m =>
-      m.worldArea === activeWorld.id ||
-      (m.number >= activeWorld.stageRange[0] && m.number <= activeWorld.stageRange[1])
-    );
-  }, [missions, activeWorld]);
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const current = container.querySelector<HTMLElement>("[data-current-stage]");
+    const section = current?.closest<HTMLElement>("[data-map-section]");
+    container.scrollTop = current && section
+      ? section.offsetTop + current.offsetTop - container.clientHeight * .58
+      : currentStageNum > finalStage ? 0 : container.scrollHeight;
+    syncMapViewport();
+  }, [profile.difficulty, currentStageNum, finalStage, segments.length, syncMapViewport]);
 
-  // Unlock state
-  const isSegmentUnlocked = useMemo(() => {
-    if (activeSegmentIndex === 0) return true;
-    const prevWorld = worlds[activeSegmentIndex - 1];
-    if (!prevWorld) return true;
-    
-    // Check if previous world is completed
-    const prevMissions = missions.filter(m =>
-      m.worldArea === prevWorld.id ||
-      (m.number >= prevWorld.stageRange[0] && m.number <= prevWorld.stageRange[1])
-    );
-    return prevMissions.length > 0 && prevMissions.every(m => (profile.missionProgress[m.id]?.stars ?? 0) > 0);
-  }, [activeSegmentIndex, worlds, missions, profile.missionProgress]);
+  function goToSegment(index: number) {
+    const container = scrollContainerRef.current;
+    const section = container?.querySelector<HTMLElement>(`[data-map-section="${index}"]`);
+    if (!container || !section) return;
+    const enteringFromBelow = index > selectedSegment;
+    container.scrollTop = enteringFromBelow
+      ? section.offsetTop + section.offsetHeight - container.clientHeight
+      : section.offsetTop;
+    syncMapViewport();
+  }
 
   if (!activeWorld) return null;
 
   return (
-    <GameScreen className="relative" bgClass="bg-[#81D4FA]">
+    <GameScreen className="relative field-map" bgClass="bg-[#fbf8f0]">
       {/* Header — sticky */}
-      <header className="shrink-0 content-wrapper pt-safe mt-2 pb-3 flex items-center gap-3 relative z-20 bg-gradient-to-b from-black/20 to-transparent">
-        <button
+      <header className="field-map-header field-wrap">
+        <button type="button"
           onClick={onBack}
-          className="h-12 w-12 sm:h-14 sm:w-14 rounded-[18px] bg-white/90 border-4 border-[#CBB794] text-[#5A3515] grid place-items-center text-2xl shadow-pop-sm shrink-0 active:translate-y-[2px]"
+          className="field-back"
           aria-label="Kembali"
         >
-          ←
+          <ArrowLeft size={19} aria-hidden="true" />
         </button>
         
         {/* Difficulty selector button */}
-        <button
+        <button type="button"
           onClick={() => setShowDifficultySelector(!showDifficultySelector)}
-          className="h-12 sm:h-14 px-3 rounded-[18px] bg-white/90 border-3 border-[#CBB794] text-[#5A3515] flex items-center gap-1.5 shadow-pop-sm shrink-0 active:translate-y-[2px]"
-          aria-label="Pilih Level Kesulitan"
+          className="field-back field-map-difficulty"
+          aria-label={`Pilih tingkat kesulitan, saat ini ${diff.shortLabel}`}
+          aria-expanded={showDifficultySelector}
         >
-          <span className="text-xl">{diff.emoji}</span>
-          <span className="font-display font-black text-xs sm:text-sm">{diff.shortLabel}</span>
-          <span className="text-xs">{showDifficultySelector ? "▲" : "▼"}</span>
+          {diff.shortLabel}<ChevronDown size={16} aria-hidden="true" />
         </button>
         
-        <div
-          className="flex-1 min-w-0 bg-white/80 bg-cover bg-center backdrop-blur-md px-4 py-2 rounded-2xl border-2 border-white/50 shadow-sm"
-          style={{
-            backgroundImage: `linear-gradient(90deg, rgba(255,255,255,.96), rgba(255,255,255,.86) 58%, rgba(255,255,255,.6)), url("./assets/2d/worlds/tmt-world-${activeWorld.backgroundTheme.replace(/_/g, "-")}-v1.webp")`,
-            backgroundPosition: "center, center top",
-          }}
-        >
-          <h1 className="font-display font-black text-xl text-[#5A3515] truncate">
+        <div className="field-map-heading">
+          <h1 className="font-display font-black text-xl">
             {activeWorld.name}
           </h1>
-          <p className="text-[#8C6B45] text-xs font-bold truncate">
-            Stage {currentStageNum} · Segmen {activeSegmentIndex + 1} dari {worlds.length}
+          <p className="text-sm font-bold">
+            Wilayah {selectedSegment + 1} dari {worlds.length} · Misi {activeWorld.stageRange[0]}–{activeWorld.stageRange[1]}
           </p>
         </div>
       </header>
@@ -170,7 +230,7 @@ export function MapScreen({ profile, onBack, onOpenMission, onChangeDifficulty, 
               const progress = getStageCompletionStatus(profile, d);
               
               return (
-                <button
+                <button type="button"
                   key={d}
                   onClick={() => {
                     if (status === "locked") {
@@ -184,7 +244,7 @@ export function MapScreen({ profile, onBack, onOpenMission, onChangeDifficulty, 
                     onChangeDifficulty?.(d);
                     setShowDifficultySelector(false);
                   }}
-                  className={`w-full rounded-xl p-2.5 flex items-center gap-3 text-left transition-all active:scale-[0.98] ${
+                  className={`tmt-choice-button w-full rounded-xl p-2.5 flex items-center gap-3 text-left transition-all active:scale-[0.98] ${
                     status === "active"
                       ? "bg-[#185E9F]/10 border-2 border-[#185E9F]"
                       : status === "completed"
@@ -225,13 +285,7 @@ export function MapScreen({ profile, onBack, onOpenMission, onChangeDifficulty, 
       {/* Locked difficulty message toast */}
       {lockedMessage && (
         <div className="shrink-0 content-wrapper mx-4">
-          <div className="bg-[#FFF3E0] border-2 border-[#FF9800] rounded-2xl p-3 flex items-start gap-2">
-            <span className="text-xl shrink-0">🔒</span>
-            <div className="flex-1">
-              <p className="text-xs font-bold text-[#E65100]">{lockedMessage}</p>
-            </div>
-            <button onClick={() => setLockedMessage(null)} aria-label="Tutup pesan level terkunci" className="text-sm text-[#8C6B45] shrink-0">✕</button>
-          </div>
+          <GameNotice tone="warning" onClose={() => setLockedMessage(null)}>{lockedMessage}</GameNotice>
         </div>
       )}
 
@@ -246,9 +300,9 @@ export function MapScreen({ profile, onBack, onOpenMission, onChangeDifficulty, 
               </p>
               <p className="text-[10px] font-bold text-[#5A3515]">Siap naik tingkat?</p>
             </div>
-            <button
+            <button type="button" data-action="primary"
               onClick={() => onHomeUpgrade?.()}
-              className="shrink-0 px-4 py-2 rounded-xl bg-gradient-meadow border-b-3 border-[#1B5E20] text-white font-black text-sm shadow-sm active:translate-y-1 active:border-b-0 transition-all"
+              className="tmt-action-button shrink-0 px-4 py-2 rounded-xl bg-gradient-meadow border-b-3 border-[#1B5E20] text-white font-black text-sm shadow-sm active:translate-y-1 active:border-b-0 transition-all"
             >
               🚀 Naik
             </button>
@@ -257,66 +311,69 @@ export function MapScreen({ profile, onBack, onOpenMission, onChangeDifficulty, 
       )}
 
       {/* Map Segment Container */}
-      <div 
-        ref={scrollContainerRef}
-        className="flex-1 min-h-0 relative w-full overflow-y-auto overflow-x-hidden overscroll-contain scroll-smooth"
-      >
-        <MapSegment 
-          missions={segmentMissions}
-          profile={profile}
-          world={activeWorld}
-          highestCompleted={highestCompleted}
-          isUnlocked={isSegmentUnlocked}
-          onOpenMission={setSelectedMission}
-        />
+      <div className="field-map-track">
+        <div ref={terrainRef} className="field-map-terrain" aria-hidden="true">
+          {segments.map(({ index, world }) => (
+            <img
+              key={world.id}
+              data-terrain-layer={index}
+              data-terrain-initial={index === currentWorldIndex ? "" : undefined}
+              className="field-map-biome"
+              src={getTerrainSource(world)}
+              alt=""
+              decoding="async"
+            />
+          ))}
+        </div>
+        <div ref={scrollContainerRef} className="field-map-scroll" onScroll={syncMapViewport}>
+          {[...segments].reverse().map(({ index, world, stages, unlocked }) => (
+            <MapSegment
+              key={world.id}
+              index={index}
+              missions={stages}
+              profile={profile}
+              world={world}
+              highestCompleted={highestCompleted}
+              isUnlocked={unlocked}
+              onOpenMission={setSelectedMission}
+            />
+          ))}
+        </div>
+        {!segments[selectedSegment]?.unlocked && (
+          <p className="field-map-locked"><Lock size={14} aria-hidden="true" /> Selesaikan wilayah sebelumnya untuk membuka jalur ini.</p>
+        )}
       </div>
 
-      {/* Segment Navigator */}
-      <FixedBottomActionArea sticky={false} className="z-20 pointer-events-none">
-        <div className="flex justify-between items-center gap-4 pointer-events-auto">
-          <GameButton
-            variant="ghost"
-            size="md"
-            disabled={activeSegmentIndex === 0}
-            onClick={() => setActiveSegmentIndex(i => Math.max(0, i - 1))}
-            className="bg-white/90 backdrop-blur-sm border-2 border-[#CBB794] shadow-pop-sm flex-1"
-          >
-            ↓ Sebelumnya
-          </GameButton>
-          
-          <GameButton
-            variant="primary"
-            size="md"
-            disabled={activeSegmentIndex === worlds.length - 1 || !isSegmentUnlocked}
-            onClick={() => setActiveSegmentIndex(i => Math.min(worlds.length - 1, i + 1))}
-            className="flex-1 shadow-pop-sm"
-          >
-            Berikutnya ↑
-          </GameButton>
-        </div>
-      </FixedBottomActionArea>
+      <nav className="field-map-nav field-wrap" aria-label="Navigasi wilayah">
+        <button type="button" className="field-back" disabled={selectedSegment <= 0} onClick={() => goToSegment(selectedSegment - 1)}>
+          <ChevronDown size={17} aria-hidden="true" /> Sebelumnya
+        </button>
+        <button type="button" className="field-button" disabled={selectedSegment >= segments.length - 1} onClick={() => goToSegment(selectedSegment + 1)}>
+          Berikutnya <ChevronUp size={17} aria-hidden="true" />
+        </button>
+      </nav>
     
-      {selectedMission && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4" onClick={() => setSelectedMission(null)}>
-          <div className="bg-white rounded-3xl p-6 w-full max-w-sm border-4 border-[#8C6B45] shadow-2xl relative" onClick={e => e.stopPropagation()}>
+      <Dialog open={!!selectedMission} onOpenChange={(open) => { if (!open) setSelectedMission(null); }}>
+        {selectedMission && (
+          <DialogContent hideCloseButton className="w-[calc(100%-2rem)] max-w-sm max-h-[88dvh] overflow-y-auto rounded-3xl border p-6 shadow-2xl">
+            <DialogDescription className="sr-only">Pratinjau misi yang dipilih dan tombol untuk memulainya.</DialogDescription>
             <button 
-              className="absolute top-3 right-3 w-8 h-8 rounded-full bg-stone-200 text-stone-600 font-bold flex items-center justify-center hover:bg-stone-300"
+              type="button"
+              aria-label="Tutup pratinjau misi"
+              className="tmt-icon-button absolute top-3 right-3 w-8 h-8 rounded-full bg-stone-200 text-stone-600 font-bold flex items-center justify-center hover:bg-stone-300"
               onClick={() => setSelectedMission(null)}
             >
-              ✕
+              <TmtCloseGlyph aria-hidden="true" />
             </button>
             <div className="text-center mb-6">
-              <h2 className="text-2xl font-black text-[#5A3515] font-display mb-1">
-                Stage {selectedMission.number}
-              </h2>
-              <div className="inline-flex items-center gap-2 bg-stone-100 px-3 py-1.5 rounded-full text-sm font-bold text-stone-600 mb-4">
+              <p className="text-sm font-bold text-[#49625a]">Misi {selectedMission.number}</p>
+              <DialogTitle className="text-2xl font-black text-[#173c3a] font-display mt-1 px-5">
+                {selectedMission.title}
+              </DialogTitle>
+              <div className="inline-flex items-center gap-2 bg-white/75 px-3 py-1.5 rounded-full text-sm font-bold text-[#49625a] mt-3">
                 <span>{CATEGORY_MAP[selectedMission.category]?.emoji || "🎮"}</span>
-                <span>Jenis: {CATEGORY_MAP[selectedMission.category]?.short || selectedMission.category}</span>
+                <span>{CATEGORY_MAP[selectedMission.category]?.short || "Petualangan"}</span>
               </div>
-              <p className="text-lg text-[#8C6B45] font-bold">
-                Tantangan:<br/>
-                <span className="text-[#E91E63]">{selectedMission.challengeType?.replace(/_/g, " ").toUpperCase() || selectedMission.missionType.replace(/_/g, " ").toUpperCase()}</span>
-              </p>
             </div>
             <GameButton variant="primary" size="xl" full onClick={() => {
               const m = selectedMission;
@@ -325,9 +382,9 @@ export function MapScreen({ profile, onBack, onOpenMission, onChangeDifficulty, 
             }}>
               Mulai Petualangan
             </GameButton>
-          </div>
-        </div>
-      )}
+          </DialogContent>
+        )}
+      </Dialog>
 
     </GameScreen>
   );
@@ -337,6 +394,7 @@ export function MapScreen({ profile, onBack, onOpenMission, onChangeDifficulty, 
 // Map Segment Component
 // ══════════════════════════════════════════
 interface MapSegmentProps {
+  index: number;
   missions: Mission[];
   profile: Profile;
   world: WorldDefinition;
@@ -345,9 +403,7 @@ interface MapSegmentProps {
   onOpenMission: (m: Mission) => void;
 }
 
-function MapSegment({ missions, profile, world, highestCompleted, isUnlocked, onOpenMission }: MapSegmentProps) {
-  // Determine Map Background style based on world index/theme
-  // Using themeColor as a base, and adding pseudo-elements or images if possible
+function MapSegment({ index, missions, profile, world, highestCompleted, isUnlocked, onOpenMission }: MapSegmentProps) {
   const segmentHeight = missions.length * NODE_HEIGHT + 300;
   
   // Calculate exact coordinates for each node
@@ -367,7 +423,7 @@ function MapSegment({ missions, profile, world, highestCompleted, isUnlocked, on
   // SVG Path generation (smooth bezier from bottom to top)
   let pathD = "";
   if (nodes.length > 0) {
-    pathD = `M ${nodes[0].x} ${100 - nodes[0].y}`; // start at node 0 (bottom-most, which is 100-y in SVG viewbox)
+    pathD = `M 50 100 L ${nodes[0].x} ${100 - nodes[0].y}`;
     for (let i = 0; i < nodes.length - 1; i++) {
       const p1 = nodes[i];
       const p2 = nodes[i+1];
@@ -382,46 +438,31 @@ function MapSegment({ missions, profile, world, highestCompleted, isUnlocked, on
       pathD += ` C ${cx1} ${cy1}, ${cx2} ${cy2}, ${p2.x} ${svgY2}`;
     }
     
-    // Extend path a bit at start and end
-    if (nodes.length > 1) {
-      pathD = `M ${nodes[0].x} 100 L ${nodes[0].x} ${100 - nodes[0].y} ` + pathD;
-      const last = nodes[nodes.length - 1];
-      pathD += ` L ${last.x} 0`;
-    }
+    const last = nodes[nodes.length - 1];
+    const midpoint = (100 - last.y) / 2;
+    pathD += ` C ${last.x} ${midpoint}, 50 ${midpoint}, 50 0`;
   }
 
-  // Determine background style based on world.backgroundTheme
-  const getBgStyle = () => {
-    const themeBackgrounds: Record<string, string> = {
-      forest: "linear-gradient(to top, #2E7D32, #66BB6A, #A5D6A7)",
-      grassland: "linear-gradient(to top, #558B2F, #9CCC65, #C5E1A5)",
-      river_bridge: "linear-gradient(to top, #0288D1, #4FC3F7, #B3E5FC)",
-      cave: "linear-gradient(to top, #3E2723, #6D4C41, #8D6E63)",
-      mountain: "linear-gradient(to top, #37474F, #607D8B, #90A4AE)",
-      beach: "linear-gradient(to top, #00838F, #4DD0E1, #FFF9C4)",
-      valley: "linear-gradient(to top, #5D4037, #8BC34A, #DCEDC8)",
-      city: "linear-gradient(to top, #37474F, #546E7A, #B0BEC5)",
-    };
-    return { background: themeBackgrounds[world.backgroundTheme] || themeBackgrounds.forest };
-  };
-
   return (
-    <div 
-      className="relative w-full transition-opacity duration-500" 
-      style={{ height: segmentHeight, ...getBgStyle(), opacity: isUnlocked ? 1 : 0.6 }}
+    <section
+      data-map-section={index}
+      aria-label={world.name}
+      className="relative w-full field-map-segment"
+      style={{ height: segmentHeight }}
     >
       {/* Decorative SVG Path */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none" viewBox="0 0 100 100">
+      <svg className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true" preserveAspectRatio="none" viewBox="0 0 100 100">
         {/* Shadow/Border of path */}
-        <path d={pathD} stroke="#8C6B45" strokeWidth="46" fill="none" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" opacity="0.3" />
+        <path d={pathD} stroke="#578975" strokeWidth="26" fill="none" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" opacity="0.38" />
         {/* Main Dirt Path */}
-        <path d={pathD} stroke="#FFE0B2" strokeWidth="40" fill="none" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
+        <path d={pathD} stroke="#fff4d7" strokeWidth="21" fill="none" vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />
         {/* Inner dashed detail */}
-        <path d={pathD} stroke="#FFB74D" strokeWidth="4" fill="none" vectorEffect="non-scaling-stroke" strokeDasharray="15 25" />
+        <path d={pathD} stroke="#aa8954" strokeWidth="2" fill="none" vectorEffect="non-scaling-stroke" strokeDasharray="7 12" />
       </svg>
-
-      {/* Decorative Elements (Randomly placed clouds/trees) */}
-      <MapDecorations seed={world.id} segmentHeight={segmentHeight} />
+      <span className="field-map-waypoint">
+        {!isUnlocked && <Lock size={13} aria-hidden="true" />}
+        {world.name}
+      </span>
 
       {/* Stage Nodes */}
       {nodes.map(({ mission: m, x, yPx }) => {
@@ -454,6 +495,7 @@ function MapSegment({ missions, profile, world, highestCompleted, isUnlocked, on
         return (
           <div 
             key={m.id} 
+            data-current-stage={state === "current" ? "" : undefined}
             className="absolute transform -translate-x-1/2 translate-y-1/2 z-10 flex flex-col items-center"
             style={{ left: `${x}%`, bottom: `${yPx}px` }}
           >
@@ -471,17 +513,7 @@ function MapSegment({ missions, profile, world, highestCompleted, isUnlocked, on
         );
       })}
 
-      {/* Top overlay indicator */}
-      {!isUnlocked && (
-        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
-          <div className="bg-white/90 px-6 py-4 rounded-[2rem] border-4 border-[#8C6B45] shadow-2xl text-center max-w-[80%]">
-            <div className="text-5xl mb-2">🔒</div>
-            <h3 className="font-display font-black text-xl text-[#5A3515]">Area Terkunci</h3>
-            <p className="text-sm font-bold text-[#8C6B45]">Selesaikan segmen sebelumnya untuk membuka jalan ini.</p>
-          </div>
-        </div>
-      )}
-    </div>
+    </section>
   );
 }
 
@@ -563,9 +595,11 @@ function StageNode({ number, state, stars, isBoss, isReward, isFinalStage, onCli
           <div className="absolute -top-1 -right-1 text-xs z-20 pointer-events-none">✨</div>
         </>
       )}
-      <button 
+      <button type="button"
+        data-state={state}
+        data-special={isBoss || isReward ? "" : undefined}
         className={cn(
-          "relative rounded-full border-[4px] sm:border-[5px] flex items-center justify-center text-white font-display font-black shadow-pop transition-transform",
+          "field-stage relative rounded-full flex items-center justify-center text-white font-display font-black shadow-pop transition-transform",
           sizeClass, bgClass, borderClass, animation, finalStageGlow,
           state === "completed" && "shadow-[0_0_12px_rgba(255,215,0,0.3)]",
           state !== "locked" && "active:translate-y-1 active:shadow-pop-sm group-hover:scale-105"
@@ -624,55 +658,6 @@ function PlayerMarker({ avatar }: { avatar: string }) {
         </div>
       </div>
       <div className="w-4 h-2 bg-black/20 rounded-[100%] mt-2 blur-sm"></div>
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════
-// Map Decorations (Trees, Rocks, etc.)
-// ══════════════════════════════════════════
-function MapDecorations({ seed, segmentHeight }: { seed: string, segmentHeight: number }) {
-  // Deterministic random generator based on string
-  const hash = Array.from(seed).reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  
-  const decorations = useMemo(() => {
-    const items = [];
-    const count = Math.floor(segmentHeight / 200); // roughly 1 decoration per 200px
-    for (let i = 0; i < count; i++) {
-      // pseudo-random using hash and index
-      const randX = ((hash * (i + 1) * 17) % 80) + 10; // 10% to 90%
-      const randY = ((hash * (i + 2) * 23) % segmentHeight);
-      const type = ((hash * (i + 3)) % 5); // 0-4
-      
-      let emoji = "🌲";
-      let size = "text-4xl";
-      switch(type) {
-        case 0: emoji = "🌳"; size = "text-5xl"; break;
-        case 1: emoji = "🌲"; size = "text-4xl"; break;
-        case 2: emoji = "🍄"; size = "text-2xl"; break;
-        case 3: emoji = "🪨"; size = "text-3xl"; break;
-        case 4: emoji = "🌸"; size = "text-2xl"; break;
-      }
-
-      // Avoid center path (approximate X 40-60%)
-      const finalX = randX > 40 && randX < 60 ? (randX > 50 ? 75 : 25) : randX;
-
-      items.push({ id: i, x: finalX, y: randY, emoji, size });
-    }
-    return items;
-  }, [hash, segmentHeight]);
-
-  return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden">
-      {decorations.map(d => (
-        <div 
-          key={d.id}
-          className={`absolute transform -translate-x-1/2 translate-y-1/2 drop-shadow-md opacity-80 ${d.size}`}
-          style={{ left: `${d.x}%`, bottom: `${d.y}px` }}
-        >
-          {d.emoji}
-        </div>
-      ))}
     </div>
   );
 }

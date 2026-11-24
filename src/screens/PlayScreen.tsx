@@ -1,7 +1,7 @@
-import { useState, useRef, useCallback, useMemo } from "react";
+import { X as TmtCloseGlyph } from "lucide-react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import type { Mission, MissionOption } from "@/types";
 import { CATEGORY_MAP, DIFFICULTY_MAP } from "@/data/constants";
-import { GameButton } from "../game/GameButton";
 import { MissionRendererRouter } from "../components/missions/renderers/MissionRendererRouter";
 import { GameScreen } from "@/components/layout/GameScreen";
 import { FixedBottomActionArea } from "@/components/layout/FixedBottomActionArea";
@@ -32,7 +32,22 @@ export function PlayScreen({ mission, onFinish, onQuit }: Props) {
   const [wrongIds, setWrongIds] = useState<string[]>([]);
   const [startTime] = useState(() => Date.now());
   const bossResultsRef = useRef<BossStepResult[]>([]);
+  const finishTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const finishScheduledRef = useRef(false);
   const [isBossMission] = useState(() => (mission as any).missionType === "boss_mission");
+
+  useEffect(() => () => {
+    if (finishTimerRef.current) clearTimeout(finishTimerRef.current);
+  }, []);
+
+  const scheduleFinish = useCallback((result: Parameters<typeof onFinish>[0], delay: number) => {
+    if (finishScheduledRef.current) return;
+    finishScheduledRef.current = true;
+    finishTimerRef.current = setTimeout(() => {
+      finishTimerRef.current = null;
+      onFinish(result);
+    }, delay);
+  }, [onFinish]);
 
   // ── Shuffle choices ONCE when mission loads ──
   // This ensures choices are random but stable across re-renders
@@ -63,8 +78,7 @@ export function PlayScreen({ mission, onFinish, onQuit }: Props) {
     const lastSelectedId = results[results.length - 1]?.selectedId ?? "";
     const elapsedSeconds = Math.round((Date.now() - startTime) / 1000);
 
-    setTimeout(() => {
-      onFinish({
+    scheduleFinish({
         isCorrect: allCorrect,
         hintsUsed: totalHints,
         attempts: maxAttempts,
@@ -72,9 +86,8 @@ export function PlayScreen({ mission, onFinish, onQuit }: Props) {
         elapsedSeconds,
         isBestChoice: allCorrect,
         bossStepResults: results,
-      });
-    }, 1500);
-  }, [onFinish, startTime]);
+      }, 1500);
+  }, [onFinish, scheduleFinish, startTime]);
 
   const submit = () => {
     if (!selected) return;
@@ -117,9 +130,7 @@ export function PlayScreen({ mission, onFinish, onQuit }: Props) {
       }
 
       setRevealed(true);
-      setTimeout(() => {
-        onFinish({ isCorrect, hintsUsed, attempts, selectedId: selected, elapsedSeconds, isBestChoice });
-      }, 900);
+      scheduleFinish({ isCorrect, hintsUsed, attempts, selectedId: selected, elapsedSeconds, isBestChoice }, 900);
     } else {
       setWrongIds((w) => [...w, selected]);
       setAttempts((a) => a + 1);
@@ -130,22 +141,18 @@ export function PlayScreen({ mission, onFinish, onQuit }: Props) {
   const isBoss = (mission as any).missionType === "boss_mission";
 
   return (
-    <GameScreen bgClass={isBoss ? "bg-gradient-to-b from-[#1a1a2e] via-[#2d1f3d] to-[#1a1a2e]" : "bg-gradient-sky"}>
+    <GameScreen bgClass={isBoss ? "bg-gradient-to-b from-[#1a1a2e] via-[#2d1f3d] to-[#1a1a2e]" : "bg-[#fbf8f0]"}>
       {!isBoss && (
-        <header className="px-4 pt-safe mt-2 pb-2 flex items-center gap-2">
-          <button onClick={onQuit} className="h-12 w-12 rounded-[18px] bg-white/50 border-2 border-white/80 text-[#185E9F] grid place-items-center text-xl shadow-sm hover:bg-white/70 active:translate-y-[2px] transition-all" aria-label="Keluar">
+        <header className="content-wrapper pt-safe mt-2 pb-2 flex items-center gap-3">
+          <button type="button" onClick={onQuit} className="field-back" aria-label="Keluar dari misi">
             ✕
           </button>
-          <div className="flex-1 flex gap-1.5 items-center">
-            <span className="px-3 py-1.5 rounded-full bg-white/50 border-2 border-white/80 text-[#185E9F] text-xs font-black shadow-sm">
-              {cat.emoji} {cat.short}
-            </span>
-            <span className="px-3 py-1.5 rounded-full bg-white/50 border-2 border-white/80 text-[#185E9F] text-xs font-black shadow-sm">
-              {diff.emoji} {diff.shortLabel}
-            </span>
+          <div className="flex-1 min-w-0 text-[#173c3a]">
+            <strong className="block text-sm">Misi {mission.number}</strong>
+            <span className="block text-xs text-[#49625a]">{cat.short} · {diff.shortLabel}</span>
           </div>
-          <div className="px-3 py-1.5 rounded-full bg-gradient-heart text-white text-xs font-black border-2 border-[#A02020] shadow-pop-sm">
-            Coba {attempts}/3
+          <div className="px-3 py-1.5 rounded-full bg-[#f8e3da] text-[#633c33] text-xs font-black">
+            Percobaan {attempts}/3
           </div>
         </header>
       )}
@@ -153,8 +160,8 @@ export function PlayScreen({ mission, onFinish, onQuit }: Props) {
       {/* Boss mission header */}
       {isBoss && (
         <header className="shrink-0 content-wrapper pt-safe mt-2 pb-2 flex items-center gap-2">
-          <button onClick={onQuit} className="h-12 w-12 rounded-[18px] bg-white/10 border-2 border-white/20 text-white grid place-items-center text-xl shadow-sm hover:bg-white/20 active:translate-y-[2px] transition-all" aria-label="Keluar">
-            ✕
+          <button type="button" onClick={onQuit} className="tmt-icon-button h-12 w-12 rounded-[18px] bg-white/10 border-2 border-white/20 text-white grid place-items-center text-xl shadow-sm hover:bg-white/20 active:translate-y-[2px] transition-all" aria-label="Keluar">
+            <TmtCloseGlyph aria-hidden="true" />
           </button>
           <div className="flex-1 flex gap-1.5 items-center">
             <span className="px-3 py-1.5 rounded-full bg-white/10 border-2 border-white/20 text-white text-xs font-black shadow-sm backdrop-blur-sm">
@@ -178,8 +185,8 @@ export function PlayScreen({ mission, onFinish, onQuit }: Props) {
         />
 
         {!isBoss && showHint ? (
-          <div className="rounded-[18px] bg-gradient-sun border-2 border-[#D48806] p-4 text-base font-bold text-[#5A3515] shadow-pop-sm mt-4">
-            <span className="font-display font-black text-[#8C6B45]">💡 Petunjuk: </span>
+          <div className="rounded-2xl bg-[#f9edc9] p-4 text-base text-[#594a32] mt-4" role="status">
+            <strong className="block mb-1">Petunjuk</strong>
             {mission.hintLevels?.[0] || "Tidak ada petunjuk lebih lanjut."}
           </div>
         ) : null}
@@ -188,9 +195,9 @@ export function PlayScreen({ mission, onFinish, onQuit }: Props) {
       {!isBoss && (
         <FixedBottomActionArea>
           <div className="flex gap-3">
-            <GameButton
-              variant="wood"
-              size="xl"
+            <button
+              type="button"
+              className="field-back disabled:opacity-50"
               onClick={() => {
                 if (!showHint) {
                   setShowHint(true);
@@ -198,13 +205,12 @@ export function PlayScreen({ mission, onFinish, onQuit }: Props) {
                 }
               }}
               disabled={showHint || revealed}
-              leadingIcon="💡"
             >
               Petunjuk
-            </GameButton>
-            <GameButton variant="primary" size="xl" full onClick={submit} disabled={!selected || revealed} trailingIcon="✓">
-              Jawab
-            </GameButton>
+            </button>
+            <button type="button" className="field-button flex-1" onClick={submit} disabled={!selected || revealed}>
+              Kirim jawaban
+            </button>
           </div>
         </FixedBottomActionArea>
       )}

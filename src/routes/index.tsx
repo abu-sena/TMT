@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, useRef, useEffect } from "react";
-import type { BadgeDef, Mission, ScreenId } from "@/types";
+import type { BadgeDef, Mission, RewardMilestone, ScreenId } from "@/types";
 import { CATEGORIES, DIFFICULTY_UI_LABELS } from "@/data/constants";
 import { applyXP } from "@/lib/leveling";
 import {
@@ -57,6 +57,8 @@ import { MyRewardsScreen } from "@/screens/MyRewardsScreen";
 import { MissionPopup } from "@/components/missions/MissionPopup";
 import { ParentGate } from "@/components/safety/ParentGate";
 import { ScreenTimeReminder } from "@/components/safety/ScreenTimeReminder";
+import { GameNotice } from "@/components/layout/GameNotice";
+import { RewardCelebration } from "@/components/rewards/RewardCelebration";
 import { DifficultyCompletionBox } from "@/components/rewards/DifficultyCompletionBox";
 import { DifficultyUnlockModal } from "@/components/rewards/DifficultyUnlockModal";
 import { MasteryCompleteModal } from "@/components/rewards/MasteryCompleteModal";
@@ -99,12 +101,17 @@ function GameApp() {
     resetProfileProgress,
     exportDebugSnapshot,
     exportProfile,
+    checkRewardsForProfile,
   } = useGameStore();
 
   const [screen, setScreen] = useState<ScreenId>("splash");
   const [activeMission, setActiveMission] = useState<Mission | null>(null);
   const [popupMission, setPopupMission] = useState<Mission | null>(null);
   const [lastResult, setLastResult] = useState<ResultData | null>(null);
+  const [resultCelebrationsDone, setResultCelebrationsDone] = useState(true);
+  const [celebrationRewards, setCelebrationRewards] = useState<RewardMilestone[]>([]);
+  const [celebrationIndex, setCelebrationIndex] = useState(0);
+  const allowGlobalOverlays = screen !== "result" || resultCelebrationsDone;
   // Screen time tracking
   const sessionStartRef = useRef(Date.now());
   const screenTimeReminderOpenRef = useRef(false);
@@ -143,7 +150,7 @@ function GameApp() {
       }, 30000);
       return () => clearInterval(timer);
     }
-  }, [activeProfile?.settings?.screenTimeReminder, activeProfile?.settings?.screenTimeMinutes]);
+  }, [activeProfile?.id, activeProfile?.settings?.screenTimeReminder, activeProfile?.settings?.screenTimeMinutes]);
 
   // Show parent gate when navigating to parent dashboard
   useEffect(() => {
@@ -225,7 +232,9 @@ function GameApp() {
 
     // categoryStats — count primary and secondary categories
     const stats = { ...prev.categoryStats };
-    const cats = [activeMission.category, activeMission.secondaryCategory].filter(Boolean) as (typeof CATEGORIES)[number]["id"][];
+    const cats = activeMission.missionType === "boss_mission"
+      ? []
+      : [activeMission.category, activeMission.secondaryCategory].filter(Boolean) as (typeof CATEGORIES)[number]["id"][];
     for (const c of cats) {
       stats[c] = {
         correct: stats[c].correct + (result.isCorrect ? 1 : 0),
@@ -330,6 +339,14 @@ function GameApp() {
     updated.badges = newBadgeIds;
 
     updateProfile(prev.id, updated);
+    if (xpResult.leveledUp) {
+      const rewards = checkRewardsForProfile(prev.id, xpResult.level);
+      if (rewards.length > 0) {
+        setCelebrationRewards(rewards);
+        setCelebrationIndex(0);
+      }
+    }
+    setResultCelebrationsDone(!result.isCorrect && !xpResult.leveledUp && unlocked.length === 0);
     setLastResult({
       mission: activeMission,
       isCorrect: result.isCorrect,
@@ -527,221 +544,232 @@ function GameApp() {
     return null;
   }
 
-  if (screen === "home") {
-    return (
-      <>
-        <HomeScreen
-          profile={activeProfile}
-          onNavigate={(s) => setScreen(s)}
-          onSwitchProfile={() => setScreen("profile-select")}
-          onOpenPendingBox={handleOpenPendingBox}
-          onHomeUpgrade={handleHomeUpgrade}
-        />
-        {homeToast && (
-          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[200] bg-[#5A3515]/90 text-white px-6 py-3 rounded-full font-bold text-sm shadow-lg">
-            Tekan sekali lagi untuk keluar
-          </div>
-        )}
-      </>
-    );
-  }
+  const activeScreen = (() => {
+    if (screen === "home") {
+      return (
+        <>
+          <HomeScreen
+            profile={activeProfile}
+            onNavigate={(s) => setScreen(s)}
+            onSwitchProfile={() => setScreen("profile-select")}
+            onOpenPendingBox={handleOpenPendingBox}
+            onHomeUpgrade={handleHomeUpgrade}
+          />
+          {homeToast && (
+            <GameNotice floating>Tekan sekali lagi untuk keluar</GameNotice>
+          )}
+        </>
+      );
+    }
 
-  if (screen === "map") {
-    const popupStars = popupMission ? activeProfile.missionProgress[popupMission.id]?.stars ?? 0 : 0;
-    return (
-      <>
-        <MapScreen
-          profile={activeProfile}
-          onBack={() => setScreen("home")}
-          onOpenMission={(m) => setPopupMission(m)}
-          onChangeDifficulty={(diff) => {
-            const current = store.profiles.find(p => p.id === activeProfile.id);
-            if (current) {
-              updateProfile(current.id, { difficulty: diff, currentDifficulty: diff });
+    if (screen === "map") {
+      const popupStars = popupMission ? activeProfile.missionProgress[popupMission.id]?.stars ?? 0 : 0;
+      return (
+        <>
+          <MapScreen
+            profile={activeProfile}
+            onBack={() => setScreen("home")}
+            onOpenMission={(m) => setPopupMission(m)}
+            onChangeDifficulty={(diff) => {
+              const current = store.profiles.find(p => p.id === activeProfile.id);
+              if (current) {
+                updateProfile(current.id, { difficulty: diff, currentDifficulty: diff });
+              }
+            }}
+            onHomeUpgrade={handleHomeUpgrade}
+          />
+          {popupMission ? (
+            <MissionPopup
+              mission={popupMission}
+              stars={popupStars}
+              onClose={() => setPopupMission(null)}
+              onPlay={() => startMission(popupMission)}
+            />
+          ) : null}
+        </>
+      );
+    }
+
+    if (screen === "play" && activeMission) {
+      return (
+        <PlayScreen
+          mission={activeMission}
+          onFinish={handleFinishMission}
+          onQuit={() => setScreen("map")}
+        />
+      );
+    }
+
+    if (screen === "result" && lastResult) {
+      return (
+        <ResultScreen
+          onCelebrationsComplete={() => setResultCelebrationsDone(true)}
+          {...lastResult}
+          onNextMission={() => {
+            const nm = nextMission();
+            if (nm) {
+              setActiveMission(nm);
+              setLastResult(null);
+              setScreen("play");
+            } else {
+              setScreen("map");
             }
           }}
-          onHomeUpgrade={handleHomeUpgrade}
-        />
-        {popupMission ? (
-          <MissionPopup
-            mission={popupMission}
-            stars={popupStars}
-            onClose={() => setPopupMission(null)}
-            onPlay={() => startMission(popupMission)}
-          />
-        ) : null}
-      </>
-    );
-  }
-
-  if (screen === "play" && activeMission) {
-    return (
-      <PlayScreen
-        mission={activeMission}
-        onFinish={handleFinishMission}
-        onQuit={() => setScreen("map")}
-      />
-    );
-  }
-
-  if (screen === "result" && lastResult) {
-    return (
-      <ResultScreen
-        {...lastResult}
-        onNextMission={() => {
-          const nm = nextMission();
-          if (nm) {
-            setActiveMission(nm);
+          onBackToMap={() => {
             setLastResult(null);
-            setScreen("play");
-          } else {
             setScreen("map");
-          }
-        }}
-        onBackToMap={() => {
-          setLastResult(null);
-          setScreen("map");
-        }}
-      />
-    );
-  }
-
-  if (screen === "badges") return <BadgesScreen profile={activeProfile} onBack={() => setScreen("home")} />;
-  if (screen === "stats") return <StatsScreen profile={activeProfile} onBack={() => setScreen("home")} />;
-  if (screen === "daily-missions") return <DailyMissionsScreen profile={activeProfile} onBack={() => setScreen("home")} />;
-
-  if (screen === "minigame-center") {
-    return (
-      <MiniGameCenter
-        profile={activeProfile}
-        onBack={() => setScreen("home")}
-        onNavigate={setScreen}
-      />
-    );
-  }
-
-  if (screen === "minigame-hitung") return <MiniGameHitungScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
-  if (screen === "minigame-pola") return <MiniGamePolaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
-  if (screen === "minigame-ingatan") return <MiniGameIngatanScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
-  if (screen === "minigame-cari-beda") return <CariBerbedaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
-
-  // ═══════════════════════════════════════════
-  // Game Adab — disembunyikan dari Mini-Game (2026-06-22)
-  // Redirect ke Mini-Game Center dengan pesan
-  // ═══════════════════════════════════════════
-  if (screen === "minigame-pilih-sikap" || screen === "minigame-nasihat" || screen === "minigame-urutkan-adab" || screen === "minigame-dilema") {
-    const gameName =
-      screen === "minigame-pilih-sikap" ? "Pilih Sikap Terbaik" :
-      screen === "minigame-nasihat" ? "Nasihat dengan Lembut" :
-      screen === "minigame-urutkan-adab" ? "Urutkan Adab" :
-      "Dilema Bijak";
-    return (
-      <div className="h-[100dvh] bg-gradient-sky flex flex-col">
-        <div className="flex-1 flex items-center justify-center p-6">
-          <div className="bg-white rounded-3xl p-8 text-center max-w-sm w-full border-4 border-[#FF9800]/30 shadow-2xl animate-pop-in">
-            <div className="text-5xl mb-4">📋</div>
-            <h2 className="font-display font-black text-xl text-[#5A3515] mb-2">
-              Game Tidak Tersedia
-            </h2>
-            <p className="text-sm font-bold text-[#8C6B45] mb-1">
-              "{gameName}" tidak tersedia lagi di menu Mini-Game.
-            </p>
-            <p className="text-xs text-[#8C6B45]/70 mb-6">
-              Game adab tetap bisa dimainkan di Peta Petualangan ya! ✨
-            </p>
-            <button
-              onClick={() => setScreen("minigame-center")}
-              className="w-full py-3 rounded-2xl bg-gradient-meadow border-b-4 border-[#2E8B12] text-white font-black text-base active:translate-y-1 active:border-b-0 transition-all"
-            >
-              🎮 Kembali ke Mini-Game
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (screen === "minigame-detektif") return <DetektifScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
-  if (screen === "minigame-tebak-aturan") return <TebakAturanScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
-  if (screen === "minigame-kesimpulan") return <PilihKesimpulanScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
-  if (screen === "minigame-benar-salah") return <BenarSalahScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
-  if (screen === "minigame-kode-warna") return <ColorCodeGame profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
-
-  if (screen === "minigame-ubah-posisi") return <UbahPosisiGame profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
-  if (screen === "minigame-cocok-bayangan") return <CocokBayanganGame profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
-  if (screen === "minigame-jalur-tercepat") return <JalurTercepatGame profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
-  if (screen === "minigame-rantai-warna") return <MiniGameRantaiWarnaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
-  if (screen === "minigame-jalur-angka") return <MiniGameJalurAngkaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
-
-  if (screen === "minigame-misi-keluarga") return <MisiKeluargaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
-  if (screen === "minigame-family-challenge") return <BattleScreen profiles={store.profiles} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
-
-  if (screen === "battle") return <BattleScreen profiles={store.profiles} onBack={() => setScreen("home")} backRef={dummyBackRef} />;
-
-  if (screen === "parent") {
-    return (
-      <>
-        <ParentGate
-          open={parentGateOpen}
-          title="Dashboard Orang Tua"
-          onPass={() => setParentGateOpen(false)}
-          onCancel={() => {
-            setParentGateOpen(false);
-            setScreen("home");
           }}
         />
-        <ParentScreen profile={activeProfile} profiles={store.profiles} onBack={() => setScreen("home")} onExportProfile={() => {
-          const data = exportProfile(activeProfile.id);
-          if (data) downloadJSON(`tmt-profile-${activeProfile.id.slice(0, 8)}.json`, data);
-        }} onExportAll={() => downloadJSON("tmt-full-export.json", exportDebugSnapshot())} onManageRewards={() => setScreen("reward-setup")} />
-      </>
-    );
-  }
-  if (screen === "reward-setup") return <RewardSetupScreen profiles={store.profiles} onBack={() => setScreen("parent")} />;
-  if (screen === "my-rewards") return <MyRewardsScreen profile={activeProfile} onBack={() => setScreen("home")} />;
+      );
+    }
 
-  if (screen === "privacy") return <PrivacyScreen onBack={() => setScreen("settings")} />;
-  if (screen === "settings") {
-    return (
-      <>
-        <SettingsScreen
+    if (screen === "badges") return <BadgesScreen profile={activeProfile} onBack={() => setScreen("home")} />;
+    if (screen === "stats") return <StatsScreen profile={activeProfile} onBack={() => setScreen("home")} />;
+    if (screen === "daily-missions") return <DailyMissionsScreen profile={activeProfile} onBack={() => setScreen("home")} />;
+
+    if (screen === "minigame-center") {
+      return (
+        <MiniGameCenter
           profile={activeProfile}
           onBack={() => setScreen("home")}
-          onUpdate={(patch) =>
-            updateProfile(activeProfile.id, { settings: { ...activeProfile.settings, ...patch } })
-          }
-          onReset={() => resetProfileProgress(activeProfile.id)}
-          onDeleteAll={() => {
-            // Clear all localStorage and reload
-            localStorage.clear();
-            window.location.reload();
-          }}
-          onSwitchProfile={() => setScreen("profile-select")}
-          onExportProfile={() => {
+          onNavigate={setScreen}
+        />
+      );
+    }
+
+    if (screen === "minigame-hitung") return <MiniGameHitungScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
+    if (screen === "minigame-pola") return <MiniGamePolaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
+    if (screen === "minigame-ingatan") return <MiniGameIngatanScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
+    if (screen === "minigame-cari-beda") return <CariBerbedaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
+
+    // ═══════════════════════════════════════════
+    // Game Adab — disembunyikan dari Mini-Game (2026-06-22)
+    // Redirect ke Mini-Game Center dengan pesan
+    // ═══════════════════════════════════════════
+    if (screen === "minigame-pilih-sikap" || screen === "minigame-nasihat" || screen === "minigame-urutkan-adab" || screen === "minigame-dilema") {
+      const gameName =
+        screen === "minigame-pilih-sikap" ? "Pilih Sikap Terbaik" :
+        screen === "minigame-nasihat" ? "Nasihat dengan Lembut" :
+        screen === "minigame-urutkan-adab" ? "Urutkan Adab" :
+        "Dilema Bijak";
+      return (
+        <div className="h-[100dvh] bg-gradient-sky flex flex-col">
+          <div className="flex-1 flex items-center justify-center p-6">
+            <div className="bg-white rounded-3xl p-8 text-center max-w-sm w-full border-4 border-[#FF9800]/30 shadow-2xl animate-pop-in">
+              <div className="text-5xl mb-4">📋</div>
+              <h2 className="font-display font-black text-xl text-[#5A3515] mb-2">
+                Game Tidak Tersedia
+              </h2>
+              <p className="text-sm font-bold text-[#8C6B45] mb-1">
+                "{gameName}" tidak tersedia lagi di menu Mini-Game.
+              </p>
+              <p className="text-xs text-[#8C6B45]/70 mb-6">
+                Game adab tetap bisa dimainkan di Peta Petualangan ya! ✨
+              </p>
+              <button
+                onClick={() => setScreen("minigame-center")}
+                className="w-full py-3 rounded-2xl bg-gradient-meadow border-b-4 border-[#2E8B12] text-white font-black text-base active:translate-y-1 active:border-b-0 transition-all"
+              >
+                🎮 Kembali ke Mini-Game
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (screen === "minigame-detektif") return <DetektifScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
+    if (screen === "minigame-tebak-aturan") return <TebakAturanScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
+    if (screen === "minigame-kesimpulan") return <PilihKesimpulanScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
+    if (screen === "minigame-benar-salah") return <BenarSalahScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
+    if (screen === "minigame-kode-warna") return <ColorCodeGame profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
+
+    if (screen === "minigame-ubah-posisi") return <UbahPosisiGame profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
+    if (screen === "minigame-cocok-bayangan") return <CocokBayanganGame profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
+    if (screen === "minigame-jalur-tercepat") return <JalurTercepatGame profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
+    if (screen === "minigame-rantai-warna") return <MiniGameRantaiWarnaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
+    if (screen === "minigame-jalur-angka") return <MiniGameJalurAngkaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
+
+    if (screen === "minigame-misi-keluarga") return <MisiKeluargaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
+    if (screen === "minigame-family-challenge") return <BattleScreen profiles={store.profiles} onBack={() => setScreen("minigame-center")} backRef={dummyBackRef} />;
+
+    if (screen === "battle") return <BattleScreen profiles={store.profiles} onBack={() => setScreen("home")} backRef={dummyBackRef} />;
+
+    if (screen === "parent") {
+      return (
+        <>
+          <ParentGate
+            open={parentGateOpen}
+            title="Dashboard Orang Tua"
+            onPass={() => setParentGateOpen(false)}
+            onCancel={() => {
+              setParentGateOpen(false);
+              setScreen("home");
+            }}
+          />
+          <ParentScreen profile={activeProfile} profiles={store.profiles} onBack={() => setScreen("home")} onExportProfile={() => {
             const data = exportProfile(activeProfile.id);
             if (data) downloadJSON(`tmt-profile-${activeProfile.id.slice(0, 8)}.json`, data);
-          }}
-          onExportAll={() => downloadJSON("tmt-full-export.json", exportDebugSnapshot())}
-          onPrivacy={() => setScreen("privacy")}
-          onReload={() => window.location.reload()}
-        />
-        <ScreenTimeReminder
-          open={screenTimeReminderOpen}
-          minutes={screenTimeMinutes}
-          onDismiss={() => setScreenTimeReminderOpen(false)}
-          onExtend={() => {
-            sessionStartRef.current = Date.now();
-            setScreenTimeReminderOpen(false);
-          }}
-        />
-      </>
-    );
-  }
+          }} onExportAll={() => downloadJSON("tmt-full-export.json", exportDebugSnapshot())} onManageRewards={() => setScreen("reward-setup")} />
+        </>
+      );
+    }
+    if (screen === "reward-setup") return <RewardSetupScreen profiles={store.profiles} onBack={() => setScreen("parent")} />;
+    if (screen === "my-rewards") return <MyRewardsScreen profile={activeProfile} onBack={() => setScreen("home")} />;
+
+    if (screen === "privacy") return <PrivacyScreen onBack={() => setScreen("settings")} />;
+    if (screen === "settings") {
+      return (
+        <>
+          <SettingsScreen
+            profile={activeProfile}
+            onBack={() => setScreen("home")}
+            onUpdate={(patch) =>
+              updateProfile(activeProfile.id, { settings: { ...activeProfile.settings, ...patch } })
+            }
+            onReset={() => resetProfileProgress(activeProfile.id)}
+            onDeleteAll={() => {
+              // Clear all localStorage and reload
+              localStorage.clear();
+              window.location.reload();
+            }}
+            onSwitchProfile={() => setScreen("profile-select")}
+            onExportProfile={() => {
+              const data = exportProfile(activeProfile.id);
+              if (data) downloadJSON(`tmt-profile-${activeProfile.id.slice(0, 8)}.json`, data);
+            }}
+            onExportAll={() => downloadJSON("tmt-full-export.json", exportDebugSnapshot())}
+            onPrivacy={() => setScreen("privacy")}
+            onReload={() => window.location.reload()}
+          />
+        </>
+      );
+    }
+    return null;
+  })();
 
   return (
     <>
+      {activeScreen}
+      <ScreenTimeReminder
+        open={screenTimeReminderOpen && allowGlobalOverlays && !completionBoxOpen && !unlockModalOpen && !masteryModalOpen && celebrationRewards.length === 0}
+        minutes={screenTimeMinutes}
+        onDismiss={() => { sessionStartRef.current = Date.now(); setScreenTimeReminderOpen(false); }}
+        onExtend={() => {
+          sessionStartRef.current = Date.now() - (screenTimeMinutes - 15) * 60_000;
+          setScreenTimeReminderOpen(false);
+        }}
+      />
+      <RewardCelebration
+        open={allowGlobalOverlays && !completionBoxOpen && !unlockModalOpen && !masteryModalOpen}
+        rewards={celebrationRewards}
+        currentIndex={celebrationIndex}
+        onClose={() => setCelebrationRewards([])}
+        onViewRewards={() => { setCelebrationRewards([]); setScreen("my-rewards"); }}
+        onNext={() => setCelebrationIndex(index => index + 1)}
+      />
       {/* Stage 500 Completion Box */}
-      {completionBoxOpen && completionDifficulty && (
+      {allowGlobalOverlays && completionBoxOpen && completionDifficulty && (
         <DifficultyCompletionBox
           difficulty={completionDifficulty as import("@/types").DifficultyId}
           onOpen={handleCompletionBoxClaim}
@@ -750,7 +778,7 @@ function GameApp() {
       )}
 
       {/* Difficulty Unlock Modal (stage 500) */}
-      {unlockModalOpen && completionDifficulty && (() => {
+      {allowGlobalOverlays && unlockModalOpen && completionDifficulty && (() => {
         const nextDiff = getNextDifficulty(completionDifficulty as import("@/types").DifficultyId);
         if (!nextDiff) return null;
         return (
@@ -765,7 +793,7 @@ function GameApp() {
       })()}
 
       {/* Mastery Complete Modal (Universitas) */}
-      {masteryModalOpen && (
+      {allowGlobalOverlays && masteryModalOpen && (
         <MasteryCompleteModal
           onViewBadges={handleMasteryViewBadges}
           onBackToMap={handleMasteryBackToMap}

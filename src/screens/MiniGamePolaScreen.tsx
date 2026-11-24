@@ -1,4 +1,7 @@
+import { ArrowLeft as TmtBackGlyph, X as TmtCloseGlyph } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { MiniGameIcon, preloadMiniGameSprites } from "@/components/minigames/MiniGameArt";
+import { MemoryObjectIcon, getMemoryObjectLabel } from "@/components/minigames/MemoryObjectIcon";
 import type { Profile, MiniGameSession } from "@/types";
 import { GameButton } from "../game/GameButton";
 import { GameCard } from "../game/GameCard";
@@ -128,6 +131,7 @@ function generatePattern(cfg: ReturnType<typeof getConfig>, correctCount: number
 }
 
 export function MiniGamePolaScreen({ profile, onBack, backRef }: Props) {
+  preloadMiniGameSprites("props", "nature");
   const cfg = getConfig(profile.difficulty);
   const { store, addMiniGameSession } = useGameStore();
 
@@ -252,7 +256,7 @@ export function MiniGamePolaScreen({ profile, onBack, backRef }: Props) {
     return (
       <div className="h-[100dvh] bg-gradient-sky flex flex-col items-center justify-center p-4">
         <GameCard tone="meadow" className="text-center w-full max-w-sm p-6 sm:p-8 text-white">
-          <div className="text-6xl mb-4">🧩</div>
+          <MiniGameIcon gameId="pola-kilat" className="size-20 mb-3" />
           <h1 className="font-display font-black text-3xl mb-1">{cfg.label}</h1>
           <p className="text-sm font-bold opacity-80 mb-4">Tebak gambar selanjutnya dari pola yang ada!</p>
           {personalBest > 0 && (
@@ -278,7 +282,7 @@ export function MiniGamePolaScreen({ profile, onBack, backRef }: Props) {
             <GameButton variant="ghost" full onClick={onBack}>Kembali</GameButton>
             <GameButton variant="primary" full onClick={startGame}>Mulai!</GameButton>
           </div>
-          <button onClick={() => setScreen("leaderboard")} className="mt-3 text-xs font-bold text-white/70 underline">Lihat Leaderboard</button>
+          <button type="button" onClick={() => setScreen("leaderboard")} className="tmt-text-button mt-3 text-xs font-bold text-white/70 underline">Lihat Leaderboard</button>
         </GameCard>
       </div>
     );
@@ -289,7 +293,7 @@ export function MiniGamePolaScreen({ profile, onBack, backRef }: Props) {
     return (
       <div className="h-[100dvh] bg-gradient-sky flex flex-col overflow-hidden">
         <header className="shrink-0 content-wrapper pt-safe mt-2 pb-3 flex items-center gap-3">
-          <button onClick={() => setScreen("start")} className="h-12 w-12 rounded-2xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-xl shadow-sm shrink-0 active:scale-95">←</button>
+          <button type="button" aria-label="Kembali" onClick={() => setScreen("start")} className="tmt-icon-button h-12 w-12 rounded-2xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-xl shadow-sm shrink-0 active:scale-95"><TmtBackGlyph aria-hidden="true" /></button>
           <div className="flex-1"><h1 className="font-display font-black text-xl text-[#5A3515]">Leaderboard</h1><p className="text-xs text-[#5A3515]/70">{cfg.label}</p></div>
           <div className="text-2xl">🏆</div>
         </header>
@@ -330,7 +334,7 @@ export function MiniGamePolaScreen({ profile, onBack, backRef }: Props) {
             <GameButton variant="ghost" full onClick={onBack}>Home</GameButton>
             <GameButton variant="primary" full onClick={startGame}>Main Lagi</GameButton>
           </div>
-          <button onClick={() => setScreen("leaderboard")} className="text-xs font-bold text-white/70 underline">Lihat Leaderboard</button>
+          <button type="button" onClick={() => setScreen("leaderboard")} className="tmt-text-button text-xs font-bold text-white/70 underline">Lihat Leaderboard</button>
         </GameCard>
       </div>
     );
@@ -361,7 +365,7 @@ export function MiniGamePolaScreen({ profile, onBack, backRef }: Props) {
   return (
     <div className="h-[100dvh] bg-gradient-sky flex flex-col p-3 sm:p-4">
       <header className="pt-safe flex items-center gap-2 mb-3 shrink-0">
-        <button onClick={() => setShowExit(true)} className="h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shadow-sm shrink-0 active:scale-95">✕</button>
+        <button type="button" aria-label="Tutup" onClick={() => setShowExit(true)} className="tmt-icon-button h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shadow-sm shrink-0 active:scale-95"><TmtCloseGlyph aria-hidden="true" /></button>
         <div className="bg-white/50 px-3 py-1.5 rounded-full font-black text-[#5A3515] text-sm sm:text-lg border-2 border-[#CBB794]">⭐ {score}</div>
         <div className="bg-white/50 px-3 py-1.5 rounded-full font-black text-[#5A3515] text-sm sm:text-lg border-2 border-[#CBB794]">✅ {correctCount}</div>
         <div className="bg-white/50 px-3 py-1.5 rounded-full font-black text-[#5A3515] text-xs sm:text-sm border-2 border-[#CBB794] ml-auto">Stage {stage}</div>
@@ -376,7 +380,7 @@ export function MiniGamePolaScreen({ profile, onBack, backRef }: Props) {
           <div className="text-xs font-bold text-[#8C6B45] mb-3 uppercase">Apa selanjutnya?</div>
           <div className="flex justify-center items-center gap-1 sm:gap-2 text-3xl sm:text-4xl flex-wrap">
             {question.sequence.map((emoji, i) => (
-              <span key={i} className="drop-shadow-sm">{emoji}</span>
+              <MemoryObjectIcon key={i} value={emoji} className="size-9 sm:size-11" />
             ))}
             <span className="text-[#A02020] font-black text-4xl sm:text-5xl ml-1">?</span>
           </div>
@@ -384,13 +388,14 @@ export function MiniGamePolaScreen({ profile, onBack, backRef }: Props) {
 
         <div className={`grid ${colsClass} gap-2 sm:gap-3 w-full max-w-sm`}>
           {question.options.map((opt, i) => (
-            <button
+            <button type="button"
               key={i}
               onClick={() => feedback === null && handleAnswer(opt)}
               disabled={feedback !== null}
-              className="h-16 sm:h-20 rounded-2xl bg-white border-4 border-[#CBB794] grid place-items-center text-3xl sm:text-4xl shadow-pop active:translate-y-[4px] active:shadow-sm transition-all hover:border-[#185E9F] disabled:opacity-50"
+              aria-label={getMemoryObjectLabel(opt)}
+              className="tmt-choice-button h-16 sm:h-20 rounded-2xl bg-white border-4 border-[#CBB794] grid place-items-center text-3xl sm:text-4xl shadow-pop active:translate-y-[4px] active:shadow-sm transition-all hover:border-[#185E9F] disabled:opacity-50"
             >
-              {opt}
+              <MemoryObjectIcon value={opt} className="size-11" decorative />
             </button>
           ))}
         </div>

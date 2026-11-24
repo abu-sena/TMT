@@ -1,3 +1,4 @@
+import { ArrowLeft as TmtBackGlyph } from "lucide-react";
 import { Component, type ReactNode } from "react";
 import type { Profile } from "@/types";
 import { CATEGORIES } from "@/data/constants";
@@ -49,9 +50,9 @@ class StatsErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryStat
             <p className="text-sm font-bold text-[#8C6B45] mb-4">
               Maaf, halaman statistik sedang mengalami kendala. Data permainanmu tetap aman.
             </p>
-            <button
+            <button type="button" data-action="neutral"
               onClick={this.props.onBack}
-              className="px-6 py-3 rounded-2xl bg-gradient-meadow text-white font-black text-lg border-b-4 border-[#2E8B12] active:translate-y-1 active:border-b-0 transition-all"
+              className="tmt-action-button px-6 py-3 rounded-2xl bg-gradient-meadow text-white font-black text-lg border-b-4 border-[#2E8B12] active:translate-y-1 active:border-b-0 transition-all"
             >
               🏠 Kembali ke Beranda
             </button>
@@ -94,12 +95,12 @@ export function StatsScreen({ profile, onBack }: Props) {
       <div className="h-[100dvh] bg-gradient-sky flex flex-col overflow-hidden">
         {/* Header */}
         <header className="shrink-0 content-wrapper pt-safe mt-2 pb-3 flex items-center gap-3">
-          <button
+          <button type="button"
             onClick={onBack}
-            className="h-12 w-12 rounded-[18px] bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-xl shadow-sm shrink-0 active:scale-95 transition-transform"
+            className="tmt-icon-button h-12 w-12 rounded-[18px] bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-xl shadow-sm shrink-0 active:scale-95 transition-transform"
             aria-label="Kembali"
           >
-            ←
+            <TmtBackGlyph aria-hidden="true" />
           </button>
           <div className="flex-1 min-w-0 flex items-center gap-2">
             <AvatarPortrait avatar={stats.avatar} className="h-12 w-12 rounded-full border-2 border-[#CBB794]" />

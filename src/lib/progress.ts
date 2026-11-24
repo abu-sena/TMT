@@ -88,7 +88,7 @@ export function checkBadges(profile: Profile): string[] {
 
   const getCompletedForCategory = (cat: CategoryId) =>
     completedMissions.filter((mp) => {
-      const m = MISSIONS.find((x) => x.id === mp.missionId);
+      const m = findMissionById(mp.missionId);
       return m && (m.category === cat || m.secondaryCategory === cat);
     });
 
@@ -105,7 +105,7 @@ export function checkBadges(profile: Profile): string[] {
 
   // Pemimpin Bijak: complete 5 boss leadership missions (moral category + isBossMission)
   const bossLeadershipMissions = completedMissions.filter(mp => {
-    const m = MISSIONS.find((x) => x.id === mp.missionId);
+    const m = findMissionById(mp.missionId);
     return m && m.isBossMission && (m.category === "moral" || m.secondaryCategory === "moral");
   }).length;
   if (bossLeadershipMissions >= 5) earned.add("pemimpin-bijak");
@@ -141,7 +141,7 @@ export function recentCompletedMissions(profile: Profile, limit = 5): { mission:
     .sort((a, b) => b.completedAt - a.completedAt)
     .slice(0, limit)
     .map(mp => {
-      const mission = MISSIONS.find(m => m.id === mp.missionId);
+      const mission = findMissionById(mp.missionId);
       return { mission: mission!, stars: mp.stars };
     })
     .filter(x => x.mission);

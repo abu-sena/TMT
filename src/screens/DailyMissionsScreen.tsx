@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from "react";
 import type { Profile, DailyMissionAssignment, DailyMissionAssignmentStatus } from "@/types";
 import { DAILY_MISSION_CATEGORY_META } from "@/types";
 import { GameButton } from "../game/GameButton";
+import { GameNotice } from "@/components/layout/GameNotice";
 import { GameCard } from "../game/GameCard";
 import { useGameStore } from "@/lib/storage";
 import { cn } from "@/lib/utils";
@@ -152,7 +153,7 @@ export function DailyMissionsScreen({ profile: initialProfile, onBack }: Props) 
         }
         updateProfile(profile.id, result);
         setAnimateItemId(assignmentId);
-        showToast("✅ Misi dikirim ke orang tua untuk divalidasi.");
+        showToast("Misi dikirim ke orang tua untuk diperiksa.");
         setSubmittingId(null);
 
         // Clear animation flag after transition
@@ -176,7 +177,7 @@ export function DailyMissionsScreen({ profile: initialProfile, onBack }: Props) 
         }
         updateProfile(profile.id, result);
         setAnimateItemId(assignmentId);
-        showToast("💪 Misi dikirim ulang ke orang tua. Semangat!");
+        showToast("Misi dikirim ulang ke orang tua.");
         setSubmittingId(null);
 
         setTimeout(() => setAnimateItemId(null), 600);
@@ -303,10 +304,10 @@ export function DailyMissionsScreen({ profile: initialProfile, onBack }: Props) 
         {/* Action button */}
         <div className="mt-2.5">
           {isNotStarted && (
-            <button
+            <button type="button"
               onClick={() => handleCheckIn(item.id)}
               disabled={isSubmitting}
-              className={cn(
+              className={cn("tmt-choice-button",
                 "w-full py-2.5 rounded-xl font-black text-sm transition-all duration-200",
                 isSubmitting
                   ? "bg-gray-300 text-gray-500 cursor-wait"
@@ -325,9 +326,9 @@ export function DailyMissionsScreen({ profile: initialProfile, onBack }: Props) 
           )}
 
           {isPending && (
-            <button
+            <button type="button"
               disabled
-              className="w-full py-2.5 rounded-xl bg-[#FFF3E0] border border-[#FF9800]/30 text-[#E65100]/70 font-bold text-sm cursor-not-allowed"
+              className="tmt-choice-button w-full py-2.5 rounded-xl bg-[#FFF3E0] border border-[#FF9800]/30 text-[#E65100]/70 font-bold text-sm cursor-not-allowed"
             >
               ⏳ Menunggu Validasi Orang Tua
             </button>
@@ -340,10 +341,10 @@ export function DailyMissionsScreen({ profile: initialProfile, onBack }: Props) 
           )}
 
           {isRejected && (
-            <button
+            <button type="button"
               onClick={() => handleRecheck(item.id)}
               disabled={isSubmitting}
-              className={cn(
+              className={cn("tmt-choice-button",
                 "w-full py-2.5 rounded-xl font-black text-sm transition-all duration-200",
                 isSubmitting
                   ? "bg-gray-300 text-gray-500 cursor-wait"
@@ -408,33 +409,30 @@ export function DailyMissionsScreen({ profile: initialProfile, onBack }: Props) 
   };
 
   return (
-    <div className="h-[100dvh] bg-gradient-to-b from-[#FFF8E1] to-[#FFE0B2] flex flex-col overflow-hidden">
+    <div className="field-shell">
       {/* Header */}
       <header className="shrink-0 content-wrapper pt-safe mt-2 pb-3 flex items-center gap-3">
-        <button
+        <button type="button"
           onClick={onBack}
-          className="h-12 w-12 rounded-[18px] bg-white/60 border-2 border-[#FF9800]/30 text-[#E65100] grid place-items-center text-xl shadow-sm shrink-0 active:scale-95 transition-transform"
+          className="field-back shrink-0"
           aria-label="Kembali"
         >
           ←
         </button>
         <div className="flex-1 min-w-0">
-          <h1 className="font-display font-black text-xl sm:text-2xl text-[#5A3515] truncate">
+          <h1 className="font-display font-black text-xl sm:text-2xl">
             Misi Harian
           </h1>
-          <p className="text-xs sm:text-sm text-[#8C6B45] truncate">
-            Centang misi yang sudah kamu lakukan hari ini ✨
+          <p className="text-xs sm:text-sm text-[#49625a]">
+            Centang misi yang sudah kamu lakukan hari ini.
           </p>
         </div>
-        <div className="text-2xl sm:text-3xl shrink-0">☀️</div>
       </header>
 
       <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain content-wrapper space-y-4 pb-6">
         {/* Toast message */}
         {toastMessage && (
-          <div className="rounded-2xl bg-[#E8F5E9] border-2 border-[#4CAF50] p-3 text-center text-sm font-bold text-[#2E7D32] animate-pop-in shadow-md">
-            {toastMessage}
-          </div>
+          <GameNotice tone="success" onClose={() => setToastMessage(null)}>{toastMessage}</GameNotice>
         )}
 
         {/* Empty state - absolutely no missions */}
@@ -454,8 +452,8 @@ export function DailyMissionsScreen({ profile: initialProfile, onBack }: Props) 
           <>
             {/* ═══ Progress Summary ═══ */}
             <GameCard
-              tone="coin"
-              className="text-white border-[#E65100]/50 bg-gradient-to-br from-[#FF9800] to-[#F57C00]"
+              tone="cream"
+              className="field-daily-summary"
             >
               <div className="flex justify-between items-start">
                 <div>

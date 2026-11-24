@@ -51,6 +51,7 @@ import { MyRewardsScreen } from "@/screens/MyRewardsScreen";
 import { MissionPopup } from "@/components/missions/MissionPopup";
 import { ParentGate } from "@/components/safety/ParentGate";
 import { ScreenTimeReminder } from "@/components/safety/ScreenTimeReminder";
+import { GameNotice } from "@/components/layout/GameNotice";
 import { RewardCelebration } from "@/components/rewards/RewardCelebration";
 import { DifficultyCompletionBox } from "@/components/rewards/DifficultyCompletionBox";
 import { DifficultyUnlockModal } from "@/components/rewards/DifficultyUnlockModal";
@@ -95,6 +96,8 @@ export function GameAppStandalone() {
   const [activeMission, setActiveMission] = useState<Mission | null>(null);
   const [popupMission, setPopupMission] = useState<Mission | null>(null);
   const [lastResult, setLastResult] = useState<ResultData | null>(null);
+  const [resultCelebrationsDone, setResultCelebrationsDone] = useState(true);
+  const allowGlobalOverlays = screen !== "result" || resultCelebrationsDone;
   const [lastResultStage500, setLastResultStage500] = useState<{
     difficulty: string;
     hasPendingReward: boolean;
@@ -133,16 +136,18 @@ export function GameAppStandalone() {
   // Android back button handler
   const backHandler = useAndroidBackButton({
     screen,
-    hasModal: popupMission !== null || parentGateOpen || screenTimeReminderOpen || celebrationOpen || completionBoxOpen || unlockModalOpen || masteryModalOpen,
+    hasModal: popupMission !== null || parentGateOpen || (allowGlobalOverlays && (screenTimeReminderOpen || celebrationOpen || completionBoxOpen || unlockModalOpen || masteryModalOpen)),
     onBack: () => {
       soundService.play("back_click");
       if (popupMission) { setPopupMission(null); return; }
       if (parentGateOpen) { setParentGateOpen(false); setScreen("home"); return; }
-      if (screenTimeReminderOpen) { setScreenTimeReminderOpen(false); return; }
-      if (celebrationOpen) { setCelebrationOpen(false); return; }
-      if (completionBoxOpen) { /* Keep box open - user must claim or use nanti button */ return; }
-      if (unlockModalOpen) { setUnlockModalOpen(false); return; }
-      if (masteryModalOpen) { setMasteryModalOpen(false); return; }
+      if (allowGlobalOverlays) {
+        if (completionBoxOpen) return;
+        if (unlockModalOpen) { setUnlockModalOpen(false); return; }
+        if (masteryModalOpen) { setMasteryModalOpen(false); return; }
+        if (celebrationOpen) { setCelebrationOpen(false); return; }
+        if (screenTimeReminderOpen) { sessionStartRef.current = Date.now(); setScreenTimeReminderOpen(false); return; }
+      }
       
       // Mini-game screens: delegate to internal handler
       if (screen.startsWith("minigame-") && miniGameBackRef.current) {
@@ -244,7 +249,7 @@ export function GameAppStandalone() {
       }, 30000);
       return () => clearInterval(timer);
     }
-  }, [activeProfile?.settings?.screenTimeReminder, activeProfile?.settings?.screenTimeMinutes]);
+  }, [activeProfile?.id, activeProfile?.settings?.screenTimeReminder, activeProfile?.settings?.screenTimeMinutes]);
 
   useEffect(() => {
     if (screen === "parent") setParentGateOpen(true);
@@ -391,7 +396,9 @@ export function GameAppStandalone() {
 
     // xpResult will be calculated below after reward multiplier is determined
     const stats = { ...prev.categoryStats };
-    const cats = [activeMission.category, activeMission.secondaryCategory].filter(Boolean) as (typeof CATEGORIES)[number]["id"][];
+    const cats = activeMission.missionType === "boss_mission"
+      ? []
+      : [activeMission.category, activeMission.secondaryCategory].filter(Boolean) as (typeof CATEGORIES)[number]["id"][];
     for (const c of cats) {
       stats[c] = { correct: stats[c].correct + (result.isCorrect ? 1 : 0), total: stats[c].total + 1 };
     }
@@ -499,6 +506,7 @@ export function GameAppStandalone() {
 
     updateProfile(prev.id, updated);
 
+    setResultCelebrationsDone(!result.isCorrect && !xpResultAdjusted.leveledUp && unlocked.length === 0);
     setLastResult({
       mission: activeMission,
       isCorrect: result.isCorrect,
@@ -529,8 +537,8 @@ export function GameAppStandalone() {
       if (newRewards.length > 0) {
         setCelebrationRewards(newRewards);
         setCelebrationIndex(0);
-        // Show celebration after result screen
-        setTimeout(() => setCelebrationOpen(true), 1500);
+        // The global modal waits for the result celebrations to finish.
+        setCelebrationOpen(true);
       }
     }
     
@@ -789,206 +797,209 @@ export function GameAppStandalone() {
     return null;
   }
 
-  if (screen === "home") {
-    return (
-      <>
-        <HomeScreen
-          profile={activeProfile}
-          onNavigate={(s) => setScreen(s)}
-          onSwitchProfile={() => setScreen("profile-select")}
-          onOpenPendingBox={handleOpenPendingBox}
-          onHomeUpgrade={handleHomeUpgrade}
-        />
-        {homeToast && (
-          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[200] bg-[#5A3515]/90 text-white px-6 py-3 rounded-full font-bold text-sm shadow-lg animate-bob">
-            Tekan sekali lagi untuk keluar
-          </div>
-        )}
-      </>
-    );
-  }
+  const activeScreen = (() => {
+    if (screen === "home") {
+      return (
+        <>
+          <HomeScreen
+            profile={activeProfile}
+            onNavigate={(s) => setScreen(s)}
+            onSwitchProfile={() => setScreen("profile-select")}
+            onOpenPendingBox={handleOpenPendingBox}
+            onHomeUpgrade={handleHomeUpgrade}
+          />
+          {homeToast && (
+            <GameNotice floating>Tekan sekali lagi untuk keluar</GameNotice>
+          )}
+        </>
+      );
+    }
 
-  if (screen === "map") {
-    const popupStars = popupMission ? activeProfile.missionProgress[popupMission.id]?.stars ?? 0 : 0;
-    return (
-      <>
-        <MapScreen 
-          profile={activeProfile} 
-          onBack={() => setScreen("home")} 
-          onOpenMission={(m) => setPopupMission(m)} 
-          onChangeDifficulty={(diff) => {
-            const current = store.profiles.find(p => p.id === activeProfile.id);
-            if (current) {
-              updateProfile(current.id, { difficulty: diff, currentDifficulty: diff });
+    if (screen === "map") {
+      const popupStars = popupMission ? activeProfile.missionProgress[popupMission.id]?.stars ?? 0 : 0;
+      return (
+        <>
+          <MapScreen
+            profile={activeProfile}
+            onBack={() => setScreen("home")}
+            onOpenMission={(m) => setPopupMission(m)}
+            onChangeDifficulty={(diff) => {
+              const current = store.profiles.find(p => p.id === activeProfile.id);
+              if (current) {
+                updateProfile(current.id, { difficulty: diff, currentDifficulty: diff });
+              }
+            }}
+            onHomeUpgrade={handleHomeUpgrade}
+          />
+          {popupMission ? (
+            <MissionPopup mission={popupMission} stars={popupStars} onClose={() => setPopupMission(null)} onPlay={() => startMission(popupMission)} />
+          ) : null}
+        </>
+      );
+    }
+
+    if (screen === "play" && activeMission) {
+      return <PlayScreen mission={activeMission} onFinish={handleFinishMission} onQuit={() => setScreen("map")} />;
+    }
+
+    if (screen === "result" && lastResult) {
+      return (
+        <ResultScreen
+          onCelebrationsComplete={() => setResultCelebrationsDone(true)}
+          {...lastResult}
+          isStage500={!!lastResultStage500}
+          stage500Difficulty={lastResultStage500?.difficulty}
+          hasPendingFinalReward={lastResultStage500?.hasPendingReward}
+          hasClaimedFinalReward={lastResultStage500?.hasClaimedReward}
+          nextDifficulty={lastResultStage500?.nextDifficulty}
+          isUniversitas={lastResultStage500?.isUniversitas}
+          onOpenRewardBox={() => {
+            if (lastResultStage500?.difficulty) {
+              const current = store.profiles.find(p => p.id === activeProfile!.id);
+              if (current && current.pendingFinalRewardDifficulty) {
+                setCompletionDifficulty(current.pendingFinalRewardDifficulty);
+                setCompletionBoxOpen(true);
+              } else {
+                // Fallback: use the difficulty from result
+                setCompletionDifficulty(lastResultStage500.difficulty as DifficultyId);
+                setCompletionBoxOpen(true);
+              }
             }
           }}
-          onHomeUpgrade={handleHomeUpgrade}
+          onNextMission={() => {
+            const nm = nextMission();
+            if (nm) { setActiveMission(nm); setLastResult(null); setLastResultStage500(null); setScreen("play"); }
+            else { setLastResult(null); setLastResultStage500(null); setScreen("map"); }
+          }}
+          onBackToMap={() => { setLastResult(null); setLastResultStage500(null); setScreen("map"); }}
         />
-        {popupMission ? (
-          <MissionPopup mission={popupMission} stars={popupStars} onClose={() => setPopupMission(null)} onPlay={() => startMission(popupMission)} />
-        ) : null}
-      </>
-    );
-  }
+      );
+    }
 
-  if (screen === "play" && activeMission) {
-    return <PlayScreen mission={activeMission} onFinish={handleFinishMission} onQuit={() => setScreen("map")} />;
-  }
+    if (screen === "badges") return <BadgesScreen profile={activeProfile} onBack={() => setScreen("home")} />;
+    if (screen === "stats") return <StatsScreen profile={activeProfile} onBack={() => setScreen("home")} />;
+    if (screen === "daily-missions") return <DailyMissionsScreen profile={activeProfile} onBack={() => setScreen("home")} />;
 
-  if (screen === "result" && lastResult) {
-    return (
-      <ResultScreen
-        {...lastResult}
-        isStage500={!!lastResultStage500}
-        stage500Difficulty={lastResultStage500?.difficulty}
-        hasPendingFinalReward={lastResultStage500?.hasPendingReward}
-        hasClaimedFinalReward={lastResultStage500?.hasClaimedReward}
-        nextDifficulty={lastResultStage500?.nextDifficulty}
-        isUniversitas={lastResultStage500?.isUniversitas}
-        onOpenRewardBox={() => {
-          if (lastResultStage500?.difficulty) {
-            const current = store.profiles.find(p => p.id === activeProfile!.id);
-            if (current && current.pendingFinalRewardDifficulty) {
-              setCompletionDifficulty(current.pendingFinalRewardDifficulty);
-              setCompletionBoxOpen(true);
-            } else {
-              // Fallback: use the difficulty from result
-              setCompletionDifficulty(lastResultStage500.difficulty as DifficultyId);
-              setCompletionBoxOpen(true);
-            }
-          }
-        }}
-        onNextMission={() => {
-          const nm = nextMission();
-          if (nm) { setActiveMission(nm); setLastResult(null); setLastResultStage500(null); setScreen("play"); }
-          else { setLastResult(null); setLastResultStage500(null); setScreen("map"); }
-        }}
-        onBackToMap={() => { setLastResult(null); setLastResultStage500(null); setScreen("map"); }}
-      />
-    );
-  }
+    if (screen === "minigame-hitung") return <MiniGameHitungScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
+    if (screen === "minigame-pola") return <MiniGamePolaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
+    if (screen === "minigame-ingatan") return <MiniGameIngatanScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
+    if (screen === "minigame-cari-beda") return <CariBerbedaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
 
-  if (screen === "badges") return <BadgesScreen profile={activeProfile} onBack={() => setScreen("home")} />;
-  if (screen === "stats") return <StatsScreen profile={activeProfile} onBack={() => setScreen("home")} />;
-  if (screen === "daily-missions") return <DailyMissionsScreen profile={activeProfile} onBack={() => setScreen("home")} />;
-
-  if (screen === "minigame-hitung") return <MiniGameHitungScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
-  if (screen === "minigame-pola") return <MiniGamePolaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
-  if (screen === "minigame-ingatan") return <MiniGameIngatanScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
-  if (screen === "minigame-cari-beda") return <CariBerbedaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
-
-  // ═══════════════════════════════════════════
-  // Game Adab — disembunyikan dari Mini-Game (2026-06-22)
-  // Redirect ke Mini-Game Center dengan pesan
-  // ═══════════════════════════════════════════
-  if (screen === "minigame-pilih-sikap" || screen === "minigame-nasihat" || screen === "minigame-urutkan-adab" || screen === "minigame-dilema") {
-    const gameName =
-      screen === "minigame-pilih-sikap" ? "Pilih Sikap Terbaik" :
-      screen === "minigame-nasihat" ? "Nasihat dengan Lembut" :
-      screen === "minigame-urutkan-adab" ? "Urutkan Adab" :
-      "Dilema Bijak";
-    return (
-      <div className="h-[100dvh] bg-gradient-sky flex flex-col">
-        <div className="flex-1 flex items-center justify-center p-6">
-          <div className="bg-white rounded-3xl p-8 text-center max-w-sm w-full border-4 border-[#FF9800]/30 shadow-2xl animate-pop-in">
-            <div className="text-5xl mb-4">📋</div>
-            <h2 className="font-display font-black text-xl text-[#5A3515] mb-2">
-              Game Tidak Tersedia
-            </h2>
-            <p className="text-sm font-bold text-[#8C6B45] mb-1">
-              "{gameName}" tidak tersedia lagi di menu Mini-Game.
-            </p>
-            <p className="text-xs text-[#8C6B45]/70 mb-6">
-              Game adab tetap bisa dimainkan di Peta Petualangan ya! ✨
-            </p>
-            <button
-              onClick={() => setScreen("minigame-center")}
-              className="w-full py-3 rounded-2xl bg-gradient-meadow border-b-4 border-[#2E8B12] text-white font-black text-base active:translate-y-1 active:border-b-0 transition-all"
-            >
-              🎮 Kembali ke Mini-Game
-            </button>
+    // ═══════════════════════════════════════════
+    // Game Adab — disembunyikan dari Mini-Game (2026-06-22)
+    // Redirect ke Mini-Game Center dengan pesan
+    // ═══════════════════════════════════════════
+    if (screen === "minigame-pilih-sikap" || screen === "minigame-nasihat" || screen === "minigame-urutkan-adab" || screen === "minigame-dilema") {
+      const gameName =
+        screen === "minigame-pilih-sikap" ? "Pilih Sikap Terbaik" :
+        screen === "minigame-nasihat" ? "Nasihat dengan Lembut" :
+        screen === "minigame-urutkan-adab" ? "Urutkan Adab" :
+        "Dilema Bijak";
+      return (
+        <div className="h-[100dvh] bg-gradient-sky flex flex-col">
+          <div className="flex-1 flex items-center justify-center p-6">
+            <div className="bg-white rounded-3xl p-8 text-center max-w-sm w-full border-4 border-[#FF9800]/30 shadow-2xl animate-pop-in">
+              <div className="text-5xl mb-4">📋</div>
+              <h2 className="font-display font-black text-xl text-[#5A3515] mb-2">
+                Game Tidak Tersedia
+              </h2>
+              <p className="text-sm font-bold text-[#8C6B45] mb-1">
+                "{gameName}" tidak tersedia lagi di menu Mini-Game.
+              </p>
+              <p className="text-xs text-[#8C6B45]/70 mb-6">
+                Game adab tetap bisa dimainkan di Peta Petualangan ya! ✨
+              </p>
+              <button
+                onClick={() => setScreen("minigame-center")}
+                className="w-full py-3 rounded-2xl bg-gradient-meadow border-b-4 border-[#2E8B12] text-white font-black text-base active:translate-y-1 active:border-b-0 transition-all"
+              >
+                🎮 Kembali ke Mini-Game
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  if (screen === "minigame-detektif") return <DetektifScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
-  if (screen === "minigame-tebak-aturan") return <TebakAturanScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
-  if (screen === "minigame-kesimpulan") return <PilihKesimpulanScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
-  if (screen === "minigame-benar-salah") return <BenarSalahScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
+    if (screen === "minigame-detektif") return <DetektifScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
+    if (screen === "minigame-tebak-aturan") return <TebakAturanScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
+    if (screen === "minigame-kesimpulan") return <PilihKesimpulanScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
+    if (screen === "minigame-benar-salah") return <BenarSalahScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
 
-  if (screen === "minigame-ubah-posisi") return <UbahPosisiGame profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
-  if (screen === "minigame-cocok-bayangan") return <CocokBayanganGame profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
-  if (screen === "minigame-jalur-tercepat") return <JalurTercepatGame profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
-  if (screen === "minigame-kode-warna") return <ColorCodeGame profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
-  if (screen === "minigame-rantai-warna") return <MiniGameRantaiWarnaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
-  if (screen === "minigame-jalur-angka") return <MiniGameJalurAngkaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
+    if (screen === "minigame-ubah-posisi") return <UbahPosisiGame profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
+    if (screen === "minigame-cocok-bayangan") return <CocokBayanganGame profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
+    if (screen === "minigame-jalur-tercepat") return <JalurTercepatGame profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
+    if (screen === "minigame-kode-warna") return <ColorCodeGame profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
+    if (screen === "minigame-rantai-warna") return <MiniGameRantaiWarnaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
+    if (screen === "minigame-jalur-angka") return <MiniGameJalurAngkaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
 
-  if (screen === "minigame-misi-keluarga") return <MisiKeluargaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
-  if (screen === "minigame-family-challenge") return <BattleScreen profiles={store.profiles} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
+    if (screen === "minigame-misi-keluarga") return <MisiKeluargaScreen profile={activeProfile} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
+    if (screen === "minigame-family-challenge") return <BattleScreen profiles={store.profiles} onBack={() => setScreen("minigame-center")} backRef={miniGameBackRef} />;
 
-  // Mini Game Center — flat list (no package step)
-  if (screen === "minigame-center") {
-    return (
-      <MiniGameCenter
-        profile={activeProfile}
-        onBack={() => setScreen("home")}
-        onNavigate={setScreen}
-      />
-    );
-  }
+    // Mini Game Center — flat list (no package step)
+    if (screen === "minigame-center") {
+      return (
+        <MiniGameCenter
+          profile={activeProfile}
+          onBack={() => setScreen("home")}
+          onNavigate={setScreen}
+        />
+      );
+    }
 
-  if (screen === "battle") return <BattleScreen profiles={store.profiles} onBack={() => setScreen("home")} backRef={miniGameBackRef} />;
+    if (screen === "battle") return <BattleScreen profiles={store.profiles} onBack={() => setScreen("home")} backRef={miniGameBackRef} />;
 
-  if (screen === "parent") {
-    return (
-      <>
-        <ParentGate open={parentGateOpen} title="Dashboard Orang Tua" onPass={() => setParentGateOpen(false)} onCancel={() => { setParentGateOpen(false); setScreen("home"); }} />
-        <ParentScreen profile={activeProfile} profiles={store.profiles} onBack={() => setScreen("home")}
-          onExportProfile={() => { const data = exportProfile(activeProfile.id); if (data) downloadJSON(`tmt-game-${activeProfile.id.slice(0, 8)}.json`, data); }}
-          onExportAll={() => downloadJSON("tmt-game-full.json", exportDebugSnapshot())}
-          onManageRewards={() => setScreen("reward-setup")} />
-      </>
-    );
-  }
+    if (screen === "parent") {
+      return (
+        <>
+          <ParentGate open={parentGateOpen} title="Dashboard Orang Tua" onPass={() => setParentGateOpen(false)} onCancel={() => { setParentGateOpen(false); setScreen("home"); }} />
+          <ParentScreen profile={activeProfile} profiles={store.profiles} onBack={() => setScreen("home")}
+            onExportProfile={() => { const data = exportProfile(activeProfile.id); if (data) downloadJSON(`tmt-game-${activeProfile.id.slice(0, 8)}.json`, data); }}
+            onExportAll={() => downloadJSON("tmt-game-full.json", exportDebugSnapshot())}
+            onManageRewards={() => setScreen("reward-setup")} />
+        </>
+      );
+    }
 
-  if (screen === "reward-setup") {
-    return (
-      <RewardSetupScreen
-        profiles={store.profiles}
-        onBack={() => setScreen("parent")}
-      />
-    );
-  }
+    if (screen === "reward-setup") {
+      return (
+        <RewardSetupScreen
+          profiles={store.profiles}
+          onBack={() => setScreen("parent")}
+        />
+      );
+    }
 
-  if (screen === "my-rewards") {
-    return <MyRewardsScreen profile={activeProfile} onBack={() => setScreen("home")} />;
-  }
+    if (screen === "my-rewards") {
+      return <MyRewardsScreen profile={activeProfile} onBack={() => setScreen("home")} />;
+    }
 
-  if (screen === "privacy") return <PrivacyScreen onBack={() => setScreen("settings")} />;
+    if (screen === "privacy") return <PrivacyScreen onBack={() => setScreen("settings")} />;
 
-  if (screen === "settings") {
-    return (
-      <>
-        <SettingsScreen profile={activeProfile} onBack={() => setScreen("home")} onReload={() => window.location.reload()}
-          onUpdate={(patch) => updateProfile(activeProfile.id, { settings: { ...activeProfile.settings, ...patch } })}
-          onReset={() => resetProfileProgress(activeProfile.id)}
-          onDeleteAll={() => { localStorage.clear(); window.location.reload(); }}
-          onSwitchProfile={() => setScreen("profile-select")}
-          onExportProfile={() => { const data = exportProfile(activeProfile.id); if (data) downloadJSON(`tmt-game-${activeProfile.id.slice(0, 8)}.json`, data); }}
-          onExportAll={() => downloadJSON("tmt-game-full.json", exportDebugSnapshot())}
-          onPrivacy={() => setScreen("privacy")} />
-        <ScreenTimeReminder open={screenTimeReminderOpen} minutes={screenTimeMinutes}
-          onDismiss={() => setScreenTimeReminderOpen(false)}
-          onExtend={() => { sessionStartRef.current = Date.now(); setScreenTimeReminderOpen(false); }} />
-      </>
-    );
-  }
+    if (screen === "settings") {
+      return (
+        <>
+          <SettingsScreen profile={activeProfile} onBack={() => setScreen("home")} onReload={() => window.location.reload()}
+            onUpdate={(patch) => updateProfile(activeProfile.id, { settings: { ...activeProfile.settings, ...patch } })}
+            onReset={() => resetProfileProgress(activeProfile.id)}
+            onDeleteAll={() => { localStorage.clear(); window.location.reload(); }}
+            onSwitchProfile={() => setScreen("profile-select")}
+            onExportProfile={() => { const data = exportProfile(activeProfile.id); if (data) downloadJSON(`tmt-game-${activeProfile.id.slice(0, 8)}.json`, data); }}
+            onExportAll={() => downloadJSON("tmt-game-full.json", exportDebugSnapshot())}
+            onPrivacy={() => setScreen("privacy")} />
+        </>
+      );
+    }
+    return null;
+  })();
 
   return (
     <>
-      {celebrationOpen && (
+      {activeScreen}
+      <ScreenTimeReminder open={screenTimeReminderOpen && allowGlobalOverlays && !completionBoxOpen && !unlockModalOpen && !masteryModalOpen && !celebrationOpen} minutes={screenTimeMinutes}
+        onDismiss={() => { sessionStartRef.current = Date.now(); setScreenTimeReminderOpen(false); }}
+        onExtend={() => { sessionStartRef.current = Date.now() - (screenTimeMinutes - 15) * 60_000; setScreenTimeReminderOpen(false); }} />
+      {allowGlobalOverlays && celebrationOpen && !completionBoxOpen && !unlockModalOpen && !masteryModalOpen && (
         <RewardCelebration
           open={celebrationOpen}
           rewards={celebrationRewards}
@@ -1009,7 +1020,7 @@ export function GameAppStandalone() {
       )}
 
       {/* Stage 500 Completion Box */}
-      {completionBoxOpen && completionDifficulty && (
+      {allowGlobalOverlays && completionBoxOpen && completionDifficulty && (
         <DifficultyCompletionBox
           difficulty={completionDifficulty as import("@/types").DifficultyId}
           onOpen={handleCompletionBoxClaim}
@@ -1018,7 +1029,7 @@ export function GameAppStandalone() {
       )}
 
       {/* Difficulty Unlock Modal (stage 500) */}
-      {unlockModalOpen && completionDifficulty && (() => {
+      {allowGlobalOverlays && unlockModalOpen && completionDifficulty && (() => {
         const nextDiff = getNextDifficulty(completionDifficulty as import("@/types").DifficultyId);
         if (!nextDiff) return null;
         return (
@@ -1033,7 +1044,7 @@ export function GameAppStandalone() {
       })()}
 
       {/* Mastery Complete Modal (Universitas) */}
-      {masteryModalOpen && (
+      {allowGlobalOverlays && masteryModalOpen && (
         <MasteryCompleteModal
           onViewBadges={handleMasteryViewBadges}
           onBackToMap={handleMasteryBackToMap}

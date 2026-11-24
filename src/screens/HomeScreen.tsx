@@ -1,261 +1,113 @@
+import { ArrowRight, BookOpen, Compass, Gamepad2, House, Settings, ShieldCheck, Star } from "lucide-react";
 import type { Profile, ScreenId } from "@/types";
 import { DIFFICULTY_MAP, DIFFICULTY_UI_LABELS } from "@/data/constants";
 import { xpProgress } from "@/lib/leveling";
-import { getNextDifficulty, hasAnyPendingFinalRewards, getPendingFinalRewardDifficulty } from "@/lib/progress";
-import { GameButton } from "../game/GameButton";
-import { GameCard } from "../game/GameCard";
-import { XPBar } from "../game/XPBar";
-import { GameScreen } from "@/components/layout/GameScreen";
+import { hasAnyPendingFinalRewards } from "@/lib/progress";
 import { useGameStore } from "@/lib/storage";
 import { AvatarPortrait } from "@/components/profile/AvatarPortrait";
+import { DashboardIcon, TmtEmblem } from "@/components/TmtBrandArt";
 
 interface Props {
   profile: Profile;
-  onNavigate: (s: ScreenId) => void;
+  onNavigate: (screen: ScreenId) => void;
   onSwitchProfile: () => void;
   onOpenPendingBox?: () => void;
   onHomeUpgrade?: () => void;
 }
 
+const shortcuts = [
+  { screen: "daily-missions", label: "Misi Harian", description: "Kebaikan sehari-hari", icon: "daily", tone: "honey" },
+  { screen: "minigame-center", label: "Mini-Game", description: "Asah nalar sambil bermain", icon: "minigame", tone: "lilac" },
+  { screen: "battle", label: "Battle", description: "Tantangan bersama", icon: "battle", tone: "peach" },
+  { screen: "badges", label: "Koleksi Lencana", description: "Lihat pencapaianmu", icon: "medal", tone: "mint" },
+] as const;
+
+const resources = [
+  { key: "hearts", icon: "energy", label: "Energi", tone: "peach" },
+  { key: "coins", icon: "coin", label: "Koin", tone: "honey" },
+  { key: "points", icon: "gem", label: "Permata", tone: "mint" },
+] as const;
+
 export function HomeScreen({ profile, onNavigate, onSwitchProfile, onOpenPendingBox, onHomeUpgrade }: Props) {
   const { store } = useGameStore();
-  const diff = DIFFICULTY_MAP[profile.difficulty];
   const xp = xpProgress(profile);
-
-  // Check for pending final reward or upgrade
-  const hasPendingReward = hasAnyPendingFinalRewards(profile);
-  const pendingRewardDiff = getPendingFinalRewardDifficulty(profile);
-
-  // Next reward
-  const nextReward = (store.rewardMilestones || [])
-    .filter((r) => r.profileId === profile.id && r.isActive && !r.isUnlocked)
-    .sort((a, b) => a.targetLevel - b.targetLevel)[0];
-  const readyRewards = (store.rewardMilestones || [])
-    .filter((r) => r.profileId === profile.id && r.isActive && r.isUnlocked && !r.isClaimed);
+  const difficulty = DIFFICULTY_MAP[profile.difficulty];
+  const rewardBox = hasAnyPendingFinalRewards(profile);
+  const upgrade = profile.difficultyUpgradeAvailable ? profile.pendingDifficultyUpgrade : null;
+  const rewards = (store.rewardMilestones ?? []).filter(reward => reward.profileId === profile.id && reward.isActive && !reward.isClaimed);
+  const ready = rewards.filter(reward => reward.isUnlocked).length;
+  const nextReward = rewards.filter(reward => !reward.isUnlocked).sort((a, b) => a.targetLevel - b.targetLevel)[0];
+  const firstMission = profile.totalMissionsCompleted === 0;
 
   return (
-    <GameScreen bgClass="bg-gradient-sky">
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-      {/* top resource pills with labels */}
-      <header className="content-wrapper pt-safe mt-4">
-        <div className="grid grid-cols-3 gap-2">
-          <ResourcePill icon="❤️" label={String(profile.hearts)} subLabel="Energi" tone="heart" />
-          <ResourcePill icon="🪙" label={String(profile.coins)} subLabel="Koin" tone="coin" />
-          <ResourcePill icon="💎" label={String(profile.points)} subLabel="Permata" tone="gem" />
-        </div>
-
-        {/* LOGO TMT */}
-        <div className="mt-6 flex justify-center">
-          <img src="/assets/logo.png" alt="TMT Logo" className="h-20 sm:h-24 w-auto object-contain drop-shadow-lg" />
-        </div>
-        <p className="text-center text-[10px] font-bold text-[#5A3515]/60 -mt-1 mb-2">
-          The Mastermind Trials
-        </p>
-
-        {/* profile card with switch icon */}
-        <div className="rounded-[28px] surface-panel p-4 flex items-center gap-4">
-          <button
-            onClick={onSwitchProfile}
-            className="h-16 w-16 rounded-[20px] bg-white grid place-items-center text-4xl border-4 border-[#CBB794] shadow-sm shrink-0 active:translate-y-[2px] relative"
-            aria-label="Ganti profil"
-          >
-            <AvatarPortrait avatar={profile.avatar} className="h-full w-full rounded-[16px]" />
-            <span className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-gradient-meadow border-2 border-white grid place-items-center text-xs">🔄</span>
-          </button>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <h2 className="font-display font-black text-2xl text-[#5A3515] truncate leading-none">{profile.name}</h2>
-              <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-[#E8DCC2] text-[#8C6B45] border-2 border-[#CBB794] shrink-0">
-                {diff.shortLabel}
-              </span>
+    <div className="field-shell field-home">
+      <main className="field-scroll">
+        <div className="field-wrap field-home-content">
+          <header className="field-home-header">
+            <div className="field-brand">
+              <TmtEmblem className="field-brand-emblem" />
+              <div><strong>TMT</strong><small>The Mastermind Trials</small></div>
             </div>
-            <div className="mt-2">
-              <XPBar level={profile.level} current={xp.current} needed={xp.needed} percent={xp.percent} />
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="content-wrapper mt-4 space-y-4 pb-8">
-        {/* ═══ Pending Final Reward Box ═══ */}
-        {hasPendingReward && pendingRewardDiff && (
-          <div className="w-full rounded-[26px] bg-gradient-to-br from-[#FFF9E6] to-[#FFE0A3] border-4 border-[#FFD700] p-4 text-center shadow-[0_0_20px_rgba(255,215,0,0.4)] animate-float">
-            <div className="text-4xl mb-2">🎁</div>
-            <div className="font-display font-black text-lg text-[#5A3515] mb-1">
-              Hadiah Akhir Level Menunggu!
-            </div>
-            <p className="text-xs font-bold text-[#8C6B45] mb-3">
-              Kamu punya hadiah spesial yang belum dibuka! ✨
-            </p>
-            <button
-              onClick={onOpenPendingBox}
-              className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#FFD700] to-[#FFA500] border-b-4 border-[#D48806] text-[#5A3515] font-black text-base shadow-sm active:translate-y-1 active:border-b-0 transition-all"
-            >
-              🎀 Buka Hadiah
+            <button type="button" className="field-avatar-button" aria-label="Ganti profil" onClick={onSwitchProfile}>
+              <AvatarPortrait avatar={profile.avatar} className="size-11 rounded-full" />
             </button>
-          </div>
-        )}
-
-        {/* ═══ Pending Difficulty Upgrade ("Nanti Dulu" was chosen) ═══ */}
-        {!hasPendingReward && profile.difficultyUpgradeAvailable && profile.pendingDifficultyUpgrade && (() => {
-          const pendingDiff = profile.pendingDifficultyUpgrade;
-          if (!pendingDiff) return null;
-          const nextLabel = DIFFICULTY_UI_LABELS[pendingDiff] || pendingDiff;
-          const nextInfo = DIFFICULTY_MAP[pendingDiff];
-          return (
-            <div className="w-full rounded-[26px] bg-gradient-to-br from-[#E8F5E9] to-[#A5D6A7] border-4 border-[#2E8B12] p-4 text-center shadow-pop">
-              <div className="text-3xl mb-2">{nextInfo?.emoji || "🚀"}</div>
-              <div className="font-display font-black text-lg text-[#2E8B12] mb-1">
-                Level Baru Terbuka!
-              </div>
-              <p className="text-xs font-bold text-[#5A3515] mb-3">
-                {nextLabel} sudah terbuka. Siap naik tingkat?
-              </p>
-              <button
-                onClick={onHomeUpgrade}
-                className="w-full py-3 rounded-2xl bg-gradient-meadow border-b-4 border-[#1B5E20] text-white font-black text-base shadow-sm active:translate-y-1 active:border-b-0 transition-all"
-              >
-                🚀 Naik Tingkat
+          </header>
+          <section className="field-landscape field-home-hero" aria-labelledby="home-greeting">
+            <div className="field-hero-copy">
+              <p className="field-kicker">Petualangan ilmu &amp; akhlak</p>
+              <h1 id="home-greeting">Halo, {profile.name}!</h1>
+              <p>{firstMission ? "Langkah pertamamu menuju Kota Ilmu dimulai di sini." : "Ada hal baru untuk ditemukan di Kota Ilmu."}</p>
+              <button type="button" className="field-button" onClick={() => onNavigate("map")}>
+                {firstMission ? "Mulai misi pertama" : "Lanjutkan misi"} <ArrowRight size={17} aria-hidden="true" />
               </button>
             </div>
-          );
-        })()}
-
-        {/* Lanjutkan Misi button — big CTA */}
-        <button
-          onClick={() => onNavigate("map")}
-          className="w-full py-4 rounded-[26px] bg-gradient-to-r from-[#2E8B12] to-[#4CAF50] border-b-4 border-[#1B5E20] text-white font-black text-lg shadow-pop active:translate-y-[2px] active:border-b-2 transition-all flex items-center justify-center gap-2"
-        >
-          <span className="text-2xl">🗺️</span> {profile.totalMissionsCompleted === 0 ? "Mulai Misi Pertama" : "Lanjutkan Misi"}
-        </button>
-
-        {/* Main grid — colorful tiles */}
-        <div className="grid grid-cols-2 gap-3">
-          <ColorTile emoji="🌍" title="Peta Petualangan" onClick={() => onNavigate("map")} color="green" />
-          <ColorTile emoji="☀️" title="Misi Harian" subtitle="Baru" onClick={() => onNavigate("daily-missions")} color="orange" />
-          <ColorTile emoji="🏅" title="Koleksi Lencana" onClick={() => onNavigate("badges")} color="purple" />
-          <ColorTile emoji="📊" title="Status Window" onClick={() => onNavigate("stats")} color="blue" />
-        </div>
-
-        {/* Mini-Game & Battle in one row */}
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={() => onNavigate("minigame-center")}
-            className="py-3.5 rounded-[22px] bg-gradient-to-br from-[#FF6B6B] to-[#FF8E53] border-b-4 border-[#D32F2F] text-white font-black text-sm shadow-pop active:translate-y-[2px] active:border-b-2 transition-all flex items-center justify-center gap-2"
-          >
-            <span className="text-xl">🎮</span> Mini-Game
-          </button>
-          <button
-            onClick={() => onNavigate("battle")}
-            className="py-3.5 rounded-[22px] bg-gradient-to-br from-[#7B1FA2] to-[#E040FB] border-b-4 border-[#4A148C] text-white font-black text-sm shadow-pop active:translate-y-[2px] active:border-b-2 transition-all flex items-center justify-center gap-2"
-          >
-            <span className="text-xl">⚔️</span> Battle
-          </button>
-        </div>
-
-        {/* Hadiah Berikutnya */}
-        {(nextReward || readyRewards.length > 0) && (
-          <button
-            onClick={() => onNavigate("my-rewards")}
-            className="w-full rounded-[26px] bg-gradient-to-br from-[#FFF9E6] to-[#FFE0A3] border-3 border-[#D48806] p-4 text-left shadow-pop active:translate-y-[4px] active:shadow-sm transition-all"
-          >
-            <div className="flex items-center gap-3">
-              <div className="text-3xl shrink-0">
-                {readyRewards.length > 0 ? "🎉" : "🎁"}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-display font-black text-sm text-[#5A3515] uppercase leading-tight">
-                  {readyRewards.length > 0
-                    ? "Hadiah Sudah Terbuka!"
-                    : "Hadiah Berikutnya"}
-                </div>
-                {nextReward ? (
-                  <>
-                    <div className="text-xs font-bold text-[#8C6B45] mt-0.5">
-                      {nextReward.rewardIcon} {nextReward.rewardTitle} · Level {nextReward.targetLevel}
-                    </div>
-                    <div className="text-[10px] font-bold text-[#2E8B12] mt-0.5">
-                      Level sekarang {profile.level}. Kurang {Math.max(0, nextReward.targetLevel - profile.level)} level lagi!
-                    </div>
-                  </>
-                ) : readyRewards.length > 0 ? (
-                  <div className="text-xs font-bold text-[#A02020] mt-0.5">
-                    Tunjukkan ke orang tua untuk mendapatkan hadiah!
-                  </div>
-                ) : null}
-                <div className="mt-1.5 h-2 rounded-full bg-white/60 overflow-hidden border border-[#D48806]/30">
-                  <div
-                    className="h-full bg-gradient-coin rounded-full transition-all"
-                    style={{
-                      width: `${nextReward ? Math.min(100, (profile.level / nextReward.targetLevel) * 100) : 100}%`,
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="text-xl shrink-0">→</div>
+          </section>
+          <section className="field-progress" aria-label="Progres petualang">
+            <div className="field-level">
+              <div><strong>Level {profile.level}</strong><span>{difficulty.shortLabel}</span></div>
+              <progress max={100} value={xp.percent} aria-label={"Pengalaman level, " + xp.current + " dari " + xp.needed + " XP"} />
             </div>
-          </button>
-        )}
-
-
-
-        {/* Kontrol & Pengaturan section — at bottom */}
-        <div className="pt-2">
-          <h2 className="font-display font-black text-lg text-[#5A3515] mb-3 text-center flex items-center justify-center gap-2">
-            <span>⚙️</span> Kontrol & Pengaturan
-          </h2>
-          <div className="grid grid-cols-2 gap-3">
-            <ColorTile emoji="👨‍👩‍👧" title="Orang Tua" onClick={() => onNavigate("parent")} color="teal" />
-            <ColorTile emoji="⚙️" title="Pengaturan" onClick={() => onNavigate("settings")} color="gray" />
+            <dl className="field-resources">
+              {resources.map(({ key, icon, label, tone }) => (
+                <div key={key} data-tone={tone}>
+                  <DashboardIcon name={icon} />
+                  <dt>{label}</dt>
+                  <dd>{profile[key]}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+          {rewardBox && onOpenPendingBox && <button type="button" className="field-notice" onClick={onOpenPendingBox}><DashboardIcon name="gift" /><span>Hadiah akhir level siap dibuka</span><ArrowRight size={17} /></button>}
+          {!rewardBox && upgrade && onHomeUpgrade && <button type="button" className="field-notice" onClick={onHomeUpgrade}><Star size={21} /> <span>Level {DIFFICULTY_UI_LABELS[upgrade]} terbuka</span><ArrowRight size={17} /></button>}
+          <section aria-labelledby="quick-access">
+            <h2 className="field-section-title" id="quick-access">Akses cepat</h2>
+            <div className="field-shortcuts">
+              {shortcuts.map(({ screen, label, description, icon, tone }) => (
+                <button type="button" key={screen} data-tone={tone} onClick={() => onNavigate(screen)}>
+                  <DashboardIcon name={icon} />
+                  <span><strong>{label}</strong><small>{description}</small></span>
+                  <ArrowRight className="field-shortcut-arrow" size={16} aria-hidden="true" />
+                </button>
+              ))}
+            </div>
+          </section>
+          {(ready > 0 || nextReward) && (
+            <button type="button" className="field-notice" onClick={() => onNavigate("my-rewards")}>
+              <DashboardIcon name="gift" /><span>{ready > 0 ? ready + " hadiah siap diklaim" : nextReward?.rewardTitle + " · Level " + nextReward?.targetLevel}</span><ArrowRight size={17} />
+            </button>
+          )}
+          <div className="field-utility">
+            <button type="button" onClick={() => onNavigate("parent")}><ShieldCheck size={17} /> Orang tua</button>
+            <button type="button" onClick={() => onNavigate("settings")}><Settings size={17} /> Pengaturan</button>
           </div>
         </div>
       </main>
-      </div>
-    </GameScreen>
-  );
-}
-
-function ResourcePill({ icon, label, subLabel, tone }: { icon: string; label: string; subLabel: string; tone: "heart" | "coin" | "gem" }) {
-  const badgeBg =
-    tone === "heart" ? "bg-gradient-heart border-[#A02020]" :
-    tone === "coin" ? "bg-gradient-coin border-[#D48806]" :
-    "bg-gradient-blue border-[#185E9F]";
-  return (
-    <div className="relative h-14 sm:h-16 rounded-full surface-panel flex flex-col items-center justify-center pl-10 sm:pl-12 pr-2 sm:pr-3 py-1">
-      <div className={`absolute left-0 top-1/2 -translate-y-1/2 h-10 w-10 sm:h-12 sm:w-12 rounded-full grid place-items-center text-xl sm:text-2xl ${badgeBg} shadow-sm border-[3px] sm:border-4`}>
-        <span>{icon}</span>
-      </div>
-      <span className="font-display font-black text-[#5A3515] text-sm sm:text-base leading-none">
-        {label}
-      </span>
-      <span className="text-[9px] sm:text-[10px] font-bold text-[#8C6B45] leading-tight">
-        {subLabel}
-      </span>
+      <nav className="field-nav" aria-label="Navigasi utama">
+        <span aria-current="page"><House size={21} />Beranda</span>
+        <button type="button" onClick={() => onNavigate("map")}><Compass size={21} />Peta</button>
+        <button type="button" onClick={() => onNavigate("minigame-center")}><Gamepad2 size={21} />Bermain</button>
+        <button type="button" onClick={() => onNavigate("stats")}><BookOpen size={21} />Progres</button>
+      </nav>
     </div>
-  );
-}
-
-function ColorTile({ emoji, title, subtitle, onClick, color }: {
-  emoji: string; title: string; subtitle?: string;
-  onClick: () => void;
-  color: "green" | "orange" | "purple" | "blue" | "teal" | "gray";
-}) {
-  const colorCls: Record<string, string> = {
-    green: "bg-gradient-to-br from-[#4CAF50] to-[#2E7D32] border-[#1B5E20] text-white",
-    orange: "bg-gradient-to-br from-[#FF9800] to-[#F57C00] border-[#E65100] text-white",
-    purple: "bg-gradient-to-br from-[#9C27B0] to-[#6A1B9A] border-[#4A148C] text-white",
-    blue: "bg-gradient-to-br from-[#2196F3] to-[#1565C0] border-[#0D47A1] text-white",
-    teal: "bg-gradient-to-br from-[#009688] to-[#00695C] border-[#004D40] text-white",
-    gray: "bg-gradient-to-br from-[#78909C] to-[#455A64] border-[#263238] text-white",
-  };
-  return (
-    <button
-      onClick={onClick}
-      className={`rounded-[22px] border-b-4 p-3 sm:p-4 text-left shadow-pop active:translate-y-[2px] active:border-b-2 ${colorCls[color]}`}
-    >
-      <div className="text-3xl sm:text-4xl drop-shadow-sm">{emoji}</div>
-      <div className="mt-1.5 font-display font-black text-xs sm:text-sm leading-tight uppercase tracking-wide">{title}</div>
-      {subtitle ? <div className="text-[10px] font-bold opacity-70 mt-0.5">{subtitle}</div> : null}
-    </button>
   );
 }

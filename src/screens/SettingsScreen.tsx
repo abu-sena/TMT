@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ArrowLeft, ChevronRight, Download, House, RotateCcw, ShieldCheck, Trash2, UserRound, Wrench, type LucideIcon } from "lucide-react";
 import type { Profile, ProfileSettings } from "@/types";
 import { GameButton } from "../game/GameButton";
 import { GameCard } from "../game/GameCard";
@@ -55,17 +56,17 @@ export function SettingsScreen({
     setTechnicalResetDone(true);
   };
 
-  const screenTimeOptions = [0, 30, 45, 60, 90];
+  const screenTimeOptions = [30, 45, 60, 90];
 
   return (
     <div className="h-[100dvh] bg-gradient-sky flex flex-col overflow-hidden">
       <header className="shrink-0 content-wrapper pt-safe mt-2 pb-3 flex items-center gap-3">
-        <button
+        <button type="button"
           onClick={onBack}
-          className="h-12 w-12 rounded-[18px] bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-xl shadow-sm shrink-0 active:scale-95 transition-transform"
+          className="tmt-icon-button h-11 w-11"
           aria-label="Kembali"
         >
-          ←
+          <ArrowLeft aria-hidden="true" size={19} />
         </button>
         <div className="flex-1 min-w-0">
           <h1 className="font-display font-black text-xl sm:text-2xl text-[#5A3515] truncate">
@@ -75,58 +76,28 @@ export function SettingsScreen({
             Sesuaikan permainan
           </p>
         </div>
-        <div className="text-2xl sm:text-3xl shrink-0">⚙️</div>
+
       </header>
 
       <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain content-wrapper space-y-3">
         {/* Audio */}
         <GameCard tone="cream" padded={false}>
           <Row
-            label="🔊 Suara Efek"
+            label="Suara efek"
             value={s.sound}
             onToggle={(v) => onUpdate({ sound: v })}
             hint="Bunyi saat menjawab dan naik level"
-          />
-          <Divider />
-          <Row
-            label="🎵 Musik Latar"
-            value={s.music}
-            onToggle={(v) => onUpdate({ music: v })}
-            hint="Musik ceria selama bermain"
           />
         </GameCard>
 
         {/* Screen Time */}
         <GameCard tone="cream" padded={false}>
-          <div className="flex items-center justify-between px-4 py-3 text-left">
-            <div className="flex-1 min-w-0">
-              <div className="font-bold">⏰ Pengingat Waktu Bermain</div>
-              <div className="text-xs text-muted-foreground">
-                {s.screenTimeReminder && s.screenTimeMinutes > 0
-                  ? `Mengingatkan setiap ${s.screenTimeMinutes} menit`
-                  : "Nonaktif"}
-              </div>
-            </div>
-            <span
-              onClick={() =>
-                onUpdate({
-                  screenTimeReminder: !s.screenTimeReminder,
-                  screenTimeMinutes: !s.screenTimeReminder ? 45 : 0,
-                })
-              }
-              className={`relative inline-flex h-7 w-12 rounded-full border-2 transition-colors cursor-pointer ${
-                s.screenTimeReminder
-                  ? "bg-gradient-meadow border-leaf-dark"
-                  : "bg-stone-300 border-stone-400"
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                  s.screenTimeReminder ? "translate-x-5" : "translate-x-0.5"
-                }`}
-              />
-            </span>
-          </div>
+          <Row
+            label="Pengingat waktu bermain"
+            hint={s.screenTimeReminder && s.screenTimeMinutes > 0 ? "Mengingatkan setiap " + s.screenTimeMinutes + " menit" : "Nonaktif"}
+            value={s.screenTimeReminder}
+            onToggle={value => onUpdate({ screenTimeReminder: value, screenTimeMinutes: value ? 45 : 0 })}
+          />
           {s.screenTimeReminder && (
             <>
               <Divider />
@@ -135,15 +106,13 @@ export function SettingsScreen({
                   Durasi sebelum pengingat:
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {screenTimeOptions.filter(Boolean).map((mins) => (
+                  {screenTimeOptions.map((mins) => (
                     <button
                       key={mins}
+                      type="button"
                       onClick={() => onUpdate({ screenTimeMinutes: mins })}
-                      className={`flex-1 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
-                        s.screenTimeMinutes === mins
-                          ? "bg-gradient-meadow border-[#2E8B12] text-white shadow-sm"
-                          : "bg-white border-[#CBB794] text-[#5A3515] hover:border-[#8C6B45]"
-                      }`}
+                      aria-pressed={s.screenTimeMinutes === mins}
+                      className="tmt-settings-choice flex-1"
                     >
                       {mins} mnt
                     </button>
@@ -184,77 +153,27 @@ export function SettingsScreen({
           </div>
         </GameCard>
 
-        {/* Privacy */}
-        <GameButton
-          variant="secondary"
-          size="md"
-          full
-          leadingIcon="🔒"
-          onClick={onPrivacy}
-        >
-          Privasi & Keamanan Data
-        </GameButton>
-
-        {/* Switch profile */}
-        <GameButton
-          variant="secondary"
-          size="md"
-          full
-          leadingIcon="👤"
-          onClick={onSwitchProfile}
-        >
-          Ganti Profil
-        </GameButton>
-
-        {/* Export */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <GameButton
-            variant="secondary"
-            size="md"
-            full
-            leadingIcon="📋"
-            onClick={onExportProfile}
-          >
-            Ekspor Profil
-          </GameButton>
-          <GameButton
-            variant="secondary"
-            size="md"
-            full
-            leadingIcon="💾"
-            onClick={onExportAll}
-          >
-            Ekspor Semua
-          </GameButton>
-        </div>
-
-        {/* ═══ Perawatan Data ═══ */}
-        <GameCard tone="cream" padded={false}>
-          <div className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xl">🛠️</span>
-              <div>
-                <div className="font-display font-black text-sm text-[#5A3515]">
-                  Reset Data Teknis
-                </div>
-                <div className="text-xs text-[#8C6B45] mt-0.5 leading-relaxed">
-                  Hapus cache dan data teknis yang bermasalah tanpa menghapus
-                  capaian, poin, lencana, profil, dan laporan. Gunakan jika
-                  Misi Harian bermasalah atau setelah update aplikasi.
-                </div>
-              </div>
-            </div>
-            <GameButton
-              variant="secondary"
-              size="md"
-              full
-              leadingIcon="🛠️"
-              onClick={() => openGate("technical")}
-            >
-              Reset Data Teknis
-            </GameButton>
+        <section className="tmt-settings-section" aria-labelledby="settings-local-data">
+          <h2 id="settings-local-data">Profil dan data</h2>
+          <div className="tmt-settings-group">
+            <SettingsAction icon={ShieldCheck} label="Privasi & keamanan data" onClick={onPrivacy} />
+            <SettingsAction icon={UserRound} label="Ganti profil" onClick={onSwitchProfile} />
+            <SettingsAction icon={Download} label="Ekspor profil" onClick={onExportProfile} />
+            <SettingsAction icon={Download} label="Ekspor semua data" onClick={onExportAll} />
           </div>
-        </GameCard>
+        </section>
+
+        <section className="tmt-settings-section" aria-labelledby="settings-maintenance">
+          <h2 id="settings-maintenance">Perawatan aplikasi</h2>
+          <div className="tmt-settings-group">
+            <SettingsAction
+              icon={Wrench}
+              label="Reset data teknis"
+              description="Bersihkan cache dan data teknis. Profil, progres, poin, dan laporan tetap tersimpan."
+              onClick={() => openGate("technical")}
+            />
+          </div>
+        </section>
 
         {/* Result after technical reset */}
         {technicalResetDone && technicalResetResult && (
@@ -291,36 +210,24 @@ export function SettingsScreen({
           </div>
         )}
 
-        {/* Destructive actions — gated */}
-        <GameButton
-          variant="danger"
-          size="md"
-          full
-          leadingIcon="🗑️"
-          onClick={() => openGate("reset")}
-        >
-          Reset Progres
-        </GameButton>
-
-        <GameButton
-          variant="ghost"
-          size="sm"
-          full
-          onClick={() => openGate("delete")}
-        >
-          Hapus Semua Data Lokal
-        </GameButton>
+        <section className="tmt-settings-section tmt-settings-risk" aria-labelledby="settings-risk-title">
+          <h2 id="settings-risk-title">Reset dan hapus</h2>
+          <div className="tmt-settings-group">
+            <SettingsAction icon={RotateCcw} label="Reset progres" description="Reset perjalanan profil aktif." onClick={() => openGate("reset")} destructive />
+            <SettingsAction icon={Trash2} label="Hapus semua data lokal" description="Hapus profil dan data game di perangkat ini." onClick={() => openGate("delete")} destructive />
+          </div>
+        </section>
 
         <div className="pt-2 text-center text-xs text-[#5A3515]/70">
           TMT · v1.0
         </div>
       </main>
 
-      <div className="shrink-0 content-wrapper pb-safe pt-2">
-        <GameButton variant="ghost" size="md" full onClick={onBack}>
-          🏠 Beranda
+      <footer className="tmt-settings-footer shrink-0 content-wrapper pb-safe pt-2">
+        <GameButton variant="ghost" size="md" full leadingIcon={<House />} onClick={onBack}>
+          Beranda
         </GameButton>
-      </div>
+      </footer>
 
       {/* Parent gate */}
       <ParentGate
@@ -383,7 +290,7 @@ function TechnicalResetConfirmModal({
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="surface-panel rounded-[2rem] p-6 max-w-sm w-full shadow-2xl border-4 border-[#D4B483] text-center">
+      <div className="surface-panel tmt-dialog-surface rounded-[2rem] p-6 max-w-sm w-full shadow-2xl border-4 border-[#D4B483] text-center">
         <div className="text-5xl mb-3">🛠️</div>
         <h2 className="font-display font-black text-xl text-[#5A3515] mb-2">
           Reset Data Teknis?
@@ -415,7 +322,7 @@ function TechnicalResetConfirmModal({
             Batal
           </GameButton>
           <GameButton
-            variant="secondary"
+            variant="primary"
             size="md"
             onClick={onConfirm}
             disabled={!checked}
@@ -429,6 +336,25 @@ function TechnicalResetConfirmModal({
   );
 }
 
+function SettingsAction({ icon: Icon, label, description, onClick, destructive = false }: {
+  icon: LucideIcon;
+  label: string;
+  description?: string;
+  onClick: () => void;
+  destructive?: boolean;
+}) {
+  return (
+    <button type="button" className="tmt-settings-row" data-destructive={destructive || undefined} onClick={onClick}>
+      <span className="tmt-settings-row-icon"><Icon size={19} aria-hidden="true" /></span>
+      <span className="tmt-settings-row-copy">
+        <strong>{label}</strong>
+        {description && <small>{description}</small>}
+      </span>
+      <ChevronRight className="tmt-settings-row-arrow" size={16} aria-hidden="true" />
+    </button>
+  );
+}
+
 function Row({
   label, value, onToggle, hint,
 }: {
@@ -439,8 +365,12 @@ function Row({
 }) {
   return (
     <button
+      type="button"
+      role="switch"
+      aria-checked={value}
+      aria-label={label}
       onClick={() => onToggle(!value)}
-      className="w-full flex items-center justify-between px-4 py-3 text-left"
+      className="tmt-settings-row tmt-settings-toggle"
     >
       <div>
         <div className="font-bold">{label}</div>
@@ -448,7 +378,7 @@ function Row({
           <div className="text-xs text-muted-foreground">{hint}</div>
         ) : null}
       </div>
-      <span
+      <span aria-hidden="true"
         className={`relative inline-flex h-7 w-12 rounded-full border-2 transition-colors ${
           value
             ? "bg-gradient-meadow border-leaf-dark"
@@ -485,17 +415,17 @@ function GoogleConnectCard() {
           </div>
         </div>
         {!user && status !== "syncing" && (
-          <button
+          <button type="button" data-action="primary"
             onClick={connect}
-            className="px-4 py-2 min-h-[2.75rem] rounded-full bg-[#1a73e8] text-white text-xs font-bold shadow-sm active:translate-y-px"
+            className="tmt-action-button px-4 py-2 min-h-[2.75rem] rounded-full bg-[#1a73e8] text-white text-xs font-bold shadow-sm active:translate-y-px"
           >
             Hubungkan
           </button>
         )}
         {user && status !== "syncing" && (
-          <button
+          <button type="button" data-action="danger-outline"
             onClick={disconnect}
-            className="px-4 py-2 min-h-[2.75rem] rounded-full bg-stone-200 text-stone-700 text-xs font-bold active:translate-y-px"
+            className="tmt-action-button px-4 py-2 min-h-[2.75rem] rounded-full bg-stone-200 text-stone-700 text-xs font-bold active:translate-y-px"
           >
             Putuskan
           </button>
@@ -552,15 +482,15 @@ function GoogleConnectCard() {
             <strong>{cloudMeta.totalMissionsCompleted} misi</strong> selesai.
           </div>
           <div className="flex gap-2">
-            <button
+            <button type="button" data-action="primary"
               onClick={restore}
-              className="flex-1 py-1.5 rounded-xl bg-[#5A3515] text-white text-xs font-bold active:translate-y-px shadow-sm"
+              className="tmt-action-button flex-1 py-1.5 rounded-xl bg-[#5A3515] text-white text-xs font-bold active:translate-y-px shadow-sm"
             >
               Gunakan Cloud
             </button>
-            <button
+            <button type="button" data-action="danger-outline"
               onClick={backup}
-              className="flex-1 py-1.5 rounded-xl bg-white text-[#5A3515] text-xs font-bold border-2 border-[#D4B483] active:translate-y-px"
+              className="tmt-action-button flex-1 py-1.5 rounded-xl bg-white text-[#5A3515] text-xs font-bold border-2 border-[#D4B483] active:translate-y-px"
             >
               Timpa Cloud
             </button>
@@ -570,15 +500,15 @@ function GoogleConnectCard() {
 
       {user && status === "idle" && (
         <div className="mt-1 flex justify-end gap-2">
-          <button
+          <button type="button"
             onClick={restore}
-            className="text-xs font-bold text-[#185E9F] underline underline-offset-2"
+            className="tmt-text-button text-xs font-bold text-[#185E9F] underline underline-offset-2"
           >
             Tarik Data
           </button>
-          <button
+          <button type="button"
             onClick={backup}
-            className="text-xs font-bold text-[#2E8B12] underline underline-offset-2"
+            className="tmt-text-button text-xs font-bold text-[#2E8B12] underline underline-offset-2"
           >
             Simpan Data
           </button>

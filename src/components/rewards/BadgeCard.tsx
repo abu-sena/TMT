@@ -12,7 +12,7 @@ export function BadgeCard({ badge, unlocked, onClick }: Props) {
     <button
       type="button"
       onClick={onClick}
-      className={cn(
+      className={cn("tmt-choice-button",
         "relative w-full p-4 text-center transition-all cursor-pointer",
         unlocked
           ? "surface-panel hover:-translate-y-1 active:translate-y-0"

@@ -47,7 +47,6 @@ export function createProfile(name: string, avatar: string, difficulty: Difficul
     createdAt: Date.now(),
     settings: {
       sound: true,
-      music: true,
       language: "id",
       googleConnected: false,
       screenTimeReminder: false,

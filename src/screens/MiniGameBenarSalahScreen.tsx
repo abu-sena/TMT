@@ -2,7 +2,9 @@
  * Benar atau Salah — True/False mini-game
  * Logika package
  */
+import { X as TmtCloseGlyph } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { MiniGameIcon } from "@/components/minigames/MiniGameArt";
 import type { Profile, MiniGameSession } from "@/types";
 import { createMiniGameSession } from "@/lib/minigame-engine";
 import { GameButton } from "../game/GameButton";
@@ -122,7 +124,7 @@ export function BenarSalahScreen({ profile, onBack, backRef }: Props) {
   if (screen === "start") return (
     <div className="h-[100dvh] bg-gradient-sky flex flex-col items-center justify-center p-4">
       <GameCard tone="blue" className="text-center w-full max-w-sm p-6 sm:p-8 text-white">
-        <div className="text-6xl mb-4">✅</div>
+        <MiniGameIcon gameId="benar-atau-salah" className="size-20 mb-3" />
         <h1 className="font-display font-black text-3xl mb-1">Benar atau Salah</h1>
         <p className="text-sm font-bold opacity-80 mb-4">Tentukan apakah pernyataan ini benar atau salah! 20 soal.</p>
         {personalBest > 0 && (<div className="mb-4 p-3 rounded-2xl bg-black/20"><div className="text-xs uppercase opacity-70">Rekor Terbaik</div><div className="font-display font-black text-2xl text-yellow-300">{personalBest}</div></div>)}
@@ -138,7 +140,7 @@ export function BenarSalahScreen({ profile, onBack, backRef }: Props) {
   return (
     <div className="h-[100dvh] bg-gradient-sky flex flex-col p-3 sm:p-4">
       <header className="pt-safe flex items-center gap-2 mb-3 shrink-0">
-        <button onClick={() => { clearTimers(); onBack(); }} className="h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shadow-sm shrink-0 active:scale-95">✕</button>
+        <button type="button" aria-label="Tutup" onClick={() => { clearTimers(); onBack(); }} className="tmt-icon-button h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shadow-sm shrink-0 active:scale-95"><TmtCloseGlyph aria-hidden="true" /></button>
         <div className="bg-white/50 px-3 py-1.5 rounded-full font-black text-[#5A3515] text-sm border-2 border-[#CBB794]">⭐ {score}</div>
         <div className="bg-white/50 px-3 py-1.5 rounded-full font-black text-[#5A3515] text-sm border-2 border-[#CBB794] ml-auto">{correctCount + wrongCount}/20</div>
       </header>
@@ -154,8 +156,8 @@ export function BenarSalahScreen({ profile, onBack, backRef }: Props) {
         )}
         {!showFeedback && (
           <div className="flex gap-3 w-full max-w-sm">
-            <button onClick={() => handleAnswer(true)} className="flex-1 py-6 rounded-2xl bg-gradient-meadow border-b-4 border-[#2E8B12] text-white font-black text-2xl shadow-lg active:translate-y-1 active:border-b-0 transition-all">✅ Benar</button>
-            <button onClick={() => handleAnswer(false)} className="flex-1 py-6 rounded-2xl bg-gradient-heart border-b-4 border-[#A02020] text-white font-black text-2xl shadow-lg active:translate-y-1 active:border-b-0 transition-all">❌ Salah</button>
+            <button type="button" onClick={() => handleAnswer(true)} className="tmt-choice-button flex-1 py-6 rounded-2xl bg-gradient-meadow border-b-4 border-[#2E8B12] text-white font-black text-2xl shadow-lg active:translate-y-1 active:border-b-0 transition-all">✅ Benar</button>
+            <button type="button" onClick={() => handleAnswer(false)} className="tmt-choice-button flex-1 py-6 rounded-2xl bg-gradient-heart border-b-4 border-[#A02020] text-white font-black text-2xl shadow-lg active:translate-y-1 active:border-b-0 transition-all">❌ Salah</button>
           </div>
         )}
       </main>

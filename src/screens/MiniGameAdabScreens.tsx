@@ -1,6 +1,7 @@
 /**
  * Nasihat dengan Lembut + Dilema Bijak + Urutkan Adab — Adab mini-games
  */
+import { X as TmtCloseGlyph } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { Profile, MiniGameSession } from "@/types";
 import { createMiniGameSession } from "@/lib/minigame-engine";
@@ -100,7 +101,7 @@ function NasihatGameScreen({ profile, onBack, backRef }: { profile: Profile; onB
   return (
     <div className="h-[100dvh] bg-gradient-sky flex flex-col p-3 sm:p-4">
       <header className="pt-safe flex items-center gap-2 mb-3 shrink-0">
-        <button onClick={onBack} className="h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shrink-0 active:scale-95">✕</button>
+        <button type="button" aria-label="Tutup" onClick={onBack} className="tmt-icon-button h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shrink-0 active:scale-95"><TmtCloseGlyph aria-hidden="true" /></button>
         <div className="bg-white/50 px-3 py-1.5 rounded-full font-black text-[#5A3515] text-sm border-2 border-[#CBB794]">⭐ {score}</div>
         <div className="bg-white/50 px-3 py-1.5 rounded-full font-black text-[#5A3515] text-sm border-2 border-[#CBB794] ml-auto">{qIdx}/{NASIHAT_QUESTIONS.length}</div>
       </header>
@@ -120,8 +121,8 @@ function NasihatGameScreen({ profile, onBack, backRef }: { profile: Profile; onB
         {selected === null && (
           <div className="space-y-2 w-full max-w-sm">
             {shuffled.map((opt, i) => (
-              <button key={i} onClick={() => handleSelect(opt.idx)}
-                className="w-full text-left p-3 rounded-2xl bg-white border-3 border-[#CBB794] text-[#5A3515] font-bold text-sm shadow-pop active:translate-y-1 transition-all hover:border-[#A02020] flex items-center gap-2">
+              <button type="button" key={i} onClick={() => handleSelect(opt.idx)}
+                className="tmt-choice-button w-full text-left p-3 rounded-2xl bg-white border-3 border-[#CBB794] text-[#5A3515] font-bold text-sm shadow-pop active:translate-y-1 transition-all hover:border-[#A02020] flex items-center gap-2">
                 <span className="text-lg shrink-0">{["💬","🔷","📌","🔹","💠","🔸"][i % 6]}</span>
                 <span className="leading-tight">{opt.text}</span>
               </button>
@@ -191,7 +192,7 @@ function DilemaGameScreen({ profile, onBack, backRef }: { profile: Profile; onBa
   return (
     <div className="h-[100dvh] bg-gradient-sky flex flex-col p-3 sm:p-4">
       <header className="pt-safe flex items-center gap-2 mb-3 shrink-0">
-        <button onClick={onBack} className="h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shrink-0 active:scale-95">✕</button>
+        <button type="button" aria-label="Tutup" onClick={onBack} className="tmt-icon-button h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shrink-0 active:scale-95"><TmtCloseGlyph aria-hidden="true" /></button>
         <div className="bg-white/50 px-3 py-1.5 rounded-full font-black text-[#5A3515] text-sm border-2 border-[#CBB794] ml-auto">{qIdx + 1}/{DILEMA_QUESTIONS.length}</div>
       </header>
       <main className="flex-1 flex flex-col items-center justify-center min-h-0 overflow-y-auto">
@@ -208,8 +209,8 @@ function DilemaGameScreen({ profile, onBack, backRef }: { profile: Profile; onBa
         {selected === null && (
           <div className="space-y-2 w-full max-w-sm">
             {shuffled.map((opt, i) => (
-              <button key={i} onClick={() => { setSelected(opt.idx); if (opt.idx === question.bestIdx) setScore(s => s + 150); else if (opt.idx === question.acceptableIdx) setScore(s => s + 80); }}
-                className="w-full text-left p-3 rounded-2xl bg-white border-3 border-[#CBB794] text-[#5A3515] font-bold text-sm shadow-pop active:translate-y-1 transition-all hover:border-[#185E9F]">
+              <button type="button" key={i} onClick={() => { setSelected(opt.idx); if (opt.idx === question.bestIdx) setScore(s => s + 150); else if (opt.idx === question.acceptableIdx) setScore(s => s + 80); }}
+                className="tmt-choice-button w-full text-left p-3 rounded-2xl bg-white border-3 border-[#CBB794] text-[#5A3515] font-bold text-sm shadow-pop active:translate-y-1 transition-all hover:border-[#185E9F]">
                 <span className="text-lg mr-2">{["💬","🔷","📌","🔹"][i % 4]}</span>{opt.text}
               </button>
             ))}
@@ -363,7 +364,7 @@ function UrutkanAdabScreen({ profile, onBack, backRef }: { profile: Profile; onB
   return (
     <div className="h-[100dvh] bg-gradient-sky flex flex-col p-3 sm:p-4">
       <header className="pt-safe flex items-center gap-2 mb-3 shrink-0">
-        <button onClick={onBack} className="h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shrink-0 active:scale-95">✕</button>
+        <button type="button" aria-label="Tutup" onClick={onBack} className="tmt-icon-button h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shrink-0 active:scale-95"><TmtCloseGlyph aria-hidden="true" /></button>
         <div className="bg-white/50 px-3 py-1.5 rounded-full font-black text-[#5A3515] text-sm border-2 border-[#CBB794] ml-auto">{qIdx + 1}/{questions.length}</div>
       </header>
       <main className="flex-1 flex flex-col items-center justify-center min-h-0 overflow-y-auto">
@@ -403,14 +404,14 @@ function UrutkanAdabScreen({ profile, onBack, backRef }: { profile: Profile; onB
               const tapped = userOrder.includes(s.id);
               const order = userOrder.indexOf(s.id);
               return (
-                <button key={s.id} onClick={() => tapStep(s.id)} disabled={tapped}
-                  className={`w-full text-left p-3 rounded-2xl border-3 font-bold text-sm transition-all ${tapped ? "bg-[#E8F5E9] border-[#2E8B12] text-[#2E8B12]" : "bg-white border-[#CBB794] text-[#5A3515] hover:border-[#185E9F]"} shadow-pop active:translate-y-1`}>
+                <button type="button" key={s.id} onClick={() => tapStep(s.id)} disabled={tapped}
+                  className={`tmt-choice-button w-full text-left p-3 rounded-2xl border-3 font-bold text-sm transition-all ${tapped ? "bg-[#E8F5E9] border-[#2E8B12] text-[#2E8B12]" : "bg-white border-[#CBB794] text-[#5A3515] hover:border-[#185E9F]"} shadow-pop active:translate-y-1`}>
                   {tapped ? `✅ ${order + 1}. ${s.text}` : `${s.text}`}
                 </button>
               );
             })}
             {userOrder.length > 0 && (
-              <button onClick={resetSteps} className="w-full py-2 text-xs font-bold text-[#A02020] underline">🔄 Ulangi susunan</button>
+              <button type="button" onClick={resetSteps} className="tmt-choice-button w-full py-2 text-xs font-bold text-[#A02020] underline">🔄 Ulangi susunan</button>
             )}
           </div>
         )}

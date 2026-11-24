@@ -1,3 +1,4 @@
+import { ArrowLeft as TmtBackGlyph } from "lucide-react";
 import { GameButton } from "@/components/ui/GameButton";
 
 interface Props {
@@ -12,12 +13,12 @@ export function PrivacyScreen({ onBack }: Props) {
   return (
     <div className="h-[100dvh] bg-gradient-sky flex flex-col overflow-hidden">
       <header className="shrink-0 content-wrapper pt-5 pb-3 flex items-center gap-3">
-        <button
+        <button type="button"
           onClick={onBack}
-          className="h-12 w-12 rounded-2xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-xl shadow-sm shrink-0 active:scale-95 transition-transform"
+          className="tmt-icon-button h-12 w-12 rounded-2xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-xl shadow-sm shrink-0 active:scale-95 transition-transform"
           aria-label="Kembali"
         >
-          ←
+          <TmtBackGlyph aria-hidden="true" />
         </button>
         <div className="flex-1 min-w-0">
           <h1 className="font-display font-black text-xl sm:text-2xl text-[#5A3515] truncate">
@@ -44,7 +45,7 @@ export function PrivacyScreen({ onBack }: Props) {
             <li>Progres misi (bintang, poin, jawaban)</li>
             <li>Level &amp; XP</li>
             <li>Lencana yang sudah dikumpulkan</li>
-            <li>Pengaturan suara &amp; musik</li>
+            <li>Pengaturan efek suara</li>
           </ul>
         </div>
 

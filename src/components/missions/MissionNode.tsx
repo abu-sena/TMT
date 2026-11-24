@@ -30,7 +30,7 @@ export function MissionNode({ number, state, stars = 0, isBoss, isBonus, onClick
       type="button"
       disabled={state === "locked"}
       onClick={onClick}
-      className={cn(baseRing, sizeCls, stateCls)}
+      className={cn("tmt-choice-button", baseRing, sizeCls, stateCls)}
       aria-label={`Misi ${number}`}
     >
       {/* inner disc */}

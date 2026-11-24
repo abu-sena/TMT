@@ -8,6 +8,8 @@ import type { Profile, MiniGameSession } from "@/types";
 import { DIFFICULTY_MAP } from "@/data/constants";
 import { GameButton } from "../game/GameButton";
 import { GameCard } from "../game/GameCard";
+import { MiniGameIcon } from "@/components/minigames/MiniGameArt";
+import { CelebrationArt } from "@/components/rewards/GameCelebrationDialog";
 
 interface Props {
   profile: Profile;
@@ -48,10 +50,10 @@ export function MiniGameResultScreen({
     <div className="h-[100dvh] bg-gradient-sky flex flex-col items-center justify-center p-4 overflow-hidden">
       <div className="w-full max-w-sm">
         {/* Result Card */}
-        <GameCard tone="cream" className="text-center p-6 sm:p-8 border-4 border-[#CBB794]">
+        <GameCard tone="cream" className="tmt-dialog-surface text-center p-6 sm:p-8 border">
           {/* Icon */}
           <div className="text-5xl sm:text-6xl mb-3">
-            {isNewBest ? "👑" : gameIcon}
+            {isNewBest ? <CelebrationArt kind="victory" /> : <MiniGameIcon gameId={session.gameType} fallback={gameIcon} className="size-16" />}
           </div>
 
           {/* Title */}
@@ -106,9 +108,9 @@ export function MiniGameResultScreen({
             </GameButton>
           </div>
           {onLeaderboard && (
-            <button
+            <button type="button"
               onClick={onLeaderboard}
-              className="w-full py-2 text-xs font-bold text-[#185E9F] underline hover:text-[#0D47A1]"
+              className="tmt-text-button w-full py-2 text-xs font-bold text-[#185E9F] underline hover:text-[#0D47A1]"
             >
               🏆 Lihat Leaderboard
             </button>

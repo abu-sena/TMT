@@ -4,7 +4,9 @@
  * Gameplay: Isi kotak kosong di sepanjang jalur matematika agar hasil hitung benar.
  */
 
+import { X as TmtCloseGlyph } from "lucide-react";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { MiniGameIcon } from "@/components/minigames/MiniGameArt";
 import type { Profile, MiniGameSession } from "@/types";
 import { GameButton } from "../game/GameButton";
 import { GameCard } from "../game/GameCard";
@@ -73,7 +75,7 @@ function NumericKeypad({ value, onChange, onOk, onCancel, allowNegative }: Keypa
   };
 
   return (
-    <div className="bg-white rounded-2xl p-3 border-2 border-[#CBB794] shadow-lg">
+    <div className="tmt-dialog-surface rounded-2xl p-3 border shadow-lg">
       {/* Display */}
       <div className="bg-[#FDF8F0] rounded-xl p-3 mb-2 text-center border-2 border-[#E8DCC2]">
         <span className="font-display font-black text-2xl text-[#5A3515] min-h-[32px]">
@@ -85,10 +87,10 @@ function NumericKeypad({ value, onChange, onOk, onCancel, allowNegative }: Keypa
         {keys.map((row, ri) => (
           <div key={ri} className="flex gap-1.5">
             {row.map(k => (
-              <button
+              <button type="button"
                 key={`${ri}-${k}`}
                 onPointerDown={e => { e.preventDefault(); handleKey(k); }}
-                className={cn(
+                className={cn("tmt-grid-button",
                   "flex-1 py-3 rounded-xl font-black text-lg sm:text-xl active:scale-90 transition-transform",
                   k === "⌫"
                     ? "bg-[#FFEBEE] text-[#E53935] border-2 border-[#E53935]/30"
@@ -105,16 +107,16 @@ function NumericKeypad({ value, onChange, onOk, onCancel, allowNegative }: Keypa
       </div>
       {/* Action buttons */}
       <div className="flex gap-2 mt-2">
-        <button
+        <button type="button" data-action="neutral"
           onClick={onCancel}
-          className="flex-1 py-2.5 rounded-xl bg-gray-200 text-[#5A3515] font-bold text-sm active:scale-95 transition-transform"
+          className="tmt-action-button flex-1 py-2.5 rounded-xl bg-gray-200 text-[#5A3515] font-bold text-sm active:scale-95 transition-transform"
         >
           Batal
         </button>
-        <button
+        <button type="button" data-action="primary"
           onClick={onOk}
           disabled={value.trim() === ""}
-          className="flex-1 py-2.5 rounded-xl bg-gradient-meadow border-b-3 border-[#2E8B12] text-white font-black text-sm active:translate-y-0.5 active:border-b-0 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="tmt-action-button flex-1 py-2.5 rounded-xl bg-gradient-meadow border-b-3 border-[#2E8B12] text-white font-black text-sm active:translate-y-0.5 active:border-b-0 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           ✓ Simpan
         </button>
@@ -369,7 +371,7 @@ export function MiniGameJalurAngkaScreen({ profile, onBack, backRef }: Props) {
     return (
       <div className="h-[100dvh] bg-gradient-to-b from-[#FFF8E1] to-[#FFE0B2] flex flex-col items-center justify-center p-4">
         <GameCard tone="coin" className="text-center w-full max-w-sm p-6 sm:p-8">
-          <div className="text-6xl mb-4">🔢</div>
+          <MiniGameIcon gameId="jalur-angka" className="size-20 mb-3" />
           <h1 className="font-display font-black text-2xl sm:text-3xl mb-1 text-[#5A3515]">
             Jalur Angka
           </h1>
@@ -521,10 +523,10 @@ export function MiniGameJalurAngkaScreen({ profile, onBack, backRef }: Props) {
     <div className="h-[100dvh] bg-gradient-to-b from-[#FFF8E1] to-[#FFE0B2] flex flex-col overflow-hidden">
       {/* ═══ Header ═══ */}
       <header className="shrink-0 pt-safe mt-1 px-3 pb-1 flex items-center gap-2">
-        <button
+        <button type="button" aria-label="Tutup"
           onClick={() => setShowExit(true)}
-          className="h-10 w-10 rounded-xl bg-white/60 border-2 border-[#D48806]/20 text-[#E65100] grid place-items-center text-lg shadow-sm shrink-0 active:scale-95"
-        >✕</button>
+          className="tmt-icon-button h-10 w-10 rounded-xl bg-white/60 border-2 border-[#D48806]/20 text-[#E65100] grid place-items-center text-lg shadow-sm shrink-0 active:scale-95"
+        ><TmtCloseGlyph aria-hidden="true" /></button>
         <div className="flex-1 min-w-0">
           <h1 className="font-display font-black text-base text-[#5A3515] truncate">Jalur Angka</h1>
           <p className="text-[10px] text-[#8C6B45] truncate">{question.instruction}</p>
@@ -621,7 +623,17 @@ export function MiniGameJalurAngkaScreen({ profile, onBack, backRef }: Props) {
                       height: 60,
                       zIndex: 5,
                     }}
+                    role={isInput ? "button" : undefined}
+                    tabIndex={isInput && !session.isCompleted ? 0 : undefined}
+                    aria-disabled={isInput ? session.isCompleted : undefined}
+                    aria-label={isInput ? `Kotak jawaban ${isFilled ? `berisi ${userVal}` : "kosong"}` : undefined}
                     onClick={() => isInput && handleCellClick(cell.id)}
+                    onKeyDown={(event) => {
+                      if (isInput && !session.isCompleted && (event.key === "Enter" || event.key === " ")) {
+                        event.preventDefault();
+                        handleCellClick(cell.id);
+                      }
+                    }}
                   >
                     <div className={cn(
                       "text-center w-full h-full flex items-center justify-center relative",
@@ -686,16 +698,16 @@ export function MiniGameJalurAngkaScreen({ profile, onBack, backRef }: Props) {
 
       {/* ═══ Bottom Buttons ═══ */}
       <footer className="shrink-0 px-3 pb-safe pb-2 pt-1 flex gap-2">
-        <button
+        <button type="button" data-action="danger-outline"
           onClick={handleReset}
-          className="flex-1 py-2.5 rounded-xl bg-white/70 border-2 border-[#D48806]/30 text-[#E65100] font-bold text-sm active:scale-95 transition-transform"
+          className="tmt-action-button flex-1 py-2.5 rounded-xl bg-white/70 border-2 border-[#D48806]/30 text-[#E65100] font-bold text-sm active:scale-95 transition-transform"
         >
           🔄 Ulangi
         </button>
-        <button
+        <button type="button"
           onClick={handleSubmit}
           disabled={!allFilled}
-          className={cn(
+          className={cn("tmt-choice-button",
             "flex-[2] py-2.5 rounded-xl font-black text-sm active:translate-y-0.5 active:border-b-0 transition-all",
             allFilled
               ? "bg-gradient-meadow border-b-3 border-[#2E8B12] text-white"
@@ -704,9 +716,9 @@ export function MiniGameJalurAngkaScreen({ profile, onBack, backRef }: Props) {
         >
           {allFilled ? "✅ Periksa Jawaban" : `✏️ Isi semua kotak dulu (${filledCount}/${question.inputCellIds.length})`}
         </button>
-        <button
+        <button type="button" data-action="neutral"
           onClick={onBack}
-          className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#FF9800] to-[#F57C00] border-b-3 border-[#E65100] text-white font-bold text-sm active:translate-y-0.5 active:border-b-0 transition-all"
+          className="tmt-action-button flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#FF9800] to-[#F57C00] border-b-3 border-[#E65100] text-white font-bold text-sm active:translate-y-0.5 active:border-b-0 transition-all"
         >
           🏠 Kembali
         </button>
@@ -731,9 +743,9 @@ export function MiniGameJalurAngkaScreen({ profile, onBack, backRef }: Props) {
               onCancel={handleKeypadCancel}
               allowNegative={question.allowNegative}
             />
-            <button
+            <button type="button" data-action="danger-outline"
               onClick={handleClearCell}
-              className="mt-2 w-full py-2 rounded-xl bg-white/80 text-[#E53935] font-bold text-xs border border-[#E53935]/20"
+              className="tmt-action-button mt-2 w-full py-2 rounded-xl bg-white/80 text-[#E53935] font-bold text-xs border border-[#E53935]/20"
             >
               🗑 Hapus Isi
             </button>

@@ -77,7 +77,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { name: "theme-color", content: "#7dbb6a" },
+      { name: "theme-color", content: "#fbf8f0" },
       { title: "TMT — Petualangan Ilmu & Akhlak" },
       { name: "description", content: "Game edukasi anak Indonesia. Misi seru untuk melatih adab, nalar, dan kepemimpinan — bisa dimainkan offline." },
       { property: "og:title", content: "TMT — Petualangan Ilmu & Akhlak" },
@@ -87,12 +87,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap",
-      },
+      { rel: "icon", type: "image/png", href: "/assets/field-guide/tmt-mark.png" },
     ],
   }),
   shellComponent: RootShell,

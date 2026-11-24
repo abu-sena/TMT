@@ -41,11 +41,11 @@ function createChoiceRenderer(name: string, icon: string, description: string) {
             else if (isSelected && !revealed) btnClass = "bg-[#E3F2FD] border-[#185E9F] text-[#185E9F]";
             
             return (
-              <button
+              <button type="button"
                 key={opt.id}
                 onClick={() => !revealed && !isWrong && onSelect(opt.id)}
                 disabled={revealed || isWrong}
-                className={`rounded-2xl border-[3px] px-4 py-3 font-bold text-sm transition-all active:scale-95 ${btnClass}`}
+                className={`tmt-choice-button rounded-2xl border-[3px] px-4 py-3 font-bold text-sm transition-all active:scale-95 ${btnClass}`}
               >
                 {opt.emoji && <span className="mr-2">{opt.emoji}</span>}
                 {opt.label}

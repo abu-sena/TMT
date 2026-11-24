@@ -2,7 +2,9 @@
  * Pilih Kesimpulan + Detektif Petunjuk + Tebak Aturan — Logic mini-games
  * Combined in one file for efficiency
  */
+import { X as TmtCloseGlyph } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { MiniGameIcon } from "@/components/minigames/MiniGameArt";
 import type { Profile, MiniGameSession } from "@/types";
 import { createMiniGameSession } from "@/lib/minigame-engine";
 import { shuffleArray } from "@/lib/utils";
@@ -90,7 +92,7 @@ function LogicGameScreen({
   if (phase === "start") return (
     <div className="h-[100dvh] bg-gradient-sky flex flex-col items-center justify-center p-4">
       <GameCard tone="blue" className="text-center w-full max-w-sm p-6 sm:p-8 text-white">
-        <div className="text-6xl mb-4">{icon}</div>
+        <MiniGameIcon gameId={gameId} fallback={icon} className="size-20 mb-3" />
         <h1 className="font-display font-black text-3xl mb-1">{title}</h1>
         <p className="text-sm font-bold opacity-80 mb-4">{questions.length} soal menanti!</p>
         {personalBest > 0 && (<div className="mb-4 p-3 rounded-2xl bg-black/20"><div className="text-xs uppercase opacity-70">Rekor Terbaik</div><div className="font-display font-black text-2xl text-yellow-300">{personalBest}</div></div>)}
@@ -106,7 +108,7 @@ function LogicGameScreen({
   return (
     <div className="h-[100dvh] bg-gradient-sky flex flex-col p-3 sm:p-4">
       <header className="pt-safe flex items-center gap-2 mb-3 shrink-0">
-        <button onClick={onBack} className="h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shrink-0 active:scale-95">✕</button>
+        <button type="button" aria-label="Tutup" onClick={onBack} className="tmt-icon-button h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shrink-0 active:scale-95"><TmtCloseGlyph aria-hidden="true" /></button>
         <div className="bg-white/50 px-3 py-1.5 rounded-full font-black text-[#5A3515] text-sm border-2 border-[#CBB794]">⭐ {score}</div>
         <div className="bg-white/50 px-3 py-1.5 rounded-full font-black text-[#5A3515] text-sm border-2 border-[#CBB794] ml-auto">{correctCount + wrongCount}/{Math.min(questions.length, 15)}</div>
       </header>
@@ -127,8 +129,8 @@ function LogicGameScreen({
         {selectedIdx === null && (
           <div className="space-y-2 w-full max-w-sm">
             {shuffled.map((opt, i) => (
-              <button key={i} onClick={() => handleSelect(opt.idx)}
-                className="w-full text-left p-3 rounded-2xl bg-white border-3 border-[#CBB794] text-[#5A3515] font-bold text-sm shadow-pop active:translate-y-1 transition-all hover:border-[#185E9F]">
+              <button type="button" key={i} onClick={() => handleSelect(opt.idx)}
+                className="tmt-choice-button w-full text-left p-3 rounded-2xl bg-white border-3 border-[#CBB794] text-[#5A3515] font-bold text-sm shadow-pop active:translate-y-1 transition-all hover:border-[#185E9F]">
                 <span className="text-lg mr-2">{String.fromCharCode(65 + i)}.</span>{opt.text}
               </button>
             ))}

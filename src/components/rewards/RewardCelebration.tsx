@@ -45,7 +45,7 @@ export function RewardCelebration({
         ))}
       </div>
 
-      <div className="relative z-10 bg-gradient-to-b from-[#FFF9E6] via-[#FFF5D1] to-[#FFE0A3] rounded-[32px] border-4 border-[#D48806] p-6 max-w-sm w-full shadow-2xl animate-pop-in text-center">
+      <div className="relative z-10 tmt-dialog-surface rounded-[32px] border-4 border-[#D48806] p-6 max-w-sm w-full shadow-2xl animate-pop-in text-center">
         {/* Golden glow icon */}
         <div className="relative inline-block mb-3">
           <div className="absolute inset-0 rounded-full bg-yellow-300/40 blur-xl animate-pulse" />
@@ -94,7 +94,7 @@ export function RewardCelebration({
             </GameButton>
           ) : (
             <>
-              <GameButton variant="ghost" size="md" onClick={onClose}>
+              <GameButton variant="secondary" size="md" onClick={onClose}>
                 Hore!
               </GameButton>
               <GameButton variant="primary" size="md" onClick={onViewRewards}>

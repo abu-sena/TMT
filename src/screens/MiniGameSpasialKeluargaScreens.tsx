@@ -2,6 +2,7 @@
  * Spasial mini-games: Ubah Posisi, Cocokkan Bayangan, Jalur Tercepat
  * Keluarga: Misi Keluarga
  */
+import { ArrowLeft as TmtBackGlyph, X as TmtCloseGlyph } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { Profile, MiniGameSession } from "@/types";
 import { createMiniGameSession } from "@/lib/minigame-engine";
@@ -10,6 +11,8 @@ import { GameButton } from "../game/GameButton";
 import { GameCard } from "../game/GameCard";
 import { MiniGameResultScreen } from "./MiniGameResultScreen";
 import { useGameStore } from "@/lib/storage";
+import { getPathTileLabel, MiniGameIcon, MiniGameSprite, PathTileArt, preloadMiniGameSprites } from "@/components/minigames/MiniGameArt";
+import { MemoryObjectIcon } from "@/components/minigames/MemoryObjectIcon";
 import type React from "react";
 
 // ═══════════════════════════
@@ -17,6 +20,7 @@ import type React from "react";
 // ═══════════════════════════
 
 function UbahPosisiGame({ profile, onBack, backRef }: { profile: Profile; onBack: () => void; backRef: React.MutableRefObject<(() => boolean) | null> }) {
+  preloadMiniGameSprites("memory", "path");
   const { addMiniGameSession, store } = useGameStore();
   const [phase, setPhase] = useState<"start" | "playing" | "feedback" | "result">("start");
   const [score, setScore] = useState(0);
@@ -143,7 +147,7 @@ function UbahPosisiGame({ profile, onBack, backRef }: { profile: Profile; onBack
   if (phase === "start") return (
     <div className="h-[100dvh] bg-gradient-to-b from-[#A5D6A7] via-[#C8E6C9] to-[#E8F5E9] flex flex-col items-center justify-center p-4">
       <GameCard tone="meadow" className="text-center w-full max-w-sm p-6 sm:p-8 text-white">
-        <div className="text-6xl mb-4">🐰</div>
+        <MiniGameIcon gameId="ubah-posisi" className="size-20 mb-3" />
         <h1 className="font-display font-black text-3xl mb-1">Ubah Posisi</h1>
         <p className="text-sm font-bold opacity-80 mb-2">
           Seekor kelinci kecil tersesat di padang rumput.
@@ -170,7 +174,7 @@ function UbahPosisiGame({ profile, onBack, backRef }: { profile: Profile; onBack
     <div className="h-[100dvh] bg-gradient-to-b from-[#C8E6C9] via-[#A5D6A7] to-[#81C784] flex flex-col overflow-hidden">
       {/* Header */}
       <header className="shrink-0 pt-safe mt-1 px-2 flex items-center gap-2">
-        <button onClick={() => { clearTimer(); onBack(); }} className="h-10 w-10 rounded-xl bg-white/60 border-2 border-[#2E8B12]/30 text-[#1B5E20] grid place-items-center text-lg shrink-0 active:scale-95">✕</button>
+        <button type="button" aria-label="Tutup" onClick={() => { clearTimer(); onBack(); }} className="tmt-icon-button h-10 w-10 rounded-xl bg-white/60 border-2 border-[#2E8B12]/30 text-[#1B5E20] grid place-items-center text-lg shrink-0 active:scale-95"><TmtCloseGlyph aria-hidden="true" /></button>
         <div className="flex-1 text-center">
           <h1 className="font-display font-black text-sm sm:text-base text-[#1B5E20] leading-tight">🐰 Bantu Kelinci Pulang</h1>
         </div>
@@ -215,20 +219,27 @@ function UbahPosisiGame({ profile, onBack, backRef }: { profile: Profile; onBack
                 const isStart = row === startPos.row && col === startPos.col;
                 const isUser = userPos?.row === row && userPos?.col === col;
                 const showCorrect = isCorrect !== null && row === correctPos.row && col === correctPos.col;
-                const isGoal = isCorrect !== null && isCorrect && isUser;
+                const marker = isStart
+                  ? <MemoryObjectIcon value="animal-rabbit" className="mini-game-tile-art" decorative />
+                  : isUser && !isCorrect
+                    ? "❌"
+                    : isUser || showCorrect
+                      ? <MiniGameSprite atlas="path" index={5} className="mini-game-tile-art" />
+                      : null;
                 return (
-                  <button
+                  <button type="button"
                     key={i}
                     onClick={() => !isCorrect && isCorrect === null && checkAnswer(row, col)}
                     disabled={isCorrect !== null}
-                    className={`aspect-square rounded-md text-xs sm:text-sm grid place-items-center transition-all ${
+                    aria-label={`${isStart ? "Titik awal, " : ""}baris ${row + 1}, kolom ${col + 1}`}
+                    className={`tmt-grid-button aspect-square rounded-md text-xs sm:text-sm grid place-items-center transition-all ${
                       isStart ? "bg-[#FFF9C4] border-2 border-[#F9A825] font-bold" :
                       isUser ? (isCorrect ? "bg-[#C8E6C9] border-2 border-[#4CAF50] ring-2 ring-[#4CAF50]/40" : "bg-[#FFCDD2] border-2 border-[#F44336]") :
                       showCorrect && isCorrect === false ? "bg-[#C8E6C9] border-2 border-[#4CAF50]" :
                       "bg-white/60 border border-[#A5D6A7] hover:bg-[#E8F5E9]"
                     }`}
                   >
-                    {isStart ? "🐰" : isUser ? (isCorrect ? "🕳️" : "❌") : showCorrect && isCorrect === false ? "🕳️" : ""}
+                    {marker}
                   </button>
                 );
               })}
@@ -279,7 +290,7 @@ function UbahPosisiGame({ profile, onBack, backRef }: { profile: Profile; onBack
   );
 }
 
-import { SVG_REGISTRY } from "@/components/svg-objects";
+import { PuzzleObjectArt } from "@/components/minigames/MiniGameArt";
 import { generateShadowMatchQuestion, validateShadowMatchAnswer, type ShadowMatchQuestion } from "@/lib/shadow-match-generator";
 
 function CocokBayanganGame({ profile, onBack, backRef }: { profile: Profile; onBack: () => void; backRef: React.MutableRefObject<(() => boolean) | null> }) {
@@ -296,8 +307,8 @@ function CocokBayanganGame({ profile, onBack, backRef }: { profile: Profile; onB
   const mySessions = store.miniGameSessions.filter(s => s.profileId === profile.id && s.gameType === "cocok-bayangan");
   const personalBest = mySessions.reduce((max, s) => Math.max(max, s.score), 0);
 
-  const genQ = () => {
-    setQuestion(generateShadowMatchQuestion(profile.difficulty));
+  const genQ = (roundIndex = qIdx) => {
+    setQuestion(generateShadowMatchQuestion(profile.difficulty, roundIndex));
     setSelectedChoiceId(null);
     setIsCorrect(null);
     setPhase("playing");
@@ -324,13 +335,14 @@ function CocokBayanganGame({ profile, onBack, backRef }: { profile: Profile; onB
     if (qIdx >= 9) {
       endGame();
     } else {
-      setQIdx(q => q + 1);
-      genQ();
+      const nextRound = qIdx + 1;
+      setQIdx(nextRound);
+      genQ(nextRound);
     }
   };
 
   const endGame = () => {
-    const sess = createMiniGameSession(profile, "cocok-bayangan", "spasial", score, correctCount, 0, 0, 0, 1, profile.difficulty, 10, 10 - correctCount);
+    const sess = createMiniGameSession(profile, "cocok-bayangan", "spasial", score, correctCount, 0, 0, 0, Math.min(10, qIdx + 1), profile.difficulty, 10, 10 - correctCount);
     setSession(sess);
     addMiniGameSession(sess);
     setPhase("result");
@@ -340,7 +352,7 @@ function CocokBayanganGame({ profile, onBack, backRef }: { profile: Profile; onB
     setScore(0);
     setCorrectCount(0);
     setQIdx(0);
-    genQ();
+    genQ(0);
   };
 
   useEffect(() => {
@@ -355,7 +367,7 @@ function CocokBayanganGame({ profile, onBack, backRef }: { profile: Profile; onB
   if (phase === "start") return (
     <div className="h-[100dvh] bg-gradient-sky flex flex-col items-center justify-center p-4">
       <GameCard tone="meadow" className="text-center w-full max-w-sm p-6 sm:p-8 text-white">
-        <div className="text-6xl mb-4">👤</div>
+        <MiniGameIcon gameId="cocok-bayangan" className="size-20 mb-3" />
         <h1 className="font-display font-black text-3xl mb-1">Cocokkan Bayangan</h1>
         <p className="text-sm font-bold opacity-80 mb-4">Pilih bayangan hitam yang cocok dengan gambar utama.</p>
         <div className="flex gap-3">
@@ -390,16 +402,10 @@ function CocokBayanganGame({ profile, onBack, backRef }: { profile: Profile; onB
   };
 
   // Helper to render SVG
-  const renderSvg = (id: string, isShadow: boolean, missingPart: string | null) => {
-    const Component = SVG_REGISTRY[id];
-    if (!Component) return <div className="h-20 w-20 bg-gray-200 rounded-full" />;
-    return <Component isShadow={isShadow} missingPart={missingPart} className="w-full h-full" />;
-  };
-
   return (
     <div className="h-[100dvh] bg-gradient-sky flex flex-col p-3 sm:p-4 overflow-hidden">
       <header className="pt-safe flex items-center gap-2 mb-3 shrink-0">
-        <button onClick={onBack} className="h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shrink-0 active:scale-95">✕</button>
+        <button type="button" aria-label="Tutup" onClick={onBack} className="tmt-icon-button h-10 w-10 rounded-xl bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-lg shrink-0 active:scale-95"><TmtCloseGlyph aria-hidden="true" /></button>
         <div className="flex-1 text-center">
           <h2 className="font-display font-black text-[#5A3515] text-lg">Cocokkan Bayangan</h2>
         </div>
@@ -412,18 +418,18 @@ function CocokBayanganGame({ profile, onBack, backRef }: { profile: Profile; onB
         {question && (
           <>
             {/* Top Area: Main Object */}
-            <GameCard tone="cream" className="w-full text-center py-6 mb-4 border-4 shrink-0 border-[#CBB794] relative overflow-hidden">
+            <GameCard tone="cream" className="mini-game-shadow-board w-full text-center py-6 mb-4 border-4 shrink-0 border-[#CBB794] relative overflow-hidden">
               <div className="text-xs font-bold text-[#8C6B45] mb-2 uppercase tracking-wide">Pilih bayangan yang cocok</div>
               <div className="flex justify-center items-center h-28 sm:h-32 mx-auto w-32">
                 <div className="w-full h-full filter drop-shadow-md">
-                  {renderSvg(question.mainObject.id, false, null)}
+                  <PuzzleObjectArt objectId={question.mainObject.id} className="size-full" />
                 </div>
               </div>
             </GameCard>
 
             {/* Bottom Area: Shadow Choices */}
             <div className={`grid ${getGridCols(question.shuffledChoices.length)} gap-3 sm:gap-4 w-full flex-1 min-h-0 content-start pb-4`}>
-              {question.shuffledChoices.map((choice) => {
+              {question.shuffledChoices.map((choice, index) => {
                 const isSelected = selectedChoiceId === choice.id;
                 const isAnswerCorrect = choice.isCorrect;
                 
@@ -452,15 +458,23 @@ function CocokBayanganGame({ profile, onBack, backRef }: { profile: Profile; onB
                 }
 
                 return (
-                  <button 
+                  <button type="button"
                     key={choice.id} 
                     onClick={() => handleSelectChoice(choice.id)}
                     disabled={phase === "feedback"}
-                    className={`h-28 sm:h-36 rounded-[24px] border-4 flex flex-col items-center justify-center p-2 shadow-pop active:translate-y-1 transition-all ${cardStyle}`}
+                    aria-label={`Bayangan ${index + 1}`}
+                    aria-pressed={isSelected}
+                    className={`tmt-choice-button h-28 sm:h-36 rounded-[24px] border-4 flex flex-col items-center justify-center p-2 shadow-pop active:translate-y-1 transition-all ${cardStyle}`}
                   >
                     <div className="flex-1 flex items-center justify-center overflow-hidden w-16 sm:w-20">
                       {/* SVGs handle their own flat black color via isShadow prop */}
-                      {renderSvg(choice.objectId, true, choice.missingPart)}
+                      <PuzzleObjectArt
+                        objectId={choice.objectId}
+                        className="size-full"
+                        silhouette
+                        rotation={choice.rotation}
+                        mirrored={choice.mirrored}
+                      />
                     </div>
                     
                     {/* Radio button indicator */}
@@ -756,9 +770,9 @@ function JalurTercepatGame({ profile, onBack, backRef }: { profile: Profile; onB
   if (phase === "start") return (
     <div className="h-[100dvh] bg-gradient-sky flex flex-col items-center justify-center p-4">
       <GameCard tone="meadow" className="text-center w-full max-w-sm p-6 sm:p-8 text-white">
-        <div className="text-6xl mb-4">🐒</div>
+        <PathTileArt value="🐒" className="size-20 mb-3" />
         <h1 className="font-display font-black text-3xl mb-1">Jalur Tercepat</h1>
-        <p className="text-sm font-bold opacity-80 mb-4">Bantu monyet 🐒 mencapai pisang 🍌 dengan jalur tercepat! Klik cell bersebelahan.</p>
+        <p className="text-sm font-bold opacity-80 mb-4">Bantu monyet mencapai pisang lewat jalur tercepat. Pilih petak yang bersebelahan.</p>
         {personalBest > 0 && (
           <div className="mb-4 p-3 rounded-2xl bg-black/20">
             <div className="text-xs uppercase font-bold opacity-70">Rekor Terbaik</div>
@@ -786,7 +800,7 @@ function JalurTercepatGame({ profile, onBack, backRef }: { profile: Profile; onB
     <div className="h-[100dvh] bg-gradient-sky flex flex-col overflow-hidden">
       {/* Compact header */}
       <header className="shrink-0 pt-safe mt-1 px-2 flex items-center gap-2">
-        <button onClick={() => { clearAllTimers(); onBack(); }} className="h-9 w-9 rounded-lg bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-base shrink-0 active:scale-95">✕</button>
+        <button type="button" aria-label="Tutup" onClick={() => { clearAllTimers(); onBack(); }} className="tmt-icon-button h-9 w-9 rounded-lg bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-base shrink-0 active:scale-95"><TmtCloseGlyph aria-hidden="true" /></button>
         <div className="flex-1 text-center">
           <h1 className="font-display font-black text-sm sm:text-base text-[#5A3515] leading-tight">🐒 Jalur Tercepat</h1>
         </div>
@@ -828,17 +842,18 @@ function JalurTercepatGame({ profile, onBack, backRef }: { profile: Profile; onB
                 if (isCurrent && !isStart && !isGoal) bgClass = "bg-[#81C784]";
 
                 return (
-                  <button
+                  <button type="button"
                     key={`${ri}-${ci}`}
                     onClick={() => clickCell(ri, ci)}
                     disabled={reachedGoal}
-                    className={`rounded-[3px] grid place-items-center transition-all text-sm sm:text-xl select-none ${
+                    aria-label={`${getPathTileLabel(cell)}, baris ${ri + 1}, kolom ${ci + 1}`}
+                    className={`tmt-grid-button rounded-[3px] grid place-items-center transition-all text-sm sm:text-xl select-none ${
                       bgClass
                     } ${!reachedGoal && !isBlocked ? "active:scale-90 active:bg-[#C8E6C9]" : ""} ${
                       isBlocked ? "cursor-not-allowed" : "cursor-pointer"
                     }`}
                   >
-                    <span className="leading-none">{cell}</span>
+                    <PathTileArt value={cell} className="mini-game-tile-art" />
                   </button>
                 );
               })
@@ -895,10 +910,10 @@ function JalurTercepatGame({ profile, onBack, backRef }: { profile: Profile; onB
       <footer className="shrink-0 px-2 pb-safe pt-1 flex gap-2">
         {!reachedGoal ? (
           <>
-            <button onClick={undoLast} disabled={userPath.length <= 1}
-              className="h-10 px-3 rounded-xl bg-white/60 border-2 border-[#CBB794] text-[#5A3515] font-bold text-xs disabled:opacity-30 active:scale-95 transition-all">↩ Undo</button>
-            <button onClick={resetPath}
-              className="h-10 px-3 rounded-xl bg-white/60 border-2 border-[#CBB794] text-[#5A3515] font-bold text-xs active:scale-95 transition-all">🔄 Reset</button>
+            <button type="button" data-action="neutral" onClick={undoLast} disabled={userPath.length <= 1}
+              className="tmt-action-button h-10 px-3 rounded-xl bg-white/60 border-2 border-[#CBB794] text-[#5A3515] font-bold text-xs disabled:opacity-30 active:scale-95 transition-all">↩ Undo</button>
+            <button type="button" data-action="danger-outline" onClick={resetPath}
+              className="tmt-action-button h-10 px-3 rounded-xl bg-white/60 border-2 border-[#CBB794] text-[#5A3515] font-bold text-xs active:scale-95 transition-all">🔄 Reset</button>
             <div className="flex-1" />
             <div className="bg-white/50 px-3 h-10 rounded-xl border-2 border-[#CBB794] flex items-center font-black text-xs text-[#5A3515]">
               📏 {userPath.length - 1} langkah
@@ -949,7 +964,7 @@ function MisiKeluargaScreen({ profile, onBack, backRef }: { profile: Profile; on
   return (
     <div className="h-[100dvh] bg-gradient-sky flex flex-col overflow-hidden">
       <header className="shrink-0 content-wrapper pt-safe mt-2 pb-3 flex items-center gap-3">
-        <button onClick={onBack} className="h-12 w-12 rounded-[18px] bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-xl shadow-sm shrink-0 active:scale-95">←</button>
+        <button type="button" aria-label="Kembali" onClick={onBack} className="tmt-icon-button h-12 w-12 rounded-[18px] bg-white/40 border-2 border-white/60 text-[#185E9F] grid place-items-center text-xl shadow-sm shrink-0 active:scale-95"><TmtBackGlyph aria-hidden="true" /></button>
         <div className="flex-1"><h1 className="font-display font-black text-xl sm:text-2xl text-[#5A3515] truncate">Misi Keluarga</h1><p className="text-xs text-[#5A3515]/80">Lakukan kebaikan di dunia nyata!</p></div>
         <div className="text-2xl">🏡</div>
       </header>
@@ -959,8 +974,8 @@ function MisiKeluargaScreen({ profile, onBack, backRef }: { profile: Profile; on
           <div className="flex-1 rounded-2xl bg-white/80 p-3 border-2 border-[#CBB794]"><div className="font-black text-2xl text-[#D48806]">{verifiedCount}</div><div className="text-[10px] uppercase text-[#8C6B45]">Diverifikasi</div></div>
         </div>
         {missions.map(m => (
-          <button key={m.id} onClick={() => toggleMission(m.id)}
-            className={`w-full rounded-2xl p-4 text-left border-4 transition-all ${m.done ? "bg-[#E8F5E9] border-[#2E8B12]" : "bg-white/90 border-[#CBB794] hover:border-[#185E9F]"}`}>
+          <button type="button" key={m.id} onClick={() => toggleMission(m.id)}
+            className={`tmt-choice-button w-full rounded-2xl p-4 text-left border-4 transition-all ${m.done ? "bg-[#E8F5E9] border-[#2E8B12]" : "bg-white/90 border-[#CBB794] hover:border-[#185E9F]"}`}>
             <div className="flex items-center gap-3">
               <div className="text-3xl">{m.emoji}</div>
               <div className="flex-1"><div className="font-bold text-[#5A3515] text-sm">{m.title}</div><div className="text-xs text-[#8C6B45]">{m.desc}</div></div>

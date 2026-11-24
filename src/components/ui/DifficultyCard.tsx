@@ -13,7 +13,8 @@ export function DifficultyCard({ difficulty, selected, onSelect, className, ...r
     <button
       type="button"
       onClick={onSelect}
-      className={cn(
+      aria-pressed={selected}
+      className={cn("tmt-choice-button",
         "rounded-[18px] border-4 p-3 text-left transition-all active:translate-y-[2px] w-full flex flex-col justify-center",
         selected
           ? "bg-gradient-sun border-[#D48806] shadow-candy-sm text-[#3a2400]"
